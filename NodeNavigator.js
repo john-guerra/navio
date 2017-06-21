@@ -1,11 +1,11 @@
-/* global d3, NodeNavigator */
-
+/* global d3, NodeNavigator, crossfilter */
 
 //eleId must be the ID of a context element where everything is going to be drawn
-function NodeNavigator(eleId, x0, y0, h) {
+function NodeNavigator(eleId, h) {
   "use strict";
-  var self = this,
-    data, //Contains the original data attributes
+  var nn = this,
+    data, //Contains the original data attributes in an array
+    crossfilterData = [crossfilter()], // Array of crossfiltered data
     dDimensions = d3.map(),
     dSortBy = d3.map(), //contains which attribute to sort by on each column
     yScales,
@@ -14,28 +14,49 @@ function NodeNavigator(eleId, x0, y0, h) {
     colScales = d3.map(),
     levelScale,
     canvas,
-    context;
+    context,
+    defaultColorRange = ["white", "blue"],
+    x0=0,
+    y0=100,
+    updateCallback = function () {};
 
-  self.margin = 10;
-  self.attribWidth = 10;
-  self.levelsSeparation = 40;
-  self.divisionsColor = "white";
-  self.levelConnectionsColor = "rgba(205, 220, 163, 0.5)";
-  self.divisionsThreshold = 3;
-  self.id = "id";
-  self.startColor = "white";
-  self.endColor = "red";
-  self.legendFont = "14px Arial";
+  nn.margin = 10;
+  nn.attribWidth = 10;
+  nn.levelsSeparation = 40;
+  nn.divisionsColor = "white";
+  nn.levelConnectionsColor = "rgba(205, 220, 163, 0.5)";
+  nn.divisionsThreshold = 3;
+  nn.id = "id";
+  nn.startColor = "white";
+  nn.endColor = "red";
+  nn.legendFont = "14px Arial";
 
-  d3.select("#"+eleId)
+  d3.select(eleId)
     // .attr("width", 150)
     // .attr("height", h)
-    .attr("class", "NodeNavigator");
+    .attr("class", "NodeNavigator")
+    .append("div")
+      .style("float", "left")
+      .attr("id", "nodeNavigator")
+      .style("position", "relative");
+  d3.select(eleId)
+    .select("#nodeNavigator")
+    .append("canvas");
+  var svg = d3.select(eleId)
+    .select("#nodeNavigator")
+    .append("svg")
+      .style("position", "absolute")
+      .style("top", 0)
+      .style("left", 0);
+  svg.append("g")
+    .attr("class", "attribs");
+
+
 
 
   xScale = d3.scaleBand()
-    // .rangeBands([0, self.attribWidth], 0.1, 0);
-    .range([0, self.attribWidth])
+    // .rangeBands([0, nn.attribWidth], 0.1, 0);
+    .range([0, nn.attribWidth])
     .round(true)
     .paddingInner(0.1)
     .paddingOuter(0);
@@ -47,7 +68,7 @@ function NodeNavigator(eleId, x0, y0, h) {
     return levelScale(level) + xScale(val);
   };
 
-  canvas = d3.select("#"+eleId).select("canvas").node();
+  canvas = d3.select(eleId).select("canvas").node();
   // canvas.style.position = "absolute";
   canvas.style.top = canvas.offsetTop + "px";
   canvas.style.left = canvas.offsetLeft + "px";
@@ -59,13 +80,13 @@ function NodeNavigator(eleId, x0, y0, h) {
   // context.strokeStyle = "rgba(0,0,0,0.02)";
 
 
-  function selfOnClickLevel(d) {
+  function nnOnClickLevel(d) {
     console.log("click " + d);
     data[d.level] = data[d.level].sort(function (a, b) {
       return d3.ascending(a[d.attrib], b[d.attrib]);
     });
     dSortBy.set(d.level, d.attrib);
-    self.updateData(data, colScales);
+    nn.updateData(data, colScales);
   }
 
   function getAttribs(obj) {
@@ -83,8 +104,8 @@ function NodeNavigator(eleId, x0, y0, h) {
 
     for (i = 0; i < dDimensions.keys().length; i++) {
       attrib = dDimensions.keys()[i];
-      y = Math.round(yScales[level](item[self.id]) + yScales[level].bandwidth()/2);
-      // y = yScales[level](item[self.id]) + yScales[level].bandwidth()/2;
+      y = Math.round(yScales[level](item[nn.id]) + yScales[level].bandwidth()/2);
+      // y = yScales[level](item[nn.id]) + yScales[level].bandwidth()/2;
 
       context.beginPath();
       context.moveTo(x(attrib, level), y);
@@ -100,14 +121,14 @@ function NodeNavigator(eleId, x0, y0, h) {
 
 
       //If the range bands are tick enough draw divisions
-      if (yScales[level].bandwidth() > self.divisionsThreshold) {
-        y = Math.round(yScales[level](item[self.id]));
+      if (yScales[level].bandwidth() > nn.divisionsThreshold) {
+        y = Math.round(yScales[level](item[nn.id]));
         // context.beginPath();
         context.moveTo(x(attrib, level), y);
         context.lineTo(x(attrib, level) + xScale.bandwidth(), y);
         context.lineWidth = 1;
         // context.lineWidth = 1;
-        context.strokeStyle = self.divisionsColor;
+        context.strokeStyle = nn.divisionsColor;
         context.stroke();
       }
 
@@ -115,7 +136,6 @@ function NodeNavigator(eleId, x0, y0, h) {
   }
 
   function drawLevelBorder(i) {
-    var attribHolder, tempData ;
     context.beginPath();
     context.rect(levelScale(i),
       yScales[i].range()[0],
@@ -124,35 +144,137 @@ function NodeNavigator(eleId, x0, y0, h) {
     context.strokeStyle = "black";
     context.lineWidth = 1;
     context.stroke();
+  }
 
+  function addBrush(d, i) {
+    var _brush = d3.select(this)
+      .selectAll(".brush")
+      .data([0]);// fake data
+
+    _brush.enter()
+      .merge(_brush)
+      .append("g")
+        .attr("class", "brush")
+        .call(d3.brushY()
+          .extent([
+            [x(xScale.domain()[0], i),yScales[i].range()[0]],
+            [x(xScale.domain()[xScale.domain().length-1], i) + xScale.bandwidth(), yScales[i].range()[1]]
+          ])
+          .on("end", brushended))
+        .selectAll("rect")
+          // .attr("x", -8)
+          .attr("width", 16);
+
+    _brush.exit().remove();
+
+
+    function brushended(d) {
+      if (!d3.event.sourceEvent) return; // Only transition after input.
+      if (!d3.event.selection) return; // Ignore empty selections.
+      console.log("Brush");
+      console.log(d);
+      var brushed = d3.event.selection;
+      var filteredData = data[i].filter(function (d) {
+        var y = yScales[i](d[nn.id]);
+        d.visible = y >= brushed[0] && y <= brushed[1];
+        return d.visible;
+      });
+
+      if (filteredData.length===0) return;
+
+      var newData = data.slice(0,i+1);
+      // var newData = data;
+      newData.push(filteredData);
+
+
+      nn.updateData(
+        newData,
+        colScales
+      );
+      console.log("Selected " + nn.getVisible().length + " calling updateCallback");
+      updateCallback(nn.getVisible());
+
+      // nn.update(false); //don't update brushes
+
+      // d3.select(this).transition().call(d3.event.target.move, d1.map(x));
+    }
+    // Update the brush
+  }
+
+
+  function drawBrushes() {
+    // var attribHolder, attribsData;
 
     //Format the data to draw the phantom rects
-    tempData = data.reduce(
-      function (p, l, i) {
-        return p.concat(xScale.domain().map(function (d) {
-          return {attrib:d, level:i};
-        }));
-      },
-      []
-    );
+    // attribsData = data.reduce(
+    //   function (p, l, i) {
+    //     return p.concat(xScale.domain().map(function (d) {
+    //       return {attrib:d, level:i};
+    //     }));
+    //   },
+    //   []
+    // );
 
-    attribHolder = d3.select("#"+eleId)
-      .select("svg")
-      .selectAll(".attribPlaceHolder")
-      .data(tempData);
+    var attribs = xScale.domain();
 
-    attribHolder.enter()
+    var levelOverlay = svg.select(".attribs")
+      .selectAll(".levelOverlay")
+      .data(data);
+
+    var attribOverlay = levelOverlay.enter()
+      .append("g")
+        .attr("class", "levelOverlay")
+      .merge(levelOverlay)
+        .each(addBrush)
+        .selectAll(".attribOverlay")
+        .data(function (_, i) {
+          return attribs.map(function (a) {
+            return {attrib:a, level:i};
+          });
+        });
+
+
+    var attribOverlayEnter = attribOverlay
+      .enter()
+        .append("g")
+        .attr("class", "attribOverlay")
+        .attr("transform", function (d) {
+          return "translate(" +
+            x(d.attrib, d.level) +
+            "," +
+            yScales[d.level].range()[0] +
+            ")";
+        });
+
+    attribOverlayEnter
       .append("rect")
-      .attr("class", "attribPlaceHolder" )
-      .attr("fill", "white")
-      .style("opacity", "0.1")
-      .attr("x", function (d) { return x(d.attrib, d.level); })
-      .attr("y", function (d) { return yScales[d.level].range()[0]; })
+      .merge(attribOverlay.select("rect"))
+      .attr("fill", "none")
+      // .style("opacity", "0.1")
+      .attr("x", 0)
+      .attr("y", 0)
       .attr("width", function () { return xScale.bandwidth(); })
-      .attr("height", function (d) { return yScales[d.level].range()[1] - yScales[d.level].range()[0]; })
-      .on("click", selfOnClickLevel);
+      .attr("height", function (d) { return yScales[d.level].range()[1] - yScales[d.level].range()[0]; });
 
-    attribHolder.exit().remove();
+    attribOverlayEnter
+      .append("text")
+      .merge(attribOverlay.select("text"))
+      .text(function (d) { return d.attrib; })
+      .attr("x", xScale.bandwidth()/2)
+      .attr("y", 0)
+      .style("font-weight", function (d) {
+        return dSortBy.has(d.level) &&
+          dSortBy.get(d.level) === d.attrib ?
+            "bolder" :
+            "normal";
+      })
+      .style("font-family", "sans-serif")
+      .style("font-size", "10px")
+      .attr("transform", "rotate(-45)")
+      .on("click", nnOnClickLevel);
+
+    attribOverlay.exit().remove();
+    levelOverlay.exit().remove();
 
   }
 
@@ -183,30 +305,30 @@ function NodeNavigator(eleId, x0, y0, h) {
     }
     data[level].forEach(function (item, i) {
       var locPrevLevel = {x: levelScale(level-1) + xScale.range()[1],
-        y: yScales[level-1](item[self.id]) };
+        y: yScales[level-1](item[nn.id]) };
       var locLevel = {x: levelScale(level),
-        y: yScales[level](item[self.id]) };
+        y: yScales[level](item[nn.id]) };
 
       var points = [ locPrevLevel,
-        {x: locPrevLevel.x + self.levelsSeparation * 0.3, y: locPrevLevel.y},
-        {x: locLevel.x - self.levelsSeparation * 0.3, y: locLevel.y},
+        {x: locPrevLevel.x + nn.levelsSeparation * 0.3, y: locPrevLevel.y},
+        {x: locLevel.x - nn.levelsSeparation * 0.3, y: locLevel.y},
         locLevel,
         {x: locLevel.x, y: locLevel.y + yScales[level].bandwidth()},
-        {x: locLevel.x - self.levelsSeparation * 0.3, y: locLevel.y + yScales[level].bandwidth()},
-        {x: locPrevLevel.x + self.levelsSeparation * 0.3, y: locPrevLevel.y + yScales[level - 1].bandwidth()},
+        {x: locLevel.x - nn.levelsSeparation * 0.3, y: locLevel.y + yScales[level].bandwidth()},
+        {x: locPrevLevel.x + nn.levelsSeparation * 0.3, y: locPrevLevel.y + yScales[level - 1].bandwidth()},
         {x: locPrevLevel.x, y: locPrevLevel.y + yScales[level -1 ].bandwidth()},
         locPrevLevel
 
       ];
-      drawLine(points, 1, self.levelConnectionsColor);
-      drawLine(points, 1, self.levelConnectionsColor, true);
+      drawLine(points, 1, nn.levelConnectionsColor);
+      drawLine(points, 1, nn.levelConnectionsColor, true);
     });
   }
 
 
   function drawDimensionTitles(level) {
     dDimensions.keys().forEach(function (attrib) {
-      // context.font = self.legendFont;
+      // context.font = nn.legendFont;
       // context.rotate(-Math.PI/4);
       // context.fillText(attrib,x(attrib, level),y0);
       // context.rotate(Math.PI/4);
@@ -230,13 +352,15 @@ function NodeNavigator(eleId, x0, y0, h) {
     context.fillText(data[level].length, levelScale(level), yScales[level].range()[1] + 15);
   }
 
-  self.initData = function (mData,  mColScales, mSortByAttr) {
+
+
+  nn.initData = function (mData,  mColScales, mSortByAttr) {
     // getAttribs(mData[0][0]);
     colScales  = mColScales;
     colScales.keys().forEach(function (d) {
       dDimensions.set(d, true);
     });
-    // self.updateData(mData, mColScales, mSortByAttr);
+    // nn.updateData(mData, mColScales, mSortByAttr);
 
   };
 
@@ -244,12 +368,12 @@ function NodeNavigator(eleId, x0, y0, h) {
     yScales=[];
     data.forEach(function (levelData, i) {
       yScales[i] = d3.scaleBand()
-        .range([y0, h-self.margin - 30])
+        .range([y0, h-nn.margin - 30])
         .paddingInner(0.0)
         .paddingOuter(0);
       yScales[i].domain(levelData.map(function (d) {
-          return d[self.id];
-        })
+        return d[nn.id];
+      })
       );
     });
 
@@ -257,7 +381,7 @@ function NodeNavigator(eleId, x0, y0, h) {
     // dDimensions.keys().forEach(function (attrib) {
     //     var scale = d3.scale.linear()
     //         .domain(d3.extent(data[0].map(function (d) { return d[attrib]; }))) //TODO: make it compute it based on the local range
-    //         .range([self.startColor, self.endColor] );
+    //         .range([nn.startColor, nn.endColor] );
     //     colScales.set(attrib, scale);
     // });
 
@@ -273,18 +397,17 @@ function NodeNavigator(eleId, x0, y0, h) {
         }
 
       }))
-      .range([0, self.attribWidth * (dDimensions.keys().length)])
+      .range([0, nn.attribWidth * (dDimensions.keys().length)])
       .paddingInner(0.1)
       .paddingOuter(0);
     levelScale.domain(data.map(function (d,i) { return i; }))
-      .range([x0+self.margin, ((xScale.range()[1] + self.levelsSeparation) * data.length) + x0])
+      .range([x0+nn.margin, ((xScale.range()[1] + nn.levelsSeparation) * data.length) + x0])
       .paddingInner(0)
       .paddingOuter(0);
 
   }
 
-
-  self.updateData = function (mData, mColScales, mSortByAttr) {
+  nn.updateData = function (mData, mColScales, mSortByAttr) {
     var ctxWidth;
     if (typeof mData !== typeof []) {
       console.error("NodeNavigator setData didn't receive an array");
@@ -298,7 +421,7 @@ function NodeNavigator(eleId, x0, y0, h) {
     context = canvas.getContext("2d");
 
     updateScales();
-    ctxWidth = levelScale.range()[1] + self.margin + x0;
+    ctxWidth = levelScale.range()[1] + nn.margin + x0;
     d3.select(canvas)
       .attr("width", ctxWidth)
       .attr("height", h)
@@ -307,16 +430,17 @@ function NodeNavigator(eleId, x0, y0, h) {
     canvas.style.width = ctxWidth+"px";
     canvas.style.height = h+"px";
 
-    d3.select("#"+eleId).select("svg")
+    svg
       .attr("width", ctxWidth)
       .attr("height", h);
-    self.update();
+    nn.update();
   };
 
 
 
-  self.update = function() {
-    var w = levelScale.range()[1] + self.margin + x0;
+  nn.update = function(updateBrushes) {
+    updateBrushes = updateBrushes||true;
+    var w = levelScale.range()[1] + nn.margin + x0;
     context.clearRect(0,0,w+1,h+1);
     data.forEach(function (levelData, i) {
       levelData.forEach(function (d) {
@@ -325,11 +449,76 @@ function NodeNavigator(eleId, x0, y0, h) {
 
       drawLevelBorder(i);
       drawLevelConnections(i);
-      drawDimensionTitles(i);
+      // drawDimensionTitles(i);
+
+
     });
+
+    drawBrushes();
 
   };
 
-  return self;
+  nn.addAttrib = function (attr, scale) {
+    colScales.set(attr,scale);
+    return nn;
+  };
+  nn.addSequentialAttrib = function (attr, scale ) {
+    nn.addAttrib(attr,scale ||
+      d3.scaleLinear()
+        .domain(d3.extent(data[0], function (d) { return d[attr]; }))
+        .range(defaultColorRange));
+    return nn;
+  };
+
+  nn.addCategoricalAttrib = function (attr, scale ) {
+    nn.addAttrib(attr,scale ||
+      d3.scaleOrdinal(d3.schemeCategory20));
+    return nn;
+  };
+
+  nn.data = function(_) {
+
+    nn.addAttrib("visible",
+              d3.scaleOrdinal()
+          .domain([false,true])
+          .range(["white", "#b5cf6b"])
+          //, "#cddca3", "#8c6d31", "#bd9e39"]
+    );
+    nn.addCategoricalAttrib("group");
+
+
+    if (arguments.length) {
+      _.forEach(function (d) {
+        d.visible = true;
+      });
+      // crossfilterData = crossfilter(_);
+      // crossfilterData.byVisible = crossfilterData.dimension(function (d) { return d.visible; });
+      data = [_];
+      var nodeSizeVar=100;
+      nn.initData(
+        data,
+        colScales,
+        nodeSizeVar
+      );
+      nn.updateData(
+        data,
+        colScales
+      );
+      return nn;
+    } else {
+      return crossfilterData[0];
+    }
+  };
+
+  nn.getVisible = function() {
+    return data[data.length-1].filter(function (d) { return d.visible; });
+  };
+
+
+  nn.updateCallback = function(_) {
+    return arguments.length ? (updateCallback = _, nn) : updateCallback;
+  };
+
+  return nn;
 }
 
