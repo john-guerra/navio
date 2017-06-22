@@ -4,8 +4,7 @@
 function NodeNavigator(eleId, h) {
   "use strict";
   var nn = this,
-    data, //Contains the original data attributes in an array
-    crossfilterData = [crossfilter()], // Array of crossfiltered data
+    data = [], //Contains the original data attributes in an array
     dDimensions = d3.map(),
     dSortBy = d3.map(), //contains which attribute to sort by on each column
     yScales,
@@ -56,6 +55,7 @@ function NodeNavigator(eleId, h) {
   svg.append("text")
     .attr("class", "tooltip")
     .style("pointer-events", "none")
+    .style("font-family", "sans-serif")
     .attr("x", -100);
 
 
@@ -197,7 +197,7 @@ function NodeNavigator(eleId, h) {
       var brushed = d3.event.selection;
       var filteredData = data[i].filter(function (d) {
         var y = yScales[i](d[nn.id]);
-        d.visible = y >= brushed[0] && y <= brushed[1];
+        d.visible = y >= (brushed[0] - yScales[i].bandwidth()) && y <= (brushed[1] );
         return d.visible;
       });
 
@@ -328,6 +328,7 @@ function NodeNavigator(eleId, h) {
     levelOverlayEnter
       .append("text")
         .attr("class", "numNodesLabel")
+        .style("font-family", "sans-serif")
       .merge(levelOverlay.select(".numNodesLabel"))
         .attr("y", function (_, i) {
           return yScales[i].range()[1] + 15;
@@ -555,8 +556,6 @@ function NodeNavigator(eleId, h) {
       _.forEach(function (d) {
         d.visible = true;
       });
-      // crossfilterData = crossfilter(_);
-      // crossfilterData.byVisible = crossfilterData.dimension(function (d) { return d.visible; });
       data = [_];
       var nodeSizeVar=100;
       nn.initData(
@@ -570,7 +569,7 @@ function NodeNavigator(eleId, h) {
       );
       return nn;
     } else {
-      return crossfilterData[0];
+      return data[0];
     }
   };
 
