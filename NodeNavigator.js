@@ -16,6 +16,7 @@ function NodeNavigator(eleId, h) {
     canvas,
     context,
     defaultColorRange = ["white", "blue"],
+    visibleColorRange = ["white", "#b5cf6b"],
     x0=0,
     y0=100,
     updateCallback = function () {};
@@ -45,11 +46,17 @@ function NodeNavigator(eleId, h) {
   var svg = d3.select(eleId)
     .select("#nodeNavigator")
     .append("svg")
+      .style("overflow", "visible")
       .style("position", "absolute")
       .style("top", 0)
       .style("left", 0);
   svg.append("g")
     .attr("class", "attribs");
+
+  svg.append("text")
+    .attr("class", "tooltip")
+    .style("pointer-events", "none")
+    .attr("x", -100);
 
 
 
@@ -79,6 +86,17 @@ function NodeNavigator(eleId, h) {
   // context.strokeStyle = "rgba(0,100,160,1)";
   // context.strokeStyle = "rgba(0,0,0,0.02)";
 
+
+
+  function invertOrdinalScale(scale, x) {
+    // Taken from https://bl.ocks.org/shimizu/808e0f5cadb6a63f28bb00082dc8fe3f
+    // custom invert function
+    var domain = scale.domain();
+    var range = scale.range();
+    var qScale = d3.scaleQuantize().domain(range).range(domain);
+
+    return qScale(x);
+  }
 
   function nnOnClickLevel(d) {
     console.log("click " + d);
@@ -122,10 +140,11 @@ function NodeNavigator(eleId, h) {
 
       //If the range bands are tick enough draw divisions
       if (yScales[level].bandwidth() > nn.divisionsThreshold) {
-        y = Math.round(yScales[level](item[nn.id]));
-        // context.beginPath();
-        context.moveTo(x(attrib, level), y);
-        context.lineTo(x(attrib, level) + xScale.bandwidth(), y);
+        var yLine = Math.round(yScales[level](item[nn.id])) ;
+        // y = yScales[level](item[nn.id])+yScales[level].bandwidth()/2;
+        context.beginPath();
+        context.moveTo(x(attrib, level), yLine);
+        context.lineTo(x(attrib, level) + xScale.bandwidth(), yLine);
         context.lineWidth = 1;
         // context.lineWidth = 1;
         context.strokeStyle = nn.divisionsColor;
@@ -149,11 +168,13 @@ function NodeNavigator(eleId, h) {
   function addBrush(d, i) {
     var _brush = d3.select(this)
       .selectAll(".brush")
-      .data([0]);// fake data
+      .data([{data:d,level:i}]);// fake data
 
     _brush.enter()
       .merge(_brush)
       .append("g")
+        .on("mousemove", onMouseOver)
+        .on("mouseout", onMouseOut)
         .attr("class", "brush")
         .call(d3.brushY()
           .extent([
@@ -201,6 +222,31 @@ function NodeNavigator(eleId, h) {
     // Update the brush
   }
 
+  function onMouseOver(d) {
+    console.log(d);
+    var screenY = d3.mouse(d3.event.target)[1],
+      screenX = d3.mouse(d3.event.target)[0];
+
+    var filteredData = invertOrdinalScale(yScales[d.level], screenY);
+
+    // var filteredData = d.data.filter(function (e) {
+    //   var y = yScales[d.level](e[nn.id]);
+    //   e.visible = y >= screenY && y < screenY + yScales[d.level];
+    //   return e.visible;
+    // });
+    console.log(filteredData);
+
+    svg.select(".tooltip")
+      .attr("x", screenX)
+      .attr("y", screenY)
+      .text(filteredData);
+  }
+
+  function onMouseOut() {
+    // svg.select(".tooltip")
+    //   .attr("x", -100)
+    //   .text("");
+  }
 
   function drawBrushes() {
     // var attribHolder, attribsData;
@@ -221,11 +267,12 @@ function NodeNavigator(eleId, h) {
       .selectAll(".levelOverlay")
       .data(data);
 
-    var attribOverlay = levelOverlay.enter()
+    var levelOverlayEnter = levelOverlay.enter()
       .append("g")
         .attr("class", "levelOverlay")
-      .merge(levelOverlay)
-        .each(addBrush)
+        .each(addBrush);
+
+    var attribOverlay = levelOverlayEnter.merge(levelOverlay)
         .selectAll(".attribOverlay")
         .data(function (_, i) {
           return attribs.map(function (a) {
@@ -249,6 +296,7 @@ function NodeNavigator(eleId, h) {
     attribOverlayEnter
       .append("rect")
       .merge(attribOverlay.select("rect"))
+
       .attr("fill", "none")
       // .style("opacity", "0.1")
       .attr("x", 0)
@@ -276,6 +324,22 @@ function NodeNavigator(eleId, h) {
     attribOverlay.exit().remove();
     levelOverlay.exit().remove();
 
+
+    levelOverlayEnter
+      .append("text")
+        .attr("class", "numNodesLabel")
+      .merge(levelOverlay.select(".numNodesLabel"))
+        .attr("y", function (_, i) {
+          return yScales[i].range()[1] + 15;
+        })
+        .attr("x", function (_, i) {
+          return  levelScale(i);
+        })
+        .text(function (d) {
+          return d.length;
+        });
+
+    levelOverlay.exit().remove();
   }
 
   function drawLine(points, width, color, close) {
@@ -481,7 +545,7 @@ function NodeNavigator(eleId, h) {
     nn.addAttrib("visible",
               d3.scaleOrdinal()
           .domain([false,true])
-          .range(["white", "#b5cf6b"])
+          .range(visibleColorRange)
           //, "#cddca3", "#8c6d31", "#bd9e39"]
     );
     nn.addCategoricalAttrib("group");
@@ -518,6 +582,15 @@ function NodeNavigator(eleId, h) {
   nn.updateCallback = function(_) {
     return arguments.length ? (updateCallback = _, nn) : updateCallback;
   };
+
+  nn.visibleColorRange = function(_) {
+    return arguments.length ? (visibleColorRange = _, nn) : visibleColorRange;
+  };
+
+  nn.defaultColorRange = function(_) {
+    return arguments.length ? (defaultColorRange = _, nn) : defaultColorRange;
+  };
+
 
   return nn;
 }
