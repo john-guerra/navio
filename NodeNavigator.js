@@ -377,7 +377,8 @@ function NodeNavigator(eleId, h) {
 
     context.strokeStyle = nn.linkColor;
     context.globalAlpha = 0.1;
-    links[links.length-1].slice(0,10000).forEach(drawLink);
+    context.lineWidth = 0.5;
+    links[links.length-1].forEach(drawLink);
     context.stroke();
     context.restore();
   }
