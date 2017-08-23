@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+#nn {
+  float:left;
+}
+#graph {
+  float:left;
+}
+</style>
+<h1>Twitter Network</h1>
+<button id="recluster">Recluster</button>
+<div id="nn"></div>
+<canvas id="graph" width="800" height="800"></canvas>
+
+<!-- <script src="https://d3js.org/d3.v4.min.js"></script> -->
+<script src="d3.v4.min.js"></script>
+<script src="netClustering.js"></script>
+<script src="forceInABox.js"></script>
+<script src="../NodeNavigator.js"></script>
+<script>
+/* global d3, forceInABox, NodeNavigator */
+
+var canvas = d3.select("#graph").node(),
+  context = canvas.getContext("2d"),
+  width = canvas.width,
+  height = canvas.height;
+
+// var radius = 2;
+var size = d3.scaleLinear().range([2,5]);
+
+var color = d3.scaleOrdinal(d3.schemeCategory20);
+
+var simulation = d3.forceSimulation()
+    .force("link", d3.forceLink()
+      // .strength(0.001)
+      // .distance(10)
+      )
+    .force("charge", d3.forceManyBody().strength(-50))
+    .force("collide", d3.forceCollide(function (d) { return d.r+1; }).iterations(4))
+    .force("x", d3.forceX(width / 2).strength(0.1))
+    .force("y", d3.forceY(height / 2).strength(0.1));
+
+
+d3.json("duto_guerraNetworkCooccurrence_clustered.json", function(error, graph) {
+  var dicNodes = d3.map();
+  graph.nodes.forEach(function (n) {
+    n.degree = 0;
+    // n.cluster = -1;
+    n.id = +n.id;
+    dicNodes.set(n.id, n);
+  });
+
+
+  graph.links = graph.links.filter(function (d) {
+    return +d.count_followers_in_query > 1;
+  });
+  graph.links.forEach(function (e) {
+    // e.count = +e.count;
+    if (dicNodes.has(e.source.id)) {
+      e.source = dicNodes.get(e.source.id);
+    } else {
+      e.source = {
+        id:e.source,
+        name:e.source,
+        degree:0,
+        // cluster: -1,
+        // screen_name:d.target,
+        count:1
+      };
+      dicNodes.set(e.source.id, e.source);
+    }
+
+    e.source.degree+=1;
+
+    if (dicNodes.has(e.target.id)) {
+      e.target = dicNodes.get(e.target.id);
+    } else {
+      e.target = {
+        id:e.target,
+        name:e.target,
+        degree:0,
+        // cluster: -1,
+        // screen_name:d.target,
+        count:1
+      };
+      dicNodes.set(e.target.id, e.target);
+    }
+
+    e.target.degree+=1;
+  });
+  var minDegree = 2;
+  var filteredLinks = graph.links.filter(function (e) {
+    return e.count_followers_in_query > minDegree;
+  });
+  var filteredGraph = {
+    nodes: dicNodes.values(),
+    links: filteredLinks
+  };
+
+  if (error) throw error;
+
+  nodeNavigator.links(graph.links);
+  nodeNavigator.data(graph.nodes);
+  nodeNavigator.updateCallback(function (nodes) {
+    update({
+      nodes:nodes,
+      links:graph.links
+    });
+  });
+
+  update(filteredGraph);
+});
+
+
+var nodeNavigator = new NodeNavigator(
+  "#nn",
+  height
+).id("screen_name");
+
+nodeNavigator.addSequentialAttrib("degree");
+
+nodeNavigator.addSequentialAttrib("friends_count");
+nodeNavigator.addSequentialAttrib("favourites_count");
+nodeNavigator.addSequentialAttrib("followers_count");
+nodeNavigator.addSequentialAttrib("listed_count");
+nodeNavigator.addSequentialAttrib("statuses_count");
+nodeNavigator.addCategoricalAttrib("utc_offset");
+
+nodeNavigator.addCategoricalAttrib("cluster", color);
+
+
+function update(graph) {
+
+  simulation.stop();
+
+  var dVisibleNodes = {};
+  graph.nodes.map(function (n) {
+    return dVisibleNodes[n.id] = true;
+  });
+  var visibleLinks = graph.links.filter(function (d) {
+    return dVisibleNodes[d.source.id]&&
+      dVisibleNodes[d.target.id];
+  });
+  console.log("nodes = " + graph.nodes.length + " links="+visibleLinks.length);
+
+  size.domain(d3.extent(nodeNavigator.getVisible(), function (d) { return d.degree; }));
+
+  graph.nodes.forEach(function (d) {
+    d.r = size(d.degree);
+    // d.visible = true;
+  });
+
+  var clusters = d3.nest()
+    .key(function(d) { return d.cluster; })
+    .entries(nodeNavigator.getVisible())
+    .sort(function(a, b) { return b.values.length - a.values.length; });
+
+  var groupingForce = forceInABox()
+        .links(graph.links)
+        .template("force")
+        .groupBy("cluster")
+        .linkStrengthInterCluster(0.001)
+        .linkStrengthIntraCluster(0.000001)
+        .size([width, height]);
+  simulation
+    // .force("grouping", groupingForce);
+
+  simulation
+      .nodes(nodeNavigator.getVisible())
+      .on("tick", ticked);
+
+  simulation.force("link")
+      // .strength(groupingForce.getLinkStrength)
+      .links(visibleLinks);
+
+
+  d3.select(canvas)
+      .on("mousemove", onHover)
+      .call(d3.drag()
+          .container(canvas)
+          .subject(dragsubject)
+          .on("start", dragstarted)
+          .on("drag", dragged)
+          .on("end", dragended));
+
+  d3.select("#recluster")
+    .on("click", function () {
+      console.log("Clustering");
+      netClustering.cluster(nodeNavigator.getVisible(), visibleLinks);
+      console.log("done");
+      update(graph);
+    });
+
+
+  simulation.alpha(0.7).restart();
+
+  function ticked() {
+    context.clearRect(0, 0, width, height);
+
+    // context.translate(width / 2, height / 2);
+
+    if (simulation.alpha() < 0.05) {
+      console.log("Draw links=" + visibleLinks.length);
+      context.save();
+      // context.beginPath();
+      // context.strokeStyle = "rgb(10,10,200)";
+      // context.globalAlpha = 0.1;
+      // context.lineWidth = 1.5;
+
+      visibleLinks.forEach(drawLink);
+      // context.stroke();
+      context.restore();
+
+    }
+
+
+    clusters.forEach(function(cluster) {
+      context.beginPath();
+      context.globalAlpha = 1;
+
+      cluster.values.forEach(drawNode);
+      context.fillStyle = color(cluster.key);
+      context.fill();
+      context.beginPath();
+      context.fillStyle = "black";
+      cluster.values.filter(function (d) { return d.degree > 20; } ).forEach(drawNodeText);
+      context.fill();
+
+      // context.stroke();
+    });
+
+    context.restore();
+  }
+
+  function dragsubject() {
+    return simulation.find(d3.event.x, d3.event.y);
+  }
+}
+
+function onHover() {
+  console.log(simulation.find(d3.event.x, d3.event.y));
+}
+
+function dragstarted() {
+  if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+  d3.event.subject.fx = d3.event.subject.x;
+  d3.event.subject.fy = d3.event.subject.y;
+}
+
+function dragged() {
+  d3.event.subject.fx = d3.event.x;
+  d3.event.subject.fy = d3.event.y;
+}
+
+function dragended() {
+  if (!d3.event.active) simulation.alphaTarget(0);
+  d3.event.subject.fx = null;
+  d3.event.subject.fy = null;
+}
+
+function drawLink(d) {
+  context.beginPath();
+  // context.strokeStyle = "rgba(180,180,180,0.01)";
+  context.strokeStyle = color(d.target.cluster);
+  context.globalAlpha=0.1;
+  context.moveTo(d.source.x, d.source.y);
+  context.lineTo(d.target.x, d.target.y);
+  context.stroke();
+}
+
+
+function drawNode(d) {
+  context.moveTo(d.x + d.r/2, d.y + d.r/2);
+  context.arc(d.x, d.y, d.r, 0, 2 * Math.PI);
+}
+
+function drawNodeText(d) {
+  context.moveTo(d.x + d.r/2, d.y + d.r/2 + 5);
+  context.fillText(d.screen_name, d.x, d.y);
+}
+
+// var thumbImg = document.createElement('img');
+
+// thumbImg.src = 'path_to_image';
+// thumbImg.onload = function() {
+//     tmpCtx.save();
+//     tmpCtx.beginPath();
+//     tmpCtx.arc(25, 25, 25, 0, Math.PI * 2, true);
+//     tmpCtx.closePath();
+//     tmpCtx.clip();
+
+//     tmpCtx.drawImage(thumbImg, 0, 0, 50, 50);
+
+//     tmpCtx.beginPath();
+//     tmpCtx.arc(0, 0, 25, 0, Math.PI * 2, true);
+//     tmpCtx.clip();
+//     tmpCtx.closePath();
+//     tmpCtx.restore();
+// };
+
+</script>
