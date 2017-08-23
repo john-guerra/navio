@@ -38,6 +38,7 @@ var simulation = d3.forceSimulation()
     .force("center", d3.forceCenter(width / 2, height / 2));
 
 var nn = new NodeNavigator("#nn", height);
+nn.addCategoricalAttrib("group");
 
 function update(graph) {
   simulation.stop();
@@ -62,7 +63,7 @@ function update(graph) {
 
   var node = nodesG
     .selectAll("circle")
-    .data(nn.getVisible(), function (d) { return d.id; });
+    .data(graph.nodes, function (d) { return d.id; });
 
   var nodeEnter = node
     .enter().append("circle");
@@ -82,7 +83,7 @@ function update(graph) {
       .text(function(d) { return d.id; });
 
   simulation
-      .nodes(nn.getVisible())
+      .nodes(graph.nodes)
       .on("tick", ticked);
 
   simulation.force("link")

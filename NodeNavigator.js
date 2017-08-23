@@ -5,6 +5,7 @@ function NodeNavigator(eleId, h) {
   "use strict";
   var nn = this,
     data = [], //Contains the original data attributes in an array
+    links = [], //Contains the original data attributes in an array
     dDimensions = d3.map(),
     dSortBy = d3.map(), //contains which attribute to sort by on each column
     yScales,
@@ -14,10 +15,13 @@ function NodeNavigator(eleId, h) {
     levelScale,
     canvas,
     context,
-    defaultColorRange = ["white", "blue"],
+    // Taken from d3.chromatic https://github.com/d3/d3-scale-chromatic/blob/master/src/sequential-single/Blues.js
+    defaultColorRange = ["#deebf7", "#2171b5"],
     visibleColorRange = ["white", "#b5cf6b"],
+
     x0=0,
     y0=100,
+    id = "id",
     updateCallback = function () {};
 
   nn.margin = 10;
@@ -26,10 +30,13 @@ function NodeNavigator(eleId, h) {
   nn.divisionsColor = "white";
   nn.levelConnectionsColor = "rgba(205, 220, 163, 0.5)";
   nn.divisionsThreshold = 3;
-  nn.id = "id";
+
   nn.startColor = "white";
   nn.endColor = "red";
   nn.legendFont = "14px Arial";
+  nn.linkColor = "#2171b5";
+
+
 
   d3.select(eleId)
     // .attr("width", 150)
@@ -109,7 +116,7 @@ function NodeNavigator(eleId, h) {
 
   function getAttribs(obj) {
     var attr;
-    dDimensions =d3.map();
+    dDimensions = d3.map();
     for (attr in obj) {
       if (obj.hasOwnProperty(attr)) {
         dDimensions.set(attr, true);
@@ -122,8 +129,8 @@ function NodeNavigator(eleId, h) {
 
     for (i = 0; i < dDimensions.keys().length; i++) {
       attrib = dDimensions.keys()[i];
-      y = Math.round(yScales[level](item[nn.id]) + yScales[level].bandwidth()/2);
-      // y = yScales[level](item[nn.id]) + yScales[level].bandwidth()/2;
+      y = Math.round(yScales[level](item[id]) + yScales[level].bandwidth()/2);
+      // y = yScales[level](item[id]) + yScales[level].bandwidth()/2;
 
       context.beginPath();
       context.moveTo(x(attrib, level), y);
@@ -140,8 +147,8 @@ function NodeNavigator(eleId, h) {
 
       //If the range bands are tick enough draw divisions
       if (yScales[level].bandwidth() > nn.divisionsThreshold) {
-        var yLine = Math.round(yScales[level](item[nn.id])) ;
-        // y = yScales[level](item[nn.id])+yScales[level].bandwidth()/2;
+        var yLine = Math.round(yScales[level](item[id])) ;
+        // y = yScales[level](item[id])+yScales[level].bandwidth()/2;
         context.beginPath();
         context.moveTo(x(attrib, level), yLine);
         context.lineTo(x(attrib, level) + xScale.bandwidth(), yLine);
@@ -152,6 +159,7 @@ function NodeNavigator(eleId, h) {
       }
 
     }
+
   }
 
   function drawLevelBorder(i) {
@@ -184,7 +192,7 @@ function NodeNavigator(eleId, h) {
           .on("end", brushended))
         .selectAll("rect")
           // .attr("x", -8)
-          .attr("width", 16);
+          .attr("width", xScale.bandwidth()* dDimensions.size());
 
     _brush.exit().remove();
 
@@ -196,7 +204,7 @@ function NodeNavigator(eleId, h) {
       console.log(d);
       var brushed = d3.event.selection;
       var filteredData = data[i].filter(function (d) {
-        var y = yScales[i](d[nn.id]);
+        var y = yScales[i](d[id]);
         d.visible = y >= (brushed[0] - yScales[i].bandwidth()) && y <= (brushed[1] );
         return d.visible;
       });
@@ -230,7 +238,7 @@ function NodeNavigator(eleId, h) {
     var filteredData = invertOrdinalScale(yScales[d.level], screenY);
 
     // var filteredData = d.data.filter(function (e) {
-    //   var y = yScales[d.level](e[nn.id]);
+    //   var y = yScales[d.level](e[id]);
     //   e.visible = y >= screenY && y < screenY + yScales[d.level];
     //   return e.visible;
     // });
@@ -343,6 +351,38 @@ function NodeNavigator(eleId, h) {
     levelOverlay.exit().remove();
   }
 
+  // Links between nodes
+  function drawLink(link) {
+    var
+      lastAttrib = xScale.domain()[xScale.domain().length-1],
+      rightBorder = x(lastAttrib, data.length-1)+ xScale.bandwidth(),
+      ys = yScales[data.length-1](link.source[id]),
+      yt = yScales[data.length-1](link.target[id]),
+      miny = Math.min(ys, yt),
+      maxy = Math.max(ys, yt),
+      midy = maxy-miny;
+    context.moveTo(rightBorder, miny); //starting point
+    context.quadraticCurveTo(
+      rightBorder + midy/3, miny + midy/2, // mid point
+      rightBorder, maxy // end point
+      );
+  }
+
+  function drawLinks() {
+    console.log("draw links ");
+    if (!links.length) return;
+
+    context.save();
+    context.beginPath();
+
+    context.strokeStyle = nn.linkColor;
+    context.globalAlpha = 0.1;
+    links[links.length-1].slice(0,10000).forEach(drawLink);
+    context.stroke();
+    context.restore();
+  }
+
+
   function drawLine(points, width, color, close) {
     context.beginPath();
     points.forEach(function (p, i) {
@@ -361,18 +401,17 @@ function NodeNavigator(eleId, h) {
       context.strokeStyle = color;
       context.stroke();
     }
-
-
   }
+
   function drawLevelConnections(level) {
     if (level <= 0) {
       return;
     }
     data[level].forEach(function (item, i) {
       var locPrevLevel = {x: levelScale(level-1) + xScale.range()[1],
-        y: yScales[level-1](item[nn.id]) };
+        y: yScales[level-1](item[id]) };
       var locLevel = {x: levelScale(level),
-        y: yScales[level](item[nn.id]) };
+        y: yScales[level](item[id]) };
 
       var points = [ locPrevLevel,
         {x: locPrevLevel.x + nn.levelsSeparation * 0.3, y: locPrevLevel.y},
@@ -437,18 +476,19 @@ function NodeNavigator(eleId, h) {
         .paddingInner(0.0)
         .paddingOuter(0);
       yScales[i].domain(levelData.map(function (d) {
-        return d[nn.id];
+        return d[id];
       })
       );
     });
 
+    // Update color scales domains
+
     // colScales = d3.map();
-    // dDimensions.keys().forEach(function (attrib) {
-    //     var scale = d3.scale.linear()
-    //         .domain(d3.extent(data[0].map(function (d) { return d[attrib]; }))) //TODO: make it compute it based on the local range
-    //         .range([nn.startColor, nn.endColor] );
-    //     colScales.set(attrib, scale);
-    // });
+    dDimensions.keys().forEach(function (attrib) {
+      var scale = colScales.get(attrib);
+      scale.domain(d3.extent(data[0].map(function (d) { return d[attrib]; }))); //TODO: make it compute it based on the local range
+      colScales.set(attrib, scale);
+    });
 
     xScale
       .domain(dDimensions.keys().sort(function (a,b) {
@@ -517,7 +557,11 @@ function NodeNavigator(eleId, h) {
       // drawDimensionTitles(i);
 
 
+
+
     });
+
+    drawLinks();
 
     drawBrushes();
 
@@ -527,10 +571,13 @@ function NodeNavigator(eleId, h) {
     colScales.set(attr,scale);
     return nn;
   };
+
   nn.addSequentialAttrib = function (attr, scale ) {
     nn.addAttrib(attr,scale ||
       d3.scaleLinear()
-        .domain(d3.extent(data[0], function (d) { return d[attr]; }))
+        .domain(data!==undefined && data.length>0 ?
+            d3.extent(data[0], function (d) { return d[attr]; }) :
+            [0, 1]) //if we don't have data, set the default domain
         .range(defaultColorRange));
     return nn;
   };
@@ -541,21 +588,33 @@ function NodeNavigator(eleId, h) {
     return nn;
   };
 
-  nn.data = function(_) {
+  nn.links = function (_) {
+    if (arguments.length) {
+      links = [_];
+      return nn;
+    } else {
+      return links;
+    }
+  };
 
-    nn.addAttrib("visible",
-              d3.scaleOrdinal()
-          .domain([false,true])
-          .range(visibleColorRange)
-          //, "#cddca3", "#8c6d31", "#bd9e39"]
-    );
-    nn.addCategoricalAttrib("group");
+
+  nn.data = function(_) {
+    if (!colScales.has("visible")) {
+      nn.addAttrib("visible",
+                d3.scaleOrdinal()
+            .domain([false,true])
+            .range(visibleColorRange)
+            //, "#cddca3", "#8c6d31", "#bd9e39"]
+      );
+    }
+    // nn.addCategoricalAttrib("group");
 
 
     if (arguments.length) {
       _.forEach(function (d) {
         d.visible = true;
       });
+
       data = [_];
       var nodeSizeVar=100;
       nn.initData(
@@ -590,6 +649,9 @@ function NodeNavigator(eleId, h) {
     return arguments.length ? (defaultColorRange = _, nn) : defaultColorRange;
   };
 
+  nn.id = function(_) {
+    return arguments.length ? (id = _, nn) : id;
+  };
 
   return nn;
 }
