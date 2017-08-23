@@ -6,6 +6,7 @@ function NodeNavigator(eleId, h) {
   var nn = this,
     data = [], //Contains the original data attributes in an array
     links = [], //Contains the original data attributes in an array
+    dData = d3.map(), // A hash for the data
     dDimensions = d3.map(),
     dSortBy = d3.map(), //contains which attribute to sort by on each column
     yScales,
@@ -182,6 +183,7 @@ function NodeNavigator(eleId, h) {
       .merge(_brush)
       .append("g")
         .on("mousemove", onMouseOver)
+        .on("click", onClick)
         .on("mouseout", onMouseOut)
         .attr("class", "brush")
         .call(d3.brushY()
@@ -192,7 +194,7 @@ function NodeNavigator(eleId, h) {
           .on("end", brushended))
         .selectAll("rect")
           // .attr("x", -8)
-          .attr("width", xScale.bandwidth()* dDimensions.size());
+          .attr("width", xScale.bandwidth()* (dDimensions.size()+1));
 
     _brush.exit().remove();
 
@@ -226,34 +228,56 @@ function NodeNavigator(eleId, h) {
       // nn.update(false); //don't update brushes
 
       // d3.select(this).transition().call(d3.event.target.move, d1.map(x));
+    }// brushend
+
+    function onClick() {
+      console.log("click");
+
+      var screenY = d3.mouse(d3.event.target)[1],
+        screenX = d3.mouse(d3.event.target)[0];
+      var itemId = invertOrdinalScale(yScales[i], screenY);
+      var itemAttr = invertOrdinalScale(xScale, screenX - levelScale(i));
+      var sel = dData.get(itemId);
+      var filteredData = data[i].filter(function (d) {
+        return d[itemAttr] === sel[itemAttr];
+      });
+      var newData = data.slice(0,i+1);
+      newData.push(filteredData);
+
+      nn.updateData(
+        newData,
+        colScales
+      );
+      console.log("Selected " + nn.getVisible().length + " calling updateCallback");
+      updateCallback(nn.getVisible());
     }
     // Update the brush
   }
 
-  function onMouseOver(d) {
-    console.log(d);
+
+  function onMouseOver(data) {
     var screenY = d3.mouse(d3.event.target)[1],
       screenX = d3.mouse(d3.event.target)[0];
 
-    var filteredData = invertOrdinalScale(yScales[d.level], screenY);
-
-    // var filteredData = d.data.filter(function (e) {
+    var itemId = invertOrdinalScale(yScales[data.level], screenY);
+    var itemAttr = invertOrdinalScale(xScale, screenX - levelScale(data.level));
+    var d = dData.get(itemId);
+    // var itemId = d.data.filter(function (e) {
     //   var y = yScales[d.level](e[id]);
     //   e.visible = y >= screenY && y < screenY + yScales[d.level];
     //   return e.visible;
     // });
-    console.log(filteredData);
 
     svg.select(".tooltip")
       .attr("x", screenX)
       .attr("y", screenY)
-      .text(filteredData);
+      .text(itemId + "  " + itemAttr + " : " + d[itemAttr]);
   }
 
   function onMouseOut() {
-    // svg.select(".tooltip")
-    //   .attr("x", -100)
-    //   .text("");
+    svg.select(".tooltip")
+      .attr("x", -100)
+      .text("");
   }
 
   function drawBrushes() {
@@ -356,8 +380,8 @@ function NodeNavigator(eleId, h) {
     var
       lastAttrib = xScale.domain()[xScale.domain().length-1],
       rightBorder = x(lastAttrib, data.length-1)+ xScale.bandwidth(),
-      ys = yScales[data.length-1](link.source[id]),
-      yt = yScales[data.length-1](link.target[id]),
+      ys = yScales[data.length-1](link.source[id]) + yScales[data.length-1].bandwidth()/2,
+      yt = yScales[data.length-1](link.target[id]) + yScales[data.length-1].bandwidth()/2,
       miny = Math.min(ys, yt),
       maxy = Math.max(ys, yt),
       midy = maxy-miny;
@@ -377,7 +401,7 @@ function NodeNavigator(eleId, h) {
 
     context.strokeStyle = nn.linkColor;
     context.globalAlpha = 0.1;
-    context.lineWidth = 0.5;
+    // context.lineWidth = 0.5;
     links[links.length-1].forEach(drawLink);
     context.stroke();
     context.restore();
@@ -464,6 +488,10 @@ function NodeNavigator(eleId, h) {
     colScales  = mColScales;
     colScales.keys().forEach(function (d) {
       dDimensions.set(d, true);
+    });
+    dData = d3.map();
+    mData[0].forEach(function (d) {
+      dData.set(d[id], d);
     });
     // nn.updateData(mData, mColScales, mSortByAttr);
 

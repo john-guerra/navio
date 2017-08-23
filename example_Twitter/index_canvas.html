@@ -24,7 +24,8 @@
 var canvas = d3.select("#graph").node(),
   context = canvas.getContext("2d"),
   width = canvas.width,
-  height = canvas.height;
+  height = canvas.height,
+  selected = null;
 
 // var radius = 2;
 var size = d3.scaleLinear().range([2,5]);
@@ -36,25 +37,27 @@ var simulation = d3.forceSimulation()
       // .strength(0.001)
       // .distance(10)
       )
-    .force("charge", d3.forceManyBody().strength(-50))
-    .force("collide", d3.forceCollide(function (d) { return d.r+1; }).iterations(4))
-    .force("x", d3.forceX(width / 2).strength(0.1))
-    .force("y", d3.forceY(height / 2).strength(0.1));
+    .force("charge", d3.forceManyBody().strength(-5))
+    // .force("collide", d3.forceCollide(function (d) { return d.r+1; }).iterations(4))
+    .force("center", d3.forceCenter(width/2, height/2));
+    // .force("x", d3.forceX(width / 2).strength(0.1))
+    // .force("y", d3.forceY(height / 2).strength(0.1));
 
 
 d3.json("duto_guerraNetworkCooccurrence_clustered.json", function(error, graph) {
   var dicNodes = d3.map();
   graph.nodes.forEach(function (n) {
     n.degree = 0;
+    n.visible = true;
     // n.cluster = -1;
     n.id = +n.id;
     dicNodes.set(n.id, n);
   });
 
 
-  graph.links = graph.links.filter(function (d) {
-    return +d.count_followers_in_query > 1;
-  });
+  // graph.links = graph.links.filter(function (d) {
+  //   return +d.count_followers_in_query > 1;
+  // });
   graph.links.forEach(function (e) {
     // e.count = +e.count;
     if (dicNodes.has(e.source.id)) {
@@ -65,7 +68,7 @@ d3.json("duto_guerraNetworkCooccurrence_clustered.json", function(error, graph) 
         name:e.source,
         degree:0,
         // cluster: -1,
-        // screen_name:d.target,
+        screen_name:e.target,
         count:1
       };
       dicNodes.set(e.source.id, e.source);
@@ -81,7 +84,7 @@ d3.json("duto_guerraNetworkCooccurrence_clustered.json", function(error, graph) 
         name:e.target,
         degree:0,
         // cluster: -1,
-        // screen_name:d.target,
+        screen_name:e.target,
         count:1
       };
       dicNodes.set(e.target.id, e.target);
@@ -90,9 +93,10 @@ d3.json("duto_guerraNetworkCooccurrence_clustered.json", function(error, graph) 
     e.target.degree+=1;
   });
   var minDegree = 2;
-  var filteredLinks = graph.links.filter(function (e) {
-    return e.count_followers_in_query > minDegree;
-  });
+  // var filteredLinks = graph.links.filter(function (e) {
+  //   return e.count_followers_in_query > minDegree;
+  // });
+  var filteredLinks = graph.links;
   var filteredGraph = {
     nodes: dicNodes.values(),
     links: filteredLinks
@@ -100,8 +104,8 @@ d3.json("duto_guerraNetworkCooccurrence_clustered.json", function(error, graph) 
 
   if (error) throw error;
 
-  nodeNavigator.links(graph.links);
-  nodeNavigator.data(graph.nodes);
+  nodeNavigator.links(filteredGraph.links);
+  nodeNavigator.data(filteredGraph.nodes);
   nodeNavigator.updateCallback(function (nodes) {
     update({
       nodes:nodes,
@@ -201,7 +205,6 @@ function update(graph) {
     // context.translate(width / 2, height / 2);
 
     if (simulation.alpha() < 0.05) {
-      console.log("Draw links=" + visibleLinks.length);
       context.save();
       // context.beginPath();
       // context.strokeStyle = "rgb(10,10,200)";
@@ -224,12 +227,19 @@ function update(graph) {
       context.fill();
       context.beginPath();
       context.fillStyle = "black";
-      cluster.values.filter(function (d) { return d.degree > 20; } ).forEach(drawNodeText);
+      // cluster.values.filter(function (d) { return d.degree > 200; } ).forEach(drawNodeText);
       context.fill();
 
       // context.stroke();
     });
 
+    if (selected) {
+      context.beginPath();
+      context.fillStyle = "black";
+      drawNodeText(selected);
+      context.fill();
+
+    }
     context.restore();
   }
 
@@ -239,7 +249,13 @@ function update(graph) {
 }
 
 function onHover() {
-  console.log(simulation.find(d3.event.x, d3.event.y));
+  var d = simulation.find(d3.event.x, d3.event.y);
+  selected = d;
+  context.beginPath();
+  context.fillStyle = "black";
+  drawNodeText(selected);
+  context.fill();
+  console.log(d);
 }
 
 function dragstarted() {
