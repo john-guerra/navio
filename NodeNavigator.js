@@ -9,6 +9,7 @@ function NodeNavigator(eleId, h) {
     dData = d3.map(), // A hash for the data
     dDimensions = d3.map(),
     dSortBy = d3.map(), //contains which attribute to sort by on each column
+    dBrushes = d3.map(),
     yScales,
     xScale,
     x,
@@ -36,6 +37,7 @@ function NodeNavigator(eleId, h) {
   nn.endColor = "red";
   nn.legendFont = "14px Arial";
   nn.linkColor = "#2171b5";
+  // nn.linkColor = "rgba(0,0,70,0.9)";
 
 
 
@@ -66,8 +68,26 @@ function NodeNavigator(eleId, h) {
     .style("font-family", "sans-serif")
     .attr("x", -100);
 
-
-
+  svg.append("g")
+    .attr("id", "closeButton")
+    .style("fill", "white")
+    .style("stroke", "black")
+    .style("display", "none")
+    .append("path")
+    .call(function (sel) {
+      var crossSize = 7,
+        path = d3.path(); // Draw a cross and a circle
+      path.moveTo(0, 0);
+      path.lineTo(crossSize, crossSize);
+      path.moveTo(crossSize, 0);
+      path.lineTo(0, crossSize);
+      path.moveTo(crossSize*1.2 + crossSize/2, crossSize/2);
+      path.arc(crossSize/2, crossSize/2, crossSize*1.2, 0, Math.PI*2);
+      sel.attr("d", path.toString());
+    })
+    .on("click", function () {
+      deleteOneLevel();
+    });
 
   xScale = d3.scaleBand()
     // .rangeBands([0, nn.attribWidth], 0.1, 0);
@@ -174,7 +194,28 @@ function NodeNavigator(eleId, h) {
     context.stroke();
   }
 
+
+  function removeBrushOnLevel(lev) {
+    d3.select("#level"+lev)
+      .selectAll(".brush")
+      .call(dBrushes.get(lev).move, null);
+  }
+
+  function removeAllBrushesBut(but) {
+    for (var lev=0; lev< data.length ; lev+=1) {
+      if (lev===but) continue;
+      removeBrushOnLevel(lev);
+    }
+  }
+
+
   function addBrush(d, i) {
+    dBrushes.set(i, d3.brushY()
+          .extent([
+            [x(xScale.domain()[0], i),yScales[i].range()[0]],
+            [x(xScale.domain()[xScale.domain().length-1], i) + xScale.bandwidth(), yScales[i].range()[1]]
+          ])
+          .on("end", brushended));
     var _brush = d3.select(this)
       .selectAll(".brush")
       .data([{data:d,level:i}]);// fake data
@@ -186,24 +227,18 @@ function NodeNavigator(eleId, h) {
         .on("click", onClick)
         .on("mouseout", onMouseOut)
         .attr("class", "brush")
-        .call(d3.brushY()
-          .extent([
-            [x(xScale.domain()[0], i),yScales[i].range()[0]],
-            [x(xScale.domain()[xScale.domain().length-1], i) + xScale.bandwidth(), yScales[i].range()[1]]
-          ])
-          .on("end", brushended))
+        .call(dBrushes.get(i))
         .selectAll("rect")
           // .attr("x", -8)
           .attr("width", xScale.bandwidth()* (dDimensions.size()+1));
 
     _brush.exit().remove();
 
-
-    function brushended(d) {
+    function brushended() {
       if (!d3.event.sourceEvent) return; // Only transition after input.
       if (!d3.event.selection) return; // Ignore empty selections.
-      console.log("Brush");
-      console.log(d);
+
+      removeAllBrushesBut(i);
       var brushed = d3.event.selection;
       var filteredData = data[i].filter(function (d) {
         var y = yScales[i](d[id]);
@@ -211,11 +246,20 @@ function NodeNavigator(eleId, h) {
         return d.visible;
       });
 
-      if (filteredData.length===0) return;
-
-      var newData = data.slice(0,i+1);
-      // var newData = data;
-      newData.push(filteredData);
+      var newData;
+      if (filteredData.length===0) { // empty selection -> remove level
+        newData = data.slice(0, i);
+        console.log("Empty selection!");
+      } else {
+        newData = data.slice(0,i+1);
+        newData.push(filteredData);
+      }
+      if (links.length>0) {
+        links = links.slice(0, i+1);
+        links.push(links[i].filter(function (d) {
+          return d.source.visible && d.target.visible;
+        }));
+      }
 
 
       nn.updateData(
@@ -232,14 +276,15 @@ function NodeNavigator(eleId, h) {
 
     function onClick() {
       console.log("click");
-
+      removeAllBrushesBut(-1); // Remove all brushes
       var screenY = d3.mouse(d3.event.target)[1],
         screenX = d3.mouse(d3.event.target)[0];
       var itemId = invertOrdinalScale(yScales[i], screenY);
       var itemAttr = invertOrdinalScale(xScale, screenX - levelScale(i));
       var sel = dData.get(itemId);
       var filteredData = data[i].filter(function (d) {
-        return d[itemAttr] === sel[itemAttr];
+        d.visible = d[itemAttr] === sel[itemAttr];
+        return d.visible;
       });
       var newData = data.slice(0,i+1);
       newData.push(filteredData);
@@ -269,7 +314,7 @@ function NodeNavigator(eleId, h) {
     // });
 
     svg.select(".tooltip")
-      .attr("x", screenX)
+      .attr("x", screenX + 20)
       .attr("y", screenY)
       .text(itemId + "  " + itemAttr + " : " + d[itemAttr]);
   }
@@ -302,6 +347,7 @@ function NodeNavigator(eleId, h) {
     var levelOverlayEnter = levelOverlay.enter()
       .append("g")
         .attr("class", "levelOverlay")
+        .attr("id", function (d,i) { return "level" +i; })
         .each(addBrush);
 
     var attribOverlay = levelOverlayEnter.merge(levelOverlay)
@@ -375,6 +421,13 @@ function NodeNavigator(eleId, h) {
     levelOverlay.exit().remove();
   }
 
+  function drawCloseButton() {
+    var maxLevel = data.length-1;
+    svg.select("#closeButton")
+      .style("display", data.length === 1 ? "none":"block")
+      .attr("transform", "translate(" + (levelScale(maxLevel) + levelScale.bandwidth() - nn.levelsSeparation +15)  + "," + yScales[maxLevel].range()[0] + ")")
+  }
+
   // Links between nodes
   function drawLink(link) {
     var
@@ -387,7 +440,7 @@ function NodeNavigator(eleId, h) {
       midy = maxy-miny;
     context.moveTo(rightBorder, miny); //starting point
     context.quadraticCurveTo(
-      rightBorder + midy/3, miny + midy/2, // mid point
+      rightBorder + midy/8, miny + midy/2, // mid point
       rightBorder, maxy // end point
       );
   }
@@ -398,9 +451,10 @@ function NodeNavigator(eleId, h) {
 
     context.save();
     context.beginPath();
-
     context.strokeStyle = nn.linkColor;
-    context.globalAlpha = 0.1;
+    context.globalAlpha = Math.min(1,
+      Math.max(0.01,100 / links[links.length-1].length )
+    ); // More links more transparency
     // context.lineWidth = 0.5;
     links[links.length-1].forEach(drawLink);
     context.stroke();
@@ -494,7 +548,6 @@ function NodeNavigator(eleId, h) {
       dData.set(d[id], d);
     });
     // nn.updateData(mData, mColScales, mSortByAttr);
-
   };
 
   function updateScales() {
@@ -514,6 +567,7 @@ function NodeNavigator(eleId, h) {
 
     // colScales = d3.map();
     dDimensions.keys().forEach(function (attrib) {
+      if (attrib === "visible") return;
       var scale = colScales.get(attrib);
       scale.domain(d3.extent(data[0].map(function (d) { return d[attrib]; }))); //TODO: make it compute it based on the local range
       colScales.set(attrib, scale);
@@ -570,6 +624,18 @@ function NodeNavigator(eleId, h) {
     nn.update();
   };
 
+  function deleteOneLevel() {
+    if (data.length<=1) return;
+    console.log("Delete one level");
+    removeBrushOnLevel(data.length-2);
+    data[data.length-2].forEach(function (d) { d.visible=true; });
+
+    if (links.length>1)
+      links = links.slice(0, data.length-1);
+    data = data.slice(0, data.length-1);
+    nn.updateData(data, colScales);
+  }
+
 
 
   nn.update = function(updateBrushes) {
@@ -593,6 +659,7 @@ function NodeNavigator(eleId, h) {
     drawLinks();
 
     drawBrushes();
+    drawCloseButton();
 
   };
 

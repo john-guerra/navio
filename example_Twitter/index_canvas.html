@@ -37,11 +37,11 @@ var simulation = d3.forceSimulation()
       // .strength(0.001)
       // .distance(10)
       )
-    .force("charge", d3.forceManyBody().strength(-5))
+    .force("charge", d3.forceManyBody().strength(-20))
     // .force("collide", d3.forceCollide(function (d) { return d.r+1; }).iterations(4))
-    .force("center", d3.forceCenter(width/2, height/2));
-    // .force("x", d3.forceX(width / 2).strength(0.1))
-    // .force("y", d3.forceY(height / 2).strength(0.1));
+    // .force("center", d3.forceCenter(width/2, height/2));
+    .force("x", d3.forceX(width / 2).strength(0.1))
+    .force("y", d3.forceY(height / 2).strength(0.1));
 
 
 d3.json("duto_guerraNetworkCooccurrence_clustered.json", function(error, graph) {
