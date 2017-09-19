@@ -9,9 +9,19 @@
 * [Visualization](https://john-guerra.github.io/NodeNavigator/example/)
 ### Example with Canvas
 * [Code](https://github.com/john-guerra/NodeNavigator/tree/master/exampleSenate)
-* [Visualization](https://john-guerra.github.io/NodeNavigator/exampleSenate/) 
+* [Visualization](https://john-guerra.github.io/NodeNavigator/exampleSenate/)
 
-
+### Libraries
+#### D3v4
+```html
+<script src="https://d3js.org/d3.v4.min.js"></script>
+````
+* #### NetClustering.js
+[NetClustering.js](https://raw.githubusercontent.com/john-guerra/NodeNavigator/master/exampleSenate/lib/js/netClustering.js)
+* #### ForceInABox
+[ForceInABox.js](https://raw.githubusercontent.com/john-guerra/NodeNavigator/master/exampleSenate/lib/js/forceInABox.js)
+* #### NodeNavigator
+[NodeNavigator.js](https://raw.githubusercontent.com/john-guerra/NodeNavigator/master/exampleSenate/lib/js/NodeNavigator.js)
 ## Installing
 
 ```html
