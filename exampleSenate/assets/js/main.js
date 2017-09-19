@@ -1,19 +1,27 @@
 (function () {
   "use strict";
   /* global d3, forceInABox, NodeNavigator */
+  var margin = {
+    x: 0,
+    y: 0
+  }
 
   var canvas = d3.select("#graph").node(),
     context = canvas.getContext("2d"),
-    width = canvas.width,
-    height = canvas.height,
+    width = canvas.width - margin.x,
+    height = canvas.height - margin.y,
     selected = null;
+  var canvasText = d3.select("#nodesText").node(),
+      contextText = canvasText.getContext("2d"),
+      widthText = canvasText.width,
+      heightText = canvasText.height;
   var size = d3.scaleLinear().range([2,5]);
 
   var color = d3.scaleOrdinal(d3.schemeCategory20);
 
   var simulation = d3.forceSimulation()
       .force("link", d3.forceLink())
-      .force("charge", d3.forceManyBody().strength(-5))
+      .force("charge", d3.forceManyBody().strength(-10))
       .force("center", d3.forceCenter(width/2, height/2));
 
   d3.json("VotacionesSenado2017.json", onLoadJSON);
@@ -78,7 +86,6 @@
     update(filteredGraph);
   };
 
-  
   var nodeNavigator = new NodeNavigator(
     "#nn",
     height
@@ -152,10 +159,11 @@
       });
 
       if (selected) {
-        context.beginPath();
-        context.fillStyle = "black";
+        eraseNodeText(selected)
+        contextText.beginPath();
+        contextText.fillStyle = "black";
         drawNodeText(selected);
-        context.fill();
+        contextText.fill();
 
       }
       context.restore();
@@ -167,9 +175,15 @@
   }
 
   function onHover() {
+    eraseNodeText(selected)
     var d = simulation.find(d3.event.x, d3.event.y);
     selected = d;
     drawNodeText(selected);
+  }
+  function eraseNodeText(d){
+    if (d) {
+      contextText.clearRect(0, 0, widthText, heightText);
+    }
   }
 
   function dragstarted() {
@@ -193,7 +207,7 @@
     context.beginPath();
     // context.strokeStyle = "rgba(180,180,180,0.01)";
     context.strokeStyle = color(d.target.cluster);
-    context.globalAlpha=0.1;
+    context.globalAlpha=0.03;
     context.moveTo(d.source.x, d.source.y);
     context.lineTo(d.target.x, d.target.y);
     context.stroke();
@@ -206,11 +220,11 @@
   }
 
   function drawNodeText(d) {
-    context.beginPath();
-    context.fillStyle = "black";
-    context.moveTo(d.x + d.r/2, d.y + d.r/2 + 5);
-    context.fillText(d.name, d.x, d.y);
-    context.fill();
+    contextText.beginPath();
+    contextText.fillStyle = "black";
+    contextText.moveTo(d.x + d.r/2, d.y + d.r/2 + 5);
+    contextText.fillText(d.name, d.x, d.y);
+    contextText.fill();
 
   }
 })();
