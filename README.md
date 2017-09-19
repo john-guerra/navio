@@ -15,13 +15,16 @@
 #### D3v4
 ```html
 <script src="https://d3js.org/d3.v4.min.js"></script>
-````
+```
 #### NetClustering.js
-[NetClustering.js](https://raw.githubusercontent.com/john-guerra/NodeNavigator/master/exampleSenate/lib/js/netClustering.js)
+&nbsp;&nbsp;&nbsp;&nbsp;[Click here to download NetClustering.js](https://raw.githubusercontent.com/john-guerra/NodeNavigator/master/exampleSenate/lib/js/netClustering.js)
 #### ForceInABox
-[ForceInABox.js](https://raw.githubusercontent.com/john-guerra/NodeNavigator/master/exampleSenate/lib/js/forceInABox.js)
+&nbsp;&nbsp;&nbsp;&nbsp;[Click here to download ForceInABox.js](https://raw.githubusercontent.com/john-guerra/NodeNavigator/master/exampleSenate/lib/js/forceInABox.js)
 #### NodeNavigator
-[NodeNavigator.js](https://raw.githubusercontent.com/john-guerra/NodeNavigator/master/exampleSenate/lib/js/NodeNavigator.js)
+&nbsp;&nbsp;&nbsp;&nbsp;[Click here to download NodeNavigator.js](https://raw.githubusercontent.com/john-guerra/NodeNavigator/master/exampleSenate/lib/js/NodeNavigator.js)
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;[Click here to download NodeNavigator.js (ES6 version)](https://raw.githubusercontent.com/john-guerra/NodeNavigator/master/NodeNavigator.js)
+
 ## Installing
 
 ```html
