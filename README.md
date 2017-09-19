@@ -16,11 +16,11 @@
 ```html
 <script src="https://d3js.org/d3.v4.min.js"></script>
 ````
-* #### NetClustering.js
+#### NetClustering.js
 [NetClustering.js](https://raw.githubusercontent.com/john-guerra/NodeNavigator/master/exampleSenate/lib/js/netClustering.js)
-* #### ForceInABox
+#### ForceInABox
 [ForceInABox.js](https://raw.githubusercontent.com/john-guerra/NodeNavigator/master/exampleSenate/lib/js/forceInABox.js)
-* #### NodeNavigator
+#### NodeNavigator
 [NodeNavigator.js](https://raw.githubusercontent.com/john-guerra/NodeNavigator/master/exampleSenate/lib/js/NodeNavigator.js)
 ## Installing
 
