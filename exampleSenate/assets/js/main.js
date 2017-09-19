@@ -13,15 +13,17 @@
 
   var simulation = d3.forceSimulation()
       .force("link", d3.forceLink())
-      .force("charge", d3.forceManyBody().strength(-5))
-      .force("center", d3.forceCenter(width/2, height/2));
+      .force("charge", d3.forceManyBody().strength(-20))
+      .force("x", d3.forceX(width/2).strength(0.15))
+      .force("y", d3.forceY(height/2).strength(0.15));
+      // .force("center", d3.forceCenter(width/2, height/2));
 
   d3.json("VotacionesSenado2017.json", onLoadJSON);
   function onLoadJSON(error, graph) {
     var dicNodes = d3.map();
     //mapping nodes
     graph.nodes.forEach(function (n) {
-      n.degree = 0;
+      n.commonVotes = 0;
       n.visible = true;
       n.id = n.name;
       dicNodes.set(n.id, n);
@@ -33,7 +35,7 @@
         e.source = {
           id:e.source,
           name:e.source,
-          degree:0,
+          commonVotes:0,
           // cluster: -1,
           screen_name:e.target.name,
           count:e.count
@@ -41,7 +43,7 @@
         dicNodes.set(e.source.id, e.source);
       }
 
-      e.source.degree+=1;
+      e.source.commonVotes+=1;
 
       if (dicNodes.has(e.target)) {
         e.target = dicNodes.get(e.target);
@@ -49,16 +51,16 @@
         e.target = {
           id:e.target,
           name:e.target,
-          degree:0,
+          commonVotes:0,
           // cluster: -1,
           screen_name:e.target.name,
           count:e.count
         };
         dicNodes.set(e.target.id, e.target);
       }
-      e.target.degree+=1;
+      e.target.commonVotes+=1;
     });
-    var minDegree = 2;
+    var mincommonVotes = 2;
     var filteredLinks = graph.links;
     var filteredGraph = {
       nodes: dicNodes.values(),
@@ -78,12 +80,12 @@
     update(filteredGraph);
   };
 
-  
+
   var nodeNavigator = new NodeNavigator(
     "#nn",
     height
   ).id("name");
-  nodeNavigator.addSequentialAttrib("degree");
+  nodeNavigator.addSequentialAttrib("commonVotes");
   nodeNavigator.addCategoricalAttrib("party");
   nodeNavigator.addCategoricalAttrib("cluster", color);
   function update(graph) {
@@ -96,24 +98,27 @@
       return dVisibleNodes[d.source.id]&&
         dVisibleNodes[d.target.id];
     });
+
+    var visible = nodeNavigator.getVisible();
     console.log("nodes = " + graph.nodes.length + " links="+visibleLinks.length);
-    size.domain(d3.extent(nodeNavigator.getVisible(), function (d) { return d.degree; }));
+    size.domain(d3.extent(visible, function (d) { return d.commonVotes; }));
     graph.nodes.forEach(function (d) {
-      d.r = size(d.degree);
+      d.r = size(d.commonVotes);
     });
     var clusters = d3.nest()
       .key(function(d) { return d.cluster; })
-      .entries(nodeNavigator.getVisible())
+      .entries(visible)
       .sort(function(a, b) { return b.values.length - a.values.length; });
-    var groupingForce = forceInABox()
-          .links(graph.links)
-          .template("force")
-          .groupBy("cluster")
-          .linkStrengthInterCluster(0.001)
-          .linkStrengthIntraCluster(0.000001)
-          .size([width, height]);
+    // var groupingForce = forceInABox()
+    //       .links(graph.links)
+    //       .template("force")
+    //       .groupBy("cluster")
+    //       .linkStrengthInterCluster(0.001)
+    //       .linkStrengthIntraCluster(0.000001)
+    //       .size([width, height]);
     simulation
-        .nodes(nodeNavigator.getVisible())
+        .force("charge", d3.forceManyBody().strength(visible.length<100? -200: -20))
+        .nodes(visible)
         .on("tick", ticked);
     simulation.force("link")
               .links(visibleLinks);
@@ -128,14 +133,14 @@
     d3.select("#recluster")
       .on("click", function () {
         console.log("Clustering");
-        netClustering.cluster(nodeNavigator.getVisible(), visibleLinks);
+        netClustering.cluster(visible, visibleLinks);
         console.log("done");
         update(graph);
       });
     simulation.alpha(0.7).restart();
     function ticked() {
       context.clearRect(0, 0, width, height);
-      if (simulation.alpha() < 0.05) {
+      if (simulation.alpha() < 0.15) {
         context.save();
         visibleLinks.forEach(drawLink);
         context.restore();
@@ -167,9 +172,11 @@
   }
 
   function onHover() {
-    var d = simulation.find(d3.event.x, d3.event.y);
+    var mouse = d3.mouse(this);
+    var d = simulation.find(mouse[0], mouse[1]);
     selected = d;
     drawNodeText(selected);
+    simulation.alpha(0.3).restart();
   }
 
   function dragstarted() {

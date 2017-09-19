@@ -1,7 +1,7 @@
 /* global d3, NodeNavigator, crossfilter */
 var d3 = require("d3");
 //eleId must be the ID of a context element where everything is going to be drawn
-export default function NodeNavigator(eleId, h) {
+function NodeNavigator(eleId, h) {
   "use strict";
   var nn = this,
     data = [], //Contains the original data attributes in an array
@@ -862,3 +862,4 @@ export default function NodeNavigator(eleId, h) {
   return nn;
 }
 
+// export default NodeNavigator;
