@@ -1,12 +1,20 @@
 (function () {
   "use strict";
   /* global d3, forceInABox, NodeNavigator */
+  var margin = {
+    x: 0,
+    y: 0
+  }
 
   var canvas = d3.select("#graph").node(),
     context = canvas.getContext("2d"),
-    width = canvas.width,
-    height = canvas.height,
+    width = canvas.width - margin.x,
+    height = canvas.height - margin.y,
     selected = null;
+  var canvasText = d3.select("#nodesText").node(),
+      contextText = canvasText.getContext("2d"),
+      widthText = canvasText.width,
+      heightText = canvasText.height;
   var size = d3.scaleLinear().range([2,5]);
 
   var color = d3.scaleOrdinal(d3.schemeCategory20);
@@ -157,10 +165,11 @@
       });
 
       if (selected) {
-        context.beginPath();
-        context.fillStyle = "black";
+        eraseNodeText(selected)
+        contextText.beginPath();
+        contextText.fillStyle = "black";
         drawNodeText(selected);
-        context.fill();
+        contextText.fill();
 
       }
       context.restore();
@@ -172,11 +181,18 @@
   }
 
   function onHover() {
+
     var mouse = d3.mouse(this);
     var d = simulation.find(mouse[0], mouse[1]);
+    // eraseNodeText(selected)
     selected = d;
     drawNodeText(selected);
     simulation.alpha(0.3).restart();
+  }
+  function eraseNodeText(d){
+    if (d) {
+      contextText.clearRect(0, 0, widthText, heightText);
+    }
   }
 
   function dragstarted() {
@@ -200,7 +216,7 @@
     context.beginPath();
     // context.strokeStyle = "rgba(180,180,180,0.01)";
     context.strokeStyle = color(d.target.cluster);
-    context.globalAlpha=0.1;
+    context.globalAlpha=0.03;
     context.moveTo(d.source.x, d.source.y);
     context.lineTo(d.target.x, d.target.y);
     context.stroke();
@@ -213,11 +229,11 @@
   }
 
   function drawNodeText(d) {
-    context.beginPath();
-    context.fillStyle = "black";
-    context.moveTo(d.x + d.r/2, d.y + d.r/2 + 5);
-    context.fillText(d.name, d.x, d.y);
-    context.fill();
+    contextText.beginPath();
+    contextText.fillStyle = "black";
+    contextText.moveTo(d.x + d.r/2, d.y + d.r/2 + 5);
+    contextText.fillText(d.name, d.x, d.y);
+    contextText.fill();
 
   }
 })();

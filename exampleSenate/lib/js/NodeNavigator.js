@@ -1,5 +1,5 @@
 /* global d3, NodeNavigator, crossfilter */
-var d3 = require("d3");
+// var d3 = require("d3");
 //eleId must be the ID of a context element where everything is going to be drawn
 function NodeNavigator(eleId, h) {
   "use strict";
@@ -861,4 +861,3 @@ function NodeNavigator(eleId, h) {
 
   return nn;
 }
-// export default NodeNavigator;
