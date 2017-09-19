@@ -4,7 +4,12 @@
 <a href="https://d3js.org"><img src="example.png" align="left" hspace="10" vspace="6"></a>
 ## Resources
 
-* [Examples](https://github.com/john-guerra/NodeNavigator)
+### Example with SVG
+* [Code](https://github.com/john-guerra/NodeNavigator/tree/master/example)
+* [Visualization](https://john-guerra.github.io/NodeNavigator/example/)
+### Example with Canvas
+* [Code](https://github.com/john-guerra/NodeNavigator/tree/master/exampleSenate)
+* [Visualization](https://john-guerra.github.io/NodeNavigator/exampleSenate/) 
 
 
 ## Installing
