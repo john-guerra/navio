@@ -17,7 +17,7 @@
 ```
 ## Basic Usage
 
-1. Use the next template. The id of the div and the canvas is crucial for proper execution
+1. Use the next template. The id of the div and the canvas are crucial for proper execution
 ```html
 <!DOCTYPE html>
 <html lang="en">
