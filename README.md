@@ -229,8 +229,8 @@ function drawNode(d) {
 ![Basic usage example](basic_usage.png)
 
 ## Customizing your visualization.
-### Setting up Drag effect.
-In order yo set up a drag effect and clusteing into your visualization you must:
+### Setting up Drag, Clustering and onHover effect.
+In order yo set up a drag effect and clustering into your visualization you must:
 1. Add the clustering button in index.html
 ```html
 <button id="recluster">Recluster</button>
