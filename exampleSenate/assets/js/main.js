@@ -11,10 +11,10 @@
     width = canvas.width - margin.x,
     height = canvas.height - margin.y,
     selected = null;
-  var canvasText = d3.select("#nodesText").node(),
-      contextText = canvasText.getContext("2d"),
-      widthText = canvasText.width,
-      heightText = canvasText.height;
+  // var canvasText = d3.select("#nodesText").node(),
+  //     contextText = canvasText.getContext("2d"),
+  //     widthText = canvasText.width,
+  //     heightText = canvasText.height;
   var size = d3.scaleLinear().range([2,5]);
 
   var color = d3.scaleOrdinal(d3.schemeCategory20);
@@ -150,13 +150,14 @@
       context.clearRect(0, 0, width, height);
       if (simulation.alpha() < 0.15) {
         context.save();
+        context.globalAlpha= visibleLinks.length > 500 ? 0.03: 0.3;
         visibleLinks.forEach(drawLink);
         context.restore();
       }
       clusters.forEach(function(cluster) {
         context.beginPath();
         context.globalAlpha = 1;
-        cluster.values.forEach(drawNode);
+        cluster.values.forEach(drawNode(visible.length > 100? 1: 2));
         context.fillStyle = color(cluster.key);
         context.fill();
         context.beginPath();
@@ -165,11 +166,11 @@
       });
 
       if (selected) {
-        eraseNodeText(selected)
-        contextText.beginPath();
-        contextText.fillStyle = "black";
+        // eraseNodeText(selected)
+        // contextText.beginPath();
+        // contextText.fillStyle = "black";
         drawNodeText(selected);
-        contextText.fill();
+        // contextText.fill();
 
       }
       context.restore();
@@ -189,11 +190,11 @@
     drawNodeText(selected);
     simulation.alpha(0.3).restart();
   }
-  function eraseNodeText(d){
-    if (d) {
-      contextText.clearRect(0, 0, widthText, heightText);
-    }
-  }
+  // function eraseNodeText(d){
+  //   if (d) {
+  //     contextText.clearRect(0, 0, widthText, heightText);
+  //   }
+  // }
 
   function dragstarted() {
     if (!d3.event.active) simulation.alphaTarget(0.3).restart();
@@ -216,24 +217,27 @@
     context.beginPath();
     // context.strokeStyle = "rgba(180,180,180,0.01)";
     context.strokeStyle = color(d.target.cluster);
-    context.globalAlpha=0.03;
+    // context.globalAlpha=0.03;
     context.moveTo(d.source.x, d.source.y);
     context.lineTo(d.target.x, d.target.y);
     context.stroke();
   }
 
 
-  function drawNode(d) {
-    context.moveTo(d.x + d.r/2, d.y + d.r/2);
-    context.arc(d.x, d.y, d.r, 0, 2 * Math.PI);
+  function drawNode(rFactor) {
+    return function (d) {
+      context.moveTo(d.x + (d.r *rFactor)/2, d.y + (d.r *rFactor)/2);
+      context.arc(d.x, d.y, (d.r *rFactor), 0, 2 * Math.PI);
+
+    };
   }
 
   function drawNodeText(d) {
-    contextText.beginPath();
-    contextText.fillStyle = "black";
-    contextText.moveTo(d.x + d.r/2, d.y + d.r/2 + 5);
-    contextText.fillText(d.name, d.x, d.y);
-    contextText.fill();
+    context.beginPath();
+    context.fillStyle = "black";
+    context.moveTo(d.x + d.r/2, d.y + d.r/2 + 5);
+    context.fillText(d.name, d.x, d.y);
+    context.fill();
 
   }
 })();

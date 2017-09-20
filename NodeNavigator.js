@@ -152,7 +152,7 @@ function NodeNavigator(eleId, h) {
     data[d.level] = data[d.level].sort(function (a, b) {
       return d3.ascending(a[d.attrib], b[d.attrib]);
     });
-    data[d.level].forEach(function (d,i) { d.__i = i; });
+    data[d.level].forEach(function (row,i) { row.__i[d.level] = i; });
     var after = performance.now();
     console.log("Click sorting " + (after-before) + "ms");
     dSortBy.set(d.level, d.attrib);
@@ -280,18 +280,23 @@ function NodeNavigator(eleId, h) {
       // });
 
       var filteredData = data[i].filter(function (d) {
-        d.visible = d.__i >= first.__i && d.__i <= last.__i;
+        d.visible = d.__i[i] >= first.__i[i] && d.__i[i] <= last.__i[i];
         return d.visible;
       });
+
+      //Assign the index
+      filteredData.forEach(function(d, j) {
+        d.__i[i+1] = j;
+      });
+
       var after = performance.now();
       console.log("Brushend filtering " + (after-before) + "ms");
 
 
       var newData;
       if (filteredData.length===0) { // empty selection -> remove level
-        newData = data.slice(0, i+1);
-        newData.push(filteredData);
         console.log("Empty selection!");
+        return;
       } else {
         newData = data.slice(0,i+1);
         newData.push(filteredData);
@@ -549,10 +554,19 @@ function NodeNavigator(eleId, h) {
     if (level <= 0) {
       return;
     }
-    data[level].representatives.forEach(function (item, i) {
-      var locPrevLevel = {x: levelScale(level-1) + xScale.range()[1],
-        y: yScales[level-1](item[id]) };
-      var locLevel = {x: levelScale(level),
+    data[level].representatives.forEach(function (item) {
+      // Compute the yPrev by calculating the index of the corresponding representative
+      var iOnPrev = dData.get(item[id]).__i[level-1];
+      var iRep = Math.floor(iOnPrev - iOnPrev%data[level-1].itemsPerpixel);
+      // console.log("i rep = "+ iRep);
+      // console.log(data[level-1][iRep]);
+      // console.log(yScales[level-1](data[level-1][iRep][id]));
+      var locPrevLevel = {
+        x: levelScale(level-1) + xScale.range()[1],
+        y: yScales[level-1](data[level-1][iRep][id])
+      };
+      var locLevel = {
+        x: levelScale(level),
         y: yScales[level](item[id]) };
 
       var points = [ locPrevLevel,
@@ -610,7 +624,8 @@ function NodeNavigator(eleId, h) {
     dData = d3.map();
     mData[0].forEach(function (d, i) {
       dData.set(d[id], d);
-      d.__i = i;
+      d.__i={};
+      d.__i[0] = i;
     });
     // nn.updateData(mData, mColScales, mSortByAttr);
 
@@ -633,7 +648,8 @@ function NodeNavigator(eleId, h) {
 
     var representatives = [];
     if (data[levelToUpdate].length>h) {
-      var itemsPerpixel = Math.floor(data[levelToUpdate].length / h);
+      var itemsPerpixel = Math.floor(data[levelToUpdate].length / (h*2));
+      data[levelToUpdate].itemsPerpixel = itemsPerpixel;
       for (var i = 0; i< data[levelToUpdate].length; i+=itemsPerpixel ){
         representatives.push(data[levelToUpdate][i]);
       }
@@ -861,4 +877,4 @@ function NodeNavigator(eleId, h) {
 
   return nn;
 }
-// export default NodeNavigator;
+
