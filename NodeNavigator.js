@@ -249,7 +249,7 @@ function NodeNavigator(eleId, h) {
       .merge(_brush)
       .append("g")
       .on("mousemove", onMouseOver)
-      .on("click", onClick)
+      .on("click", onSelectByValue)
       .on("mouseout", onMouseOut)
       .attr("class", "brush")
       .call(dBrushes.get(i))
@@ -321,7 +321,7 @@ function NodeNavigator(eleId, h) {
       // d3.select(this).transition().call(d3.event.target.move, d1.map(x));
     }// brushend
 
-    function onClick() {
+    function onSelectByValue() {
       console.log("click");
       removeAllBrushesBut(-1); // Remove all brushes
       var screenY = d3.mouse(d3.event.target)[1],
@@ -338,6 +338,7 @@ function NodeNavigator(eleId, h) {
         d.visible = d[itemAttr] === sel[itemAttr];
         return d.visible;
       });
+      filteredData.forEach(function (d, i) { d.__i[data.length] = i;});
       after = performance.now();
       console.log("Click filtering " + (after-before) + "ms");
 
