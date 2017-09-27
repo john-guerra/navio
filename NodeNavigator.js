@@ -1,5 +1,5 @@
 /* global d3, NodeNavigator, crossfilter */
-var d3 = require("d3");
+// var d3 = require("d3");
 //eleId must be the ID of a context element where everything is going to be drawn
 function NodeNavigator(eleId, h) {
   "use strict";
@@ -462,7 +462,9 @@ function NodeNavigator(eleId, h) {
             "normal";
       })
       .style("font-family", "sans-serif")
-      .style("font-size", "10px")
+      .style("font-size", "9px")
+      .on("mousemove", function (d) { d3.select(this).style("font-size", "24px"); })
+      .on("mouseout", function (d) { d3.select(this).style("font-size", "9px"); })
       .attr("transform", "rotate(-45)")
       .on("click", nnOnClickLevel);
 

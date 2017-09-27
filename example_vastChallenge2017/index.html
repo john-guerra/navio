@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Document</title>
+  <script src="./papaparse.min.js"></script>
+</head>
+<style>
+  body {
+    font-family: sans-serif;
+  }
+</style>
+<body>
+  <h1>Vast Challenge 2017 <small>Mini challenge 1</small></h1>
+<div id="nodeNavigator"></div>
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script src="../NodeNavigator.js"></script>
+
+<script>
+
+  var catColumns = [
+    "car-type",
+    "gate-name",
+    "dayOfTheWeek",
+    "car-id",
+    "year"
+  ];
+  var seqColumns = [
+    "minutes",
+    "hours",
+    "day",
+    "month",
+    "seconds",
+    "carIdPart1",
+    "carIdPart2",
+    "Timestamp"
+  ];
+
+
+  var nn = new NodeNavigator("#nodeNavigator", 600)
+    .id("i");
+  catColumns.forEach((c) => nn.addCategoricalAttrib(c));
+  seqColumns.forEach((c) => nn.addSequentialAttrib(c));
+
+  var data =[];
+  var i =0;
+  // Papa.parse("./head.csv", {
+  //   // download: true,
+  //   delimiter:";",
+  //   header: true,
+  //   // worker: true,
+  //   download:true,
+  //   step: function(row) {
+  //       // console.log("Row:", row.data);
+  //       row.data[0].i= i++;
+  //       data.push(row.data[0]);
+  //       // if (i%100000===0) {
+  //       //     console.log("redraw 100k");
+  //       //     nn.data(data);
+  //       // }
+  //   },
+  //   complete: function() {
+  //       console.log("All done!");
+  //       nn.data(data);
+  //   }
+  // });
+  d3.csv("./Lekagul Sensor Data.csv", type, function (err, data) {
+    if (err) throw err;
+    console.log(data.length);
+    // data = d3.dsvFormat(";").formatRows(data);
+    data.forEach((d,i) => d.i = i);
+
+    nn.data(data);
+  });
+  //2015-05-01 00:43:28
+  var fmt = d3.timeParse("%Y-%m-%d %H:%M:%S");
+  function type(row) {
+    var split = row["car-id"].split("-");
+    row.Timestamp = fmt(row.Timestamp);
+    row.hours = row.Timestamp.getHours();
+    row.dayNight = row.hour < 6 || row.hour>18 ? "night": "day";
+    row.dayOfTheWeek = row.Timestamp.getDay();
+    row.minutes = row.Timestamp.getMinutes();
+    row.seconds = row.Timestamp.getSeconds();
+    row.year = row.Timestamp.getFullYear();
+    row.month = row.Timestamp.getMonth();
+    row.day = row.Timestamp.getDate();
+    row.carIdPart1 = +split[0];
+    row.carIdPart2 = +split[1];
+    return row;
+  }
+</script>
+</body>
+</html>
