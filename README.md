@@ -1,7 +1,8 @@
 # NodeNavigator
 
 **NodeNavigator** is a d3 visualization widget to help summarizing, browsing and navigating large network visualizations.
-![](src/example.png | height=100)
+<br>
+<img src="src/example.png" alt="NodeNavigator widget" height="400">
 
 ## Resources
 
@@ -18,10 +19,7 @@
 <script src="https://d3js.org/d3.v4.min.js"></script>
 ```
 #### NodeNavigator
-
-<br>
-&nbsp;&nbsp;&nbsp;&nbsp;[Click here to download NodeNavigator.js](https://raw.githubusercontent.com/john-guerra/NodeNavigator/master/NodeNavigator.js)
-
+[Download](https://raw.githubusercontent.com/john-guerra/NodeNavigator/master/NodeNavigator.js)
 ## Installing
 
 ```html
