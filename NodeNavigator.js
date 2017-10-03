@@ -464,6 +464,7 @@ function NodeNavigator(eleId, h) {
       })
       .style("font-family", "sans-serif")
       .style("font-size", "9px")
+      .style("transition", "font-size 0.2s")
       .on("mousemove", function (d) { d3.select(this).style("font-size", "24px"); })
       .on("mouseout", function (d) { d3.select(this).style("font-size", "9px"); })
       .attr("transform", "rotate(-45)")
@@ -880,4 +881,3 @@ function NodeNavigator(eleId, h) {
 
   return nn;
 }
-
