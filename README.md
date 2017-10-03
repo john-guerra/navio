@@ -1,7 +1,8 @@
 # NodeNavigator
 
 **NodeNavigator** is a d3 visualization widget to help summarizing, browsing and navigating large network visualizations.
-<div style="width="100%><img style="height:200px; margin: 0 auto;" src="src/example.png" alt="NodeNavigator widget" align="center" ></div>
+![](src/example.png | height=100)
+
 ## Resources
 
 ### Example with SVG
@@ -92,5 +93,8 @@ d3.csv("./dataset.csv", function (err, data) {
 });
 
 ```
+
+Demo
+[vastChallenge2017](http://john-guerra.github.io/NodeNavigator/example_vastChallenge2017/index.html)
 ## License
 NodeNavigator.js is licensed under the MIT license. (http://opensource.org/licenses/MIT)
