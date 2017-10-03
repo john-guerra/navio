@@ -1,7 +1,7 @@
 # NodeNavigator
 
 **NodeNavigator** is a d3 visualization widget to help summarizing, browsing and navigating large network visualizations.
-<div style="width="100%><img style="height:400px; margin: 0 auto;" src="src/example.png" alt="NodeNavigator widget" align="center" ></div>
+<div style="width="100%><img style="height:200px; margin: 0 auto;" src="src/example.png" alt="NodeNavigator widget" align="center" ></div>
 ## Resources
 
 ### Example with SVG
@@ -16,10 +16,6 @@
 ```html
 <script src="https://d3js.org/d3.v4.min.js"></script>
 ```
-<!-- #### NetClustering.js
-&nbsp;&nbsp;&nbsp;&nbsp;[Click here to download NetClustering.js](https://raw.githubusercontent.com/john-guerra/NodeNavigator/master/exampleSenate/lib/js/netClustering.js)
-#### ForceInABox
-&nbsp;&nbsp;&nbsp;&nbsp;[Click here to download ForceInABox.js](https://raw.githubusercontent.com/john-guerra/NodeNavigator/master/exampleSenate/lib/js/forceInABox.js) -->
 #### NodeNavigator
 
 <br>
