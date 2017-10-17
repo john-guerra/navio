@@ -657,6 +657,7 @@ function NodeNavigator(eleId, h) {
         representatives.push(data[levelToUpdate][i]);
       }
     } else {
+      data[levelToUpdate].itemsPerpixel=1;
       representatives = data[levelToUpdate];
     }
     data[levelToUpdate].representatives = representatives;
