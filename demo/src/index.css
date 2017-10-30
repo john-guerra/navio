@@ -1,0 +1,22 @@
+body {
+  font-family: 'Roboto', sans-serif
+}
+.heading {
+  font-weight: 100;
+  text-align: center;
+}
+.subheading {
+  font-weight: 300;
+}
+.Main-app {
+  min-height: 100vh;
+  width: 100%;
+  background-color: rgba(255,255,0);
+  padding-top: 1em;
+  /*background: -webkit-linear-gradient(51deg, #0fb8ad 0%, #1fc8db 51%, #2cb5e8 75%);
+  background: -o-linear-gradient(51deg, #0fb8ad 0%, #1fc8db 51%, #2cb5e8 75%);
+  background: linear-gradient(141deg, #0fb8ad 0%, #1fc8db 51%, #2cb5e8 75%);*/
+}
+.pull-right {
+  text-align: right;
+}

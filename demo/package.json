@@ -1,0 +1,24 @@
+{
+  "name": "node-app",
+  "version": "0.1.0",
+  "private": true,
+  "homepage" : "http://jgmurillo10.github.io/node-app",
+  "dependencies": {
+    "d3": "^4.11.0",
+    "react": "^16.0.0",
+    "react-bootstrap": "^0.31.3",
+    "react-dom": "^16.0.0",
+    "react-files": "^2.4.3",
+    "react-router-dom": "^4.2.2",
+    "react-scripts": "1.0.14",
+    "vega": "^3.0.6"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test --env=jsdom",
+    "eject": "react-scripts eject",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build"
+  }
+}
