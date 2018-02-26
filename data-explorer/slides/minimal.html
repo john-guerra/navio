@@ -1,0 +1,75 @@
+<html>
+  <head>
+    <link rel="stylesheet" href="css/reveal.css">
+    <link rel="stylesheet" href="css/theme/white.css">
+    <link rel="stylesheet" href="../revealVizScroll.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+  </head>
+  <body>
+    <div class="reveal">
+      <div class="slides">
+        <!-- Optional: Placeholder for your scrollable viz -->
+        <div class="scrollable scrollable-demo">
+          <svg width=400 height=400>
+            <circle cx=200 cy=200 r=20 style="fill:steelblue"></circle>
+          </svg>
+        </div>
+
+        <!-- Your slides -->
+        <section>
+          <section>
+            <h1>No Scrolling</h1>
+          </section>
+          <section class="scroll" scrollable="demo" step="step 0" >
+            <h2>Step 0 text</h2>
+          </section>
+          <section class="scroll" scrollable="demo" step="step 1" >
+            <h2>Step 1 text</h2>
+          </section>
+          <section>
+            <h2>No scrolling again</h2>
+          </section>
+        </section>
+      </div>
+    </div>
+    <script src="js/head.min.js"></script>
+    <script src="js/reveal.js"></script>
+    <script src="js/d3.v4.min.js"></script>
+    <script>
+      function moveLeft(ele) {
+        d3.select(ele)
+          .select("circle")
+          .transition()
+          .duration(1000)
+            .attr("cx", 100);
+      }
+
+      function moveRight(ele) {
+        d3.select(ele)
+          .select("circle")
+          .transition()
+          .duration(1000)
+            .attr("cx", 300);
+      }
+
+      function doStep(step) {
+        if (step==="step 0") moveLeft(this);
+        else if (step==="step 1") moveRight(this);
+      }
+
+    </script>
+    <script>
+      Reveal.initialize({
+        dependencies: [
+          { src : "../revealVizScroll.js",
+            async: false,
+            callback: function () {
+              revealVizScroll.makeScrollable("demo", doStep);
+            }
+          }
+        ],
+
+      });
+    </script>
+  </body>
+</html>

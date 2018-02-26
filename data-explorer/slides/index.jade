@@ -1,0 +1,151 @@
+doctype html
+html
+  head
+    title RevealVizScroll demo
+    link(rel="stylesheet", href="css/reveal.css")
+    link(rel="stylesheet", href="css/theme/white.css")
+    link(rel="stylesheet", href="../revealVizScroll.css")
+
+    meta(charset='utf-8')
+    meta(name='author', content='John Alexis Guerra Gomez')
+    meta(name='description', content="RevealVizScroll demo")
+    meta(name="viewport",content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui")
+
+    style.
+      .reveal pre {
+        font-size:0.3em;
+      }
+
+  body
+
+    div.reveal
+      div.slides
+        //- If you want you can manually setup your viz here
+        div.scrollable.scrollable-demo
+
+        section
+          h1 RevealVizScroll demo
+          p Create scrolliteling viz effects from Reveal
+          a(href="https://github.com/john-guerra/revealVizScrollyteling") revealVizScroll repo
+
+        section
+          section
+            h3 Have you ever wanted to created incremental visualizations in Reveal?
+
+          section.scroll(scrollable="demo" step="left")
+            h2 It's easy
+            p Create a scroller with init, stepping and stop functions
+            pre
+              code(data-trim data-noescape).
+                revealVizScroll.makeScrollable("demo",
+                  initFn,
+                  stepFn,
+                  stopFn);
+
+
+          section.scroll(scrollable="demo" step="middle")
+            p Then add a #[strong scroll] class to your sections with two parameters
+            pre
+              code(data-trim data-noescape).
+                &lt;section
+                  class=scroll
+                  scrollable=&quot;demo&quot;
+                  step=&quot;moveLeft&quot;&gt;
+                &lt;/section&gt;
+
+
+          section.scroll(scrollable="demo" step="down")
+            p And modify the visualization from the steping function
+
+          section
+            h2 End
+            p This slide doesn't have the #[strong scroll] class, therefore it hides the scroller
+
+
+
+    script(src="js/head.min.js")
+    script(src="js/reveal.js")
+    script(src="js/d3.v4.min.js")
+
+    script.
+      // InitFn Initialization function. Use it for creating your viz
+      function initFn () {
+        // Append an svg and a circle
+        d3.select(this)
+          .append("svg")
+          .attr("width", 400)
+          .attr("height", 400)
+          .selectAll("circle")
+            .data(d3.range(0, 30))
+              .enter()
+              .append("circle")
+              .attr("cx", 50)
+              .attr("cy", function (d, i)  { return i*(10+2) + 50; })
+              .attr("r", 5)
+              .attr("style", "steelblue");
+
+      }
+
+      //StepFn Function called every step
+      function stepFn(step) {
+        if (step === "left") {
+          d3.select(this)
+            .selectAll("circle")
+              .transition()
+              .duration(1000)
+              .attr("cx", 50)
+              .attr("cy", function (d, i)  { return i*(10+2) + 50; })
+              .attr("r", 5)
+              .attr("style", "steelblue");
+
+        }
+        if (step === "middle") {
+          d3.select(this)
+            .selectAll("circle")
+              .transition()
+              .duration(1000)
+              .attr("cx", function() { return Math.random()*350; })
+              .attr("cy", function (d, i)  { return i*(10+2) + 50; })
+              .style("fill", "steelblue");
+        } else if (step === "down") {
+          d3.select(this)
+            .selectAll("circle")
+              .transition()
+              .duration(1000)
+              .attr("cy", 50)
+              .style("fill", "darkblue");
+        }
+      }
+
+      // Stop function, what to do if the presentation moves away from the viz. Useful for stoping force simulations
+      function stopFn() {
+        console.log("Not scrolling anymore :(");
+      }
+
+      function revealVizScrollCallback() {
+        // Create a new scrollable named demo
+        revealVizScroll.makeScrollable("demo", stepFn, initFn, stopFn);
+      }
+
+
+    script.
+      Reveal.initialize({
+        dependencies: [
+          { src : "../revealVizScroll.js",
+            async: false,
+            callback: revealVizScrollCallback
+          }
+        ],
+
+      });
+    //- script.
+    //-   (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+    //-   (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+    //-   m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    //-   })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+    //-   ga('create', 'UA-72531610-1', 'auto');
+    //-   ga('send', 'pageview');
+
+
+
