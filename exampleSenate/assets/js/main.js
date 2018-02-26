@@ -69,7 +69,7 @@
       }
       e.target.commonVotes+=1;
     });
-    var mincommonVotes = 1;
+    var mincommonVotes = 2;
     var filteredLinks = graph.links;
     var filteredGraph = {
       nodes: dicNodes.values(),
