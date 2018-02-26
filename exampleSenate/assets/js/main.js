@@ -4,7 +4,7 @@
   var margin = {
     x: 0,
     y: 0
-  }
+  };
 
   var canvas = d3.select("#graph").node(),
     context = canvas.getContext("2d"),
@@ -26,8 +26,9 @@
       .force("y", d3.forceY(height/2).strength(0.15));
       // .force("center", d3.forceCenter(width/2, height/2));
 
-  d3.json("VotacionesSenado2017.json", onLoadJSON);
-  function onLoadJSON(error, graph) {
+  d3.json("VotacionesSenado2017_de_CongresoVisible.json", onLoad);
+  
+  function onLoad(error, graph) {
     var dicNodes = d3.map();
     //mapping nodes
     graph.nodes.forEach(function (n) {
@@ -68,7 +69,7 @@
       }
       e.target.commonVotes+=1;
     });
-    var mincommonVotes = 2;
+    var mincommonVotes = 1;
     var filteredLinks = graph.links;
     var filteredGraph = {
       nodes: dicNodes.values(),
