@@ -2,7 +2,7 @@
   "name": "node-app",
   "version": "0.1.0",
   "private": true,
-  "homepage" : "http://jgmurillo10.github.io/node-app",
+  "homepage": "http://jgmurillo10.github.io/node-app",
   "dependencies": {
     "d3": "^4.11.0",
     "react": "^16.0.0",
