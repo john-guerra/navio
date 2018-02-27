@@ -92,7 +92,11 @@ d3.csv("./dataset.csv", function (err, data) {
 
 ```
 
-Demo
+## Demo
+
 [vastChallenge2017](http://john-guerra.github.io/NodeNavigator/example_vastChallenge2017/index.html)
+
+[Live Demo: Data-explorer](https://john-guerra.github.io/NodeNavigator/data-explorer/build/index.html)
+
 ## License
 NodeNavigator.js is licensed under the MIT license. (http://opensource.org/licenses/MIT)
