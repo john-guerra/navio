@@ -14,7 +14,7 @@ class Visualization extends Component {
 	componentDidMount() {
     console.log("NodeNavigatorComponent did mount");
     this.nn = new NodeNavigator(this.target, 600)
-      .id(this.props.id)
+      .id("car-id")
       .updateCallback(this.props.updateCallback);
       this.props.attributes.map((d,i)=>{
         if(d.checked){
