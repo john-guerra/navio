@@ -62,9 +62,11 @@
 	grid-template-columns: 3fr 2fr 1fr !important;
 	grid-template-rows: auto;
 	align-self: center;
+	border-bottom: 1px solid black;
+	padding-bottom: 0.5em;
 }
 .attribute-name {
-	text-align: right;
+	text-align: left;
 	font-size: 0.5em;
 	align-self: center;
 

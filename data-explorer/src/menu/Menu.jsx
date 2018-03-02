@@ -1,11 +1,22 @@
 import React, { Component } from 'react';
-import { Switch, Button, Select, Tooltip } from 'antd';
+import { Switch, Button, Select, Tooltip, Radio } from 'antd';
 import * as d3 from "d3";
 const Option = Select.Option;
+const RadioGroup = Radio.Group;
 class Menu extends Component {
 	state = {
 		size: 'default',
+		value: '',
 	}
+	onChangeRadio = (e) => {
+	    console.log('radio checked', e.target.value);
+	    this.setState({
+	      value: e.target.value,
+	    }, ()=>{
+	    	this.props.setId(e.target.value)
+	    });
+	 }
+
 	onChange(checked) {
 	  console.log(`switch to ${checked}`);
 	}
@@ -14,8 +25,7 @@ class Menu extends Component {
 			let selection = d3.select("#menu")
 								.style("transition", "visibility 1s")
 								.style("visibility","visible");
-			console.log(selection,'selection')
-		}
+		};
 	}
 	clickAtt(i){
 		console.log(i,'i')
@@ -30,28 +40,32 @@ class Menu extends Component {
 		this.props.changeTypeStatus(attr,value);
 	}
 	render(){
+		const radioStyle = {
+	      display: 'block',
+	      height: '30px',
+	      lineHeight: '30px',
+	    };
 		const { size } = this.state;
 		return(
 			<div id="menu" className="menu">
 				<div className="ids">
 					<div className="ids-title">
-						<p>ID</p>
+						<p>ID ({this.props.id}) </p>
 					</div>
 					
 					<div className="ids-container">
-					{
-						this.props.ids.map((d,i)=>{
-							return (
-								<Button 
-									className="id" 
-									key={i} 
-									type="dashed"
-								>
-									{d}
-								</Button>
-							);
-						})
-					}
+					  	<RadioGroup onChange={this.onChangeRadio} value={this.state.value}>  
+							{
+								this.props.attributes.map((d,i)=>{
+									console.log(d.name,this.props.id);
+									let check = d.name == this.props.id;
+									console.log(check);
+									return (
+										<Radio defaultChecked={d.id} className="id" style={radioStyle} value={d.name}>{d.name}</Radio>
+									)
+								})
+							}
+						</RadioGroup>
 					</div>
 
 				</div>

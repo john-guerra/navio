@@ -78,16 +78,17 @@ class App extends Component {
       atts.push(i);
     }
     this.getAttributesType(data,atts,ids);
-    console.log(atts,'atts');
+    console.log(atts,'atts', ids,'ids');
     this.setState({
       loaded: true,
       attributes: atts,
       ids: ids,
       data: data,
+      id: ids[0],
     })
     console.log('end setting data')
   }
-  setID(id){
+  setId = (id) => {
     console.log('setID');
     this.setState({id:id})
   }
@@ -162,7 +163,8 @@ class App extends Component {
                   loaded={this.state.loaded}
                   attributes={this.state.attributes}
                   ids={this.state.ids}
-                  setId={this.setID.bind(this)}
+                  id={this.state.id}
+                  setId={this.setId}
                   setAttributes={this.setAttributes.bind(this)}
 
                 />
@@ -177,7 +179,7 @@ class App extends Component {
                   updateCallback={this.updateCallback}
                   attributes={this.state.attributes}
                   ids={this.state.ids}
-                  id={this.state.ids[0]}
+                  id={this.state.id}
                 />
                 
                 <div className="footer">
