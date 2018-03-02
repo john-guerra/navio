@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import * as d3 from "d3";
-import { Icon } from 'antd';
+import { Spin } from 'antd';
 import Load from './load/Load.jsx';
 import Visualization from './visualization/Visualization.jsx';
 class Content extends Component {
@@ -25,12 +25,7 @@ class Content extends Component {
 
 							:
 							<div className="center">
-								<div>								
-									<Icon type="loading" />
-								</div>
-								<div>
-									<h1>loading...</h1>	
-								</div>
+								<Spin size="large" tip="Loading..."/>	
 							</div>
 							
 						}
