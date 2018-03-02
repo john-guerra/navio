@@ -11,7 +11,7 @@ a:link {
 
 .content {
     grid-area: c;
-    margin-left: -40%; 
+    margin-left: -50%; 
     transition: margin-left 1s;
     display: flex;
     justify-content: flex-start;
