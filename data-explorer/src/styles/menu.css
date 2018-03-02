@@ -51,6 +51,7 @@
 	justify-self:center;
 }
 .attributes-container {
+	overflow-y: scroll;
 	grid-area: attributes-container;
 	display: grid;
 	grid-auto-rows: auto;
@@ -64,6 +65,8 @@
 }
 .attribute-name {
 	text-align: right;
+	font-size: 0.5em;
+	align-self: center;
 
 }
 .attribute-select {

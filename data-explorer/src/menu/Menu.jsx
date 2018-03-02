@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { Switch, Button, Select } from 'antd';
+import { Switch, Button, Select, Tooltip } from 'antd';
 import * as d3 from "d3";
 const Option = Select.Option;
 class Menu extends Component {
@@ -79,7 +79,9 @@ class Menu extends Component {
 								        </Select>
 									</div>
 									<div className="attribute-switch">
-										<Switch className="attribute" defaultChecked onChange={(checked)=>this.props.changeCheckStatus(d,checked)} />
+										<Tooltip placement="right"  title="Here you can change this dimension visibility">
+										    <Switch className="attribute" defaultChecked onChange={(checked)=>this.props.changeCheckStatus(d,checked)} />
+										</Tooltip>
 									</div>
 								</div>
 								)
