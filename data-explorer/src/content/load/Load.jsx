@@ -3,21 +3,6 @@ import { Upload, Icon, message, Button, Modal, Card } from 'antd';
 import * as vega from 'vega';
 import './load.css';
 const Dragger = Upload.Dragger;
-const props = {
-  name: 'file',
-  multiple: true,
-  onChange(info) {
-    const status = info.file.status;
-    if (status !== 'uploading') {
-      console.log(info.file, info.fileList);
-    }
-    if (status === 'done') {
-      message.success(`${info.file.name} file uploaded successfully.`);
-    } else if (status === 'error') {
-      message.error(`${info.file.name} file upload failed.`);
-    }
-  },
-};
 class Load extends Component {
   state = {
     fileName: 'Upload a dataset',
@@ -50,7 +35,10 @@ class Load extends Component {
     });
   }
   onChange = (e) =>{
-    let fileName = e.target.value.split( '\\' ).pop()
+    console.log(e)
+    if(e.file.perfect!==100) return;
+    console.log(e.file)
+    let fileName = e.file.name;
     this.setState({
       fileName: fileName
     })
@@ -59,8 +47,7 @@ class Load extends Component {
         fileName: 'Upload a dataset'
       })
     } 
-
-    this.handleFile(e.target.files[0]);
+    this.handleFile(e.file.originalFileObj);
   }
   getFileSize = (file) => {
     let fSExt = ['Bytes', 'KB', 'MB', 'GB'];
@@ -79,12 +66,8 @@ class Load extends Component {
       alert('No file selected.');
       return;
     }
-    // let fileSize = this.getFileSize(file);
-
     reader.onload = (lEvent: any) => {
-      // const name = file.name.replace(/\.\w+$/, '');
       const format = file.name.split('.').pop();
-
       let values;
       try {
         values = vega.read(lEvent.target.result, {type: format});
@@ -97,12 +80,21 @@ class Load extends Component {
 
     reader.readAsText(file);
   }
+  beforeUpload = (e) => {
+    console.log(e,'beforeUpload');
+    this.handleFile(e);
+    return false;
+  }
+  customRequest = (e) => {
+    console.log(e,'customRequest');
+
+  }
   render() {
-    const { visible, confirmLoading, ModalText } = this.state;
+    const { visible, confirmLoading } = this.state;
     return (
       <div>
         <div className="dragger">
-          <Dragger {...props}>
+          <Dragger accept=".csv,.tsv,.txt" customRequest={this.customRequest} beforeUpload={this.beforeUpload} name={'file'} multiple={false} onChange={this.onChange}>
             <p className="ant-upload-drag-icon">
               <Icon type="upload" />
             </p>
@@ -128,8 +120,8 @@ class Load extends Component {
             <div className="dataset-container">
               {this.props.datasets.map((d,i)=> {
                 return(
-                  <div className="dataset">
-                    <Card key={i} title={d} extra={<a onClick={()=>this.handleOk(i)} href="#">select</a>} style={{ width: 300 }}>
+                  <div key={i} className="dataset">
+                    <Card  title={d} extra={<a onClick={()=>this.handleOk(i)} href="#">select</a>} style={{ width: 300 }}>
                       <p>Card content</p>
                       <p>Card content</p>
                       <p>Card content</p>
