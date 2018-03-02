@@ -405,6 +405,7 @@ function NodeNavigator(eleId, h) {
     //   []
     // );
 
+    // Send visible and seqId to the beginning
     var attribs = xScale.domain();
 
     var levelOverlay = svg.select(".attribs")
@@ -418,12 +419,12 @@ function NodeNavigator(eleId, h) {
         .each(addBrush);
 
     var attribOverlay = levelOverlayEnter.merge(levelOverlay)
-        .selectAll(".attribOverlay")
-        .data(function (_, i) {
-          return attribs.map(function (a) {
-            return {attrib:a, level:i};
-          });
+      .selectAll(".attribOverlay")
+      .data(function (_, i) {
+        return attribs.map(function (a) {
+          return {attrib:a, level:i};
         });
+      });
 
 
     var attribOverlayEnter = attribOverlay
@@ -453,7 +454,11 @@ function NodeNavigator(eleId, h) {
     attribOverlayEnter
       .append("text")
       .merge(attribOverlay.select("text"))
-      .text(function (d) { return d.attrib; })
+      .text(function (d) { 
+        return d.attrib === "__seqId" ?
+          "sequential Index" : 
+          d.attrib; 
+      })
       .attr("x", xScale.bandwidth()/2)
       .attr("y", 0)
       .style("font-weight", function (d) {
@@ -694,10 +699,14 @@ function NodeNavigator(eleId, h) {
 
     xScale
       .domain(dDimensions.keys().sort(function (a,b) {
-        if (a==="visible") {
+        if (a === "visible") {
           return -1;
         }
         else if (b === "visible") {
+          return 1;
+        } else if (a === "__seqId") {
+          return -1;
+        } else if (b === "__seqId") {
           return 1;
         } else {
           return 0;
@@ -838,6 +847,13 @@ function NodeNavigator(eleId, h) {
             //, "#cddca3", "#8c6d31", "#bd9e39"]
       );
     }
+    if (!colScales.has("__seqId")) {
+      nn.addSequentialAttrib(
+        "__seqId"
+      );
+    }
+
+
     // nn.addCategoricalAttrib("group");
 
 
