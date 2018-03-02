@@ -8,9 +8,10 @@ html, body {
 a:link {
   text-decoration: none;
 }
+
 .content {
     grid-area: c;
-    margin-left: -20%; 
+    margin-left: -40%; 
     transition: margin-left 1s;
 }
 
@@ -48,12 +49,6 @@ a:link {
 }
 .container > .header > .info > i {
   margin: 1em;
-}
-.container > .menu {
-  flex-direction: column;
-  padding: 0.5em;
-
-
 }
 #root > div > div.footer > svg {
   margin: 1em;

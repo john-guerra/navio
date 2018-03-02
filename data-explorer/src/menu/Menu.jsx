@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { Switch, Button, Icon, Select } from 'antd';
+import { Switch, Button, Select } from 'antd';
 import * as d3 from "d3";
 const Option = Select.Option;
 class Menu extends Component {
@@ -33,42 +33,54 @@ class Menu extends Component {
 		const { size } = this.state;
 		return(
 			<div id="menu" className="menu">
-				<div className="attributes">
-					<p>ID</p>
-					<div className="attributes-container">
+				<div className="ids">
+					<div className="ids-title">
+						<p>ID</p>
+					</div>
+					
+					<div className="ids-container">
 					{
 						this.props.ids.map((d,i)=>{
 							return (
-								<Button className="attribute" key={i} type="dashed">{d}</Button>
-							)
+								<Button 
+									className="id" 
+									key={i} 
+									type="dashed"
+								>
+									{d}
+								</Button>
+							);
 						})
 					}
-
 					</div>
 
 				</div>
 				<div className="attributes">
-					<p>Attributes</p>
-					<div className="attributes-container-wrapper">
+					<div className="attributes-title">
+						<p>Attributes</p>
+					</div>
+					<div className="attributes-container">
 					{
 						this.props.attributes.map((d,i)=>{
 							return (
-								<div key={i} className="attributes-container">
-									<div>
+								<div className="attribute">
+									<div className="attribute-name">
 										<span>{d.name}</span> 
+									</div>
+									<div className="attribute-select">
 										<Select
 								          size={size}
 								          defaultValue={d.type}
 								          onChange={(value)=>this.handleChange(d,value)}
-								          style={{ width: 200 }}
+								          className="attribute-select-item"
 								        >
 								        	<Option key={"categorical"} value={"categorical"} >categorical</Option>
 								        	<Option key={"sequential"} value={"sequential"}>sequential</Option>
 								        </Select>
 									</div>
-									
-									<Switch className="attribute" defaultChecked onChange={(checked)=>this.props.changeCheckStatus(d,checked)} />
-									{/*<Switch defaultChecked onChange={this.onChange.bind(this)} />*/}
+									<div className="attribute-switch">
+										<Switch className="attribute" defaultChecked onChange={(checked)=>this.props.changeCheckStatus(d,checked)} />
+									</div>
 								</div>
 								)
 						})

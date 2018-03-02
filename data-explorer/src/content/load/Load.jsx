@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { Upload, Icon, message, Button, Modal, Card } from 'antd';
+import { Upload, Icon, Button, Modal, Card } from 'antd';
 import * as vega from 'vega';
 import './load.css';
 const Dragger = Upload.Dragger;
