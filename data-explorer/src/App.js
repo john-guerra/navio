@@ -64,7 +64,7 @@ class App extends Component {
   setLoading = (loading) => {
     this.setState({loading:loading});
   };
-  setData(data){
+  setData = (data) => {
     console.log('setting data')
     /*Creates an empty array that will contain the metadata of the attributes*/
     let atts = []
@@ -98,6 +98,14 @@ class App extends Component {
     console.log('setatts');
     this.setState({attributes:attrs})
   }
+  changeTypeStatus = (attr,type) => {
+    let attrs = this.state.attributes;
+    attrs.forEach(a=> {
+      if(a.name === attr.name){
+        a.type = type;
+      }
+    })
+  }
   changeCheckStatus = (attr, checked) => {
     console.log(attr,checked,this.state);
     let attrs = this.state.attributes;
@@ -108,7 +116,7 @@ class App extends Component {
     })
     this.setState({attributes:attrs});
   }
-  updateCallback(callback){
+  updateCallback = (callback) => {
     console.log('updateCallback',callback);
   }
   toggleModal = () => {
@@ -140,8 +148,8 @@ class App extends Component {
         }
            <div className="container">
                 <div className="header">
-                    <div> <Icon type="compass" /> </div>
-                    <div>Data Navigator</div>
+                    <div className="logo"> <Icon type="compass" /> </div>
+                    <div> Data Navigator</div>
                     
                     <div className="info"> <a href="#openModal">  <i className="fas fa-info-circle" ></i> </a></div>
                 </div>
@@ -160,10 +168,10 @@ class App extends Component {
                   setLoading={this.setLoading}
                   loading={this.state.loading}
                   datasets={this.state.datasets}
-                  setData={this.setData.bind(this)} 
+                  setData={this.setData} 
                   loaded={this.state.loaded} 
                   data={this.state.data} 
-                  updateCallback={this.updateCallback.bind(this)}
+                  updateCallback={this.updateCallback}
                   attributes={this.state.attributes}
                   ids={this.state.ids}
                   id={this.state.ids[0]}

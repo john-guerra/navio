@@ -36,3 +36,6 @@ body {
   display: flex;
   justify-content: center;
 }
+.logo {
+  margin-right: 1em; 
+}
