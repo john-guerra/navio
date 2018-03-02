@@ -24,9 +24,13 @@ class Content extends Component {
 							/>
 
 							:
-							<div>
-								<Icon type="loading" />
-								<h1>loading...</h1>	
+							<div className="center">
+								<div>								
+									<Icon type="loading" />
+								</div>
+								<div>
+									<h1>loading...</h1>	
+								</div>
 							</div>
 							
 						}

@@ -63,7 +63,7 @@ class App extends Component {
   }
   setLoading = (loading) => {
     this.setState({loading:loading});
-  }
+  };
   setData(data){
     console.log('setting data')
     /*Creates an empty array that will contain the metadata of the attributes*/
@@ -78,6 +78,7 @@ class App extends Component {
       atts.push(i);
     }
     this.getAttributesType(data,atts,ids);
+    console.log(atts,'atts');
     this.setState({
       loaded: true,
       attributes: atts,
@@ -96,6 +97,16 @@ class App extends Component {
   setAttributes(attrs){
     console.log('setatts');
     this.setState({attributes:attrs})
+  }
+  changeCheckStatus = (attr, checked) => {
+    console.log(attr,checked,this.state);
+    let attrs = this.state.attributes;
+    attrs.forEach(a=>{
+      if(a.name === attr.name){
+        a.checked = checked;
+      }
+    })
+    this.setState({attributes:attrs});
   }
   updateCallback(callback){
     console.log('updateCallback',callback);
@@ -136,6 +147,7 @@ class App extends Component {
                 </div>
 
                 <Menu
+                  changeCheckStatus={this.changeCheckStatus}
                   loaded={this.state.loaded}
                   attributes={this.state.attributes}
                   ids={this.state.ids}

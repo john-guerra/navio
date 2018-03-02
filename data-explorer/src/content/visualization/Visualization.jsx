@@ -11,15 +11,17 @@ class Visualization extends Component {
     if (newProps.data.length !== this.props.data.length)
       this.nn.data(newProps.data);
   }
-	componentDidMount() {
-    this.props.setLoading(true);
+  componentDidUpdate(){
+    this.setUpNodeNavigator();
+  }
+  setUpNodeNavigator = () => {
     console.log("NodeNavigatorComponent did mount");
     this.nn = new NodeNavigator(this.target, 600)
       .id(this.props.id)
       .updateCallback(this.props.updateCallback);
       this.props.attributes.forEach((d,i)=>{
         if(d.checked){
-       	console.log(this.props.data)
+        console.log(this.props.data)
         console.log("------------");
 
           if(d.type === cat){
@@ -37,6 +39,11 @@ class Visualization extends Component {
     if (this.props.data) {
       this.nn.data(this.props.data);
     }
+  }
+	componentDidMount() {
+    this.props.setLoading(true);
+    this.setUpNodeNavigator();
+    
   }
 
 	render(){

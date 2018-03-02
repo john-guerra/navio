@@ -46,7 +46,7 @@ class Menu extends Component {
 							return (
 								<div key={i} className="attributes-container">
 									<Button className="attribute"  >{d.name}</Button>
-									<Switch className="attribute" defaultChecked onChange={this.onChange.bind(this)} />
+									<Switch className="attribute" defaultChecked onChange={(checked)=>this.props.changeCheckStatus(d,checked)} />
 									{/*<Switch defaultChecked onChange={this.onChange.bind(this)} />*/}
 								</div>
 								)
