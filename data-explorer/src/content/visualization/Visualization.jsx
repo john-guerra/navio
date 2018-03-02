@@ -12,6 +12,7 @@ class Visualization extends Component {
       this.nn.data(newProps.data);
   }
 	componentDidMount() {
+    this.props.setLoading(true);
     console.log("NodeNavigatorComponent did mount");
     this.nn = new NodeNavigator(this.target, 600)
       .id(this.props.id)

@@ -16,12 +16,8 @@ class App extends Component {
       ids: [],
       id: "",
       datasets:["moma","senate","other"],
+      loading:false,
     }
-  }
-  componentDidMount() {
-    // fetch('/users')
-    //   .then(res => res.json())
-    //   .then(users => this.setState({users}))
   }
   /*
     Function that iterates over the data in order to get the type of each attribute
@@ -65,7 +61,11 @@ class App extends Component {
     }
     return true;
   }
+  setLoading = (loading) => {
+    this.setState({loading:loading});
+  }
   setData(data){
+    console.log('setting data')
     /*Creates an empty array that will contain the metadata of the attributes*/
     let atts = []
     let ids = []
@@ -84,6 +84,7 @@ class App extends Component {
       ids: ids,
       data: data,
     })
+    console.log('end setting data')
   }
   setID(id){
     console.log('setID');
@@ -144,6 +145,8 @@ class App extends Component {
                 />
                 
                 <Content 
+                  setLoading={this.setLoading}
+                  loading={this.state.loading}
                   datasets={this.state.datasets}
                   setData={this.setData.bind(this)} 
                   loaded={this.state.loaded} 

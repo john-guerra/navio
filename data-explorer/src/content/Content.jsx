@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import * as d3 from "d3";
+import { Icon } from 'antd';
 import Load from './load/Load.jsx';
 import Visualization from './visualization/Visualization.jsx';
 class Content extends Component {
@@ -13,13 +14,27 @@ class Content extends Component {
 		return(
 			<div id="content" className="content">
 				{ !this.props.loaded? 
-					<Load 
-						datasets={this.props.datasets}
-						setData={this.props.setData.bind(this)}
-					/>
+					<div>
+						{!this.props.loading ? 
+							<Load 
+								setLoading={this.props.setLoading}
+								loading={this.props.loading}
+								datasets={this.props.datasets}
+								setData={this.props.setData.bind(this)}
+							/>
+
+							:
+							<div>
+								<Icon type="loading" />
+								<h1>loading...</h1>	
+							</div>
+							
+						}
+						
+					</div>
 					:
 					<Visualization
-
+						setLoading={this.props.setLoading}
 						data={this.props.data}
 						updateCallback={this.props.updateCallback}
 						attributes={this.props.attributes}
