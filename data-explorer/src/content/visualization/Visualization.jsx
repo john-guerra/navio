@@ -4,6 +4,8 @@ import NodeNavigator from "./NodeNavigator.js";
 // let d3 = require("d3");
 const cat = "categorical";
 const seq = "sequential";
+let d3 = require("d3");
+let d3_chromatic = require("d3-scale-chromatic");
 class Visualization extends Component {
 
  componentWillUpdate(newProps) {
@@ -16,9 +18,17 @@ class Visualization extends Component {
   }
   setUpNodeNavigator = () => {
     console.log("NodeNavigatorComponent did mount");
+    console.log(this.props.data, 'this.props.data nn')
     this.nn = new NodeNavigator(this.target, 600)
       .id(this.props.id)
       .updateCallback(this.props.updateCallback);
+      // .addSequentialAttrib("Timestamp",
+      //   d3.scalePow()
+      //     .exponent(0.25)
+      //     .range([d3_chromatic.interpolatePurples(0), d3_chromatic.interpolatePurples(1)]))
+      // .addCategoricalAttrib("car-type")
+      // .addCategoricalAttrib("gate-name");
+
       this.props.attributes.forEach((d,i)=>{
         if(d.checked){
         console.log(this.props.data)
@@ -29,7 +39,17 @@ class Visualization extends Component {
             this.nn.addCategoricalAttrib(d.name);
           }else if(d.type === seq){
             console.log('seq',d.name);
-            this.nn.addSequentialAttrib(d.name);
+            if(d.data=== "date"){
+              console.log('date')
+              this.nn.addSequentialAttrib(d.name,
+                        d3.scalePow()
+                          .exponent(0.25)
+                          .range([d3_chromatic.interpolatePurples(0), d3_chromatic.interpolatePurples(1)]))
+            }
+            else {
+              this.nn.addSequentialAttrib(d.name);
+            }
+            
           }
 
          console.log("------------");
@@ -46,11 +66,9 @@ class Visualization extends Component {
     
   }
 
-	render(){
-		return(
-			<div
-	          className="visualization"
-	          ref={(target) => this.target = target }>
+	render() {
+		return (
+    		  <div ref={(target) => this.target = target }>
 	        </div>
 		)
 	}

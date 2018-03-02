@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { Upload, Icon, message, Button, Modal, Card } from 'antd';
+import { Upload, Icon, Button, Modal, Card } from 'antd';
 import * as vega from 'vega';
 import './load.css';
 const Dragger = Upload.Dragger;
@@ -15,11 +15,13 @@ class Load extends Component {
       visible: true,
     });
   }
-  handleOk = (i) => {
-    console.log(i)
+  handleOk = (data) => {
+    console.log(data)
     this.setState({
       ModalText: 'The modal will be closed after two seconds',
       confirmLoading: true,
+    }, ()=>{
+      this.props.setData(data)
     });
     setTimeout(() => {
       this.setState({
@@ -117,12 +119,20 @@ class Load extends Component {
           >
             <div className="dataset-container">
               {this.props.datasets.map((d,i)=> {
+                console.log(d)
                 return(
                   <div key={i} className="dataset">
-                    <Card  title={d} extra={<a onClick={()=>this.handleOk(i)} href="#">select</a>} style={{ width: 300 }}>
-                      <p>Card content</p>
-                      <p>Card content</p>
-                      <p>Card content</p>
+                    <Card  title={d.name} extra={<a onClick={()=>this.handleOk(d.data)} href="#">select</a>} style={{ width: 300 }}>
+                      <h1>Size</h1>
+                      <p>{d.size} rows</p>
+                      <h1>Attributes ({d.n_attributes})</h1>
+                        { d.attributes?
+                          <div>
+                            
+                          </div>
+                          :''
+                        }
+                      
                     </Card>
                   </div>
                   )

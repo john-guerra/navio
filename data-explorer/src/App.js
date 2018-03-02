@@ -4,6 +4,7 @@ import 'antd/dist/antd.css';
 import { Icon } from 'antd';
 import Menu from './menu/Menu.jsx';
 import Content from './content/Content.jsx';
+import * as d3 from "d3";
 
 class App extends Component {
   constructor(props){
@@ -15,7 +16,7 @@ class App extends Component {
       attributes: [],
       ids: [],
       id: "",
-      datasets:["moma","senate","other"],
+      datasets:[{"name":"all_followers_id.csv"},{"name":"Artworks_less_columns.csv"},{"name":"Lekagul Sensor Data.csv"}],
       loading:false,
     }
   }
@@ -25,7 +26,24 @@ class App extends Component {
     returns an array with the types of the attributes of the data
     also gets the attributte that is id
   */
-
+  componentWillMount(){
+    let datasets = this.state.datasets;
+    datasets.forEach(d=>{
+      d3.csv(`datasets/${d.name}`, function(err,data) {
+        if(err) return err;
+        console.log(d.name)
+        console.log(data)
+        d.size = data.length;
+        d.data = data;
+        d.attributes = []
+        for (let prop in data[0]){
+          d.attributes.push(prop);
+        };
+        d.n_attributes = d.attributes.length;
+      })
+    })
+    this.setState({datasets});
+  }
   getAttributesType(data,atts,ids){
     let seq = "sequential";
     let cat = "categorical";
@@ -40,10 +58,13 @@ class App extends Component {
       let isDate = this.isDate(attr);
       if(!notNumber){
         atts[count].type = seq;
+        atts[count].data = "number";
       }else if(isDate){
         atts[count].type = seq;
+        atts[count].data = "date";
       }else {
          atts[count].type = cat;
+         atts[count].data = "string";
       }
       count++;
     }
@@ -78,16 +99,25 @@ class App extends Component {
       atts.push(i);
     }
     this.getAttributesType(data,atts,ids);
-    console.log(atts,'atts');
+    console.log(atts,'atts', ids,'ids');
+    data.forEach((row) => {
+      atts.forEach(att=> {
+        if(att.data === "date"){
+          row[att.name] = new Date(row[att.name]);
+        }
+      })
+    })
+    console.log(data,'dataParsed');
     this.setState({
       loaded: true,
       attributes: atts,
       ids: ids,
       data: data,
+      id: ids[0],
     })
     console.log('end setting data')
   }
-  setID(id){
+  setId = (id) => {
     console.log('setID');
     this.setState({id:id})
   }
@@ -99,12 +129,14 @@ class App extends Component {
     this.setState({attributes:attrs})
   }
   changeTypeStatus = (attr,type) => {
+    console.log(attr,type,'changeTypeStatus');
     let attrs = this.state.attributes;
     attrs.forEach(a=> {
       if(a.name === attr.name){
         a.type = type;
       }
     })
+    this.setState({attributes:attrs});
   }
   changeCheckStatus = (attr, checked) => {
     console.log(attr,checked,this.state);
@@ -156,10 +188,12 @@ class App extends Component {
 
                 <Menu
                   changeCheckStatus={this.changeCheckStatus}
+                  changeTypeStatus={this.changeTypeStatus}
                   loaded={this.state.loaded}
                   attributes={this.state.attributes}
                   ids={this.state.ids}
-                  setId={this.setID.bind(this)}
+                  id={this.state.id}
+                  setId={this.setId}
                   setAttributes={this.setAttributes.bind(this)}
 
                 />
@@ -174,7 +208,7 @@ class App extends Component {
                   updateCallback={this.updateCallback}
                   attributes={this.state.attributes}
                   ids={this.state.ids}
-                  id={this.state.ids[0]}
+                  id={this.state.id}
                 />
                 
                 <div className="footer">
