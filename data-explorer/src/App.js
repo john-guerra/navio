@@ -157,7 +157,12 @@ class App extends Component {
       showModal: !this.state.showModal,
     })
   }
-  
+  setLoaded = () => {
+    this.setState({
+      loaded:false,
+      loading:false,
+    });
+  }
   getModal(){
     return (
       <div id="openModal" className="modalDialog">
@@ -199,6 +204,7 @@ class App extends Component {
                 />
                 
                 <Content 
+                  setLoaded={this.setLoaded}
                   setLoading={this.setLoading}
                   loading={this.state.loading}
                   datasets={this.state.datasets}

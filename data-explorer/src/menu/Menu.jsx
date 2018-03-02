@@ -22,10 +22,14 @@ class Menu extends Component {
 	}
 	componentDidUpdate(){
 		if(this.props.loaded){
-			let selection = d3.select("#menu")
-								.style("transition", "visibility 1s")
-								.style("visibility","visible");
-		};
+			d3.select("#menu")
+					.style("transition", "visibility 1s")
+					.style("visibility","visible");
+		}else {
+			d3.select("#menu")
+					.style("transition", "visibility 1s")
+					.style("visibility","hidden");
+		}
 	}
 	clickAtt(i){
 		console.log(i,'i')

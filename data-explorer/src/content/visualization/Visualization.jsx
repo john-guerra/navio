@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import PropTypes from "prop-types";
 import NodeNavigator from "./NodeNavigator.js";
+import { Button } from 'antd';
 // let d3 = require("d3");
 const cat = "categorical";
 const seq = "sequential";
@@ -65,11 +66,18 @@ class Visualization extends Component {
     this.setUpNodeNavigator();
     
   }
-
+  onClick = () => {
+    this.props.setLoaded();
+  }
 	render() {
 		return (
-    		  <div ref={(target) => this.target = target }>
-	        </div>
+          <div>
+            <div className="change-dataset-button">
+              <Button onClick={this.onClick}>Change dataset</Button>
+            </div>
+      		  <div ref={(target) => this.target = target }>
+  	        </div>
+          </div>
 		)
 	}
 }

@@ -108,8 +108,8 @@ class Load extends Component {
         <div>
           <p> --------- or select one of our datasets --------- </p>
         </div>
-        <div className="center">
-          <Button onClick={this.showModal} type="primary" ghost>Select</Button>
+        <div>
+          <Button className="button" onClick={this.showModal} type="primary" ghost>Select</Button>
           <Modal title="Datasets"
             visible={visible}
             onOk={this.handleOk}

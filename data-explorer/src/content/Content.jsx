@@ -7,7 +7,11 @@ class Content extends Component {
 	componentDidUpdate(){
 		if(this.props.loaded){
 			d3.select("#content")
+			  .style("transition","margin-left 1s")
 			  .style("margin-left", 0);
+		}else{
+			d3.select("#content")
+			  .style("margin-left", "-50%");
 		}
 	}
 	render(){
@@ -25,7 +29,7 @@ class Content extends Component {
 
 							:
 							<div className="center">
-								<Spin size="large" tip="Loading..."/>	
+								<Spin size="large" tip="Loading dataset..."/>	
 							</div>
 							
 						}
@@ -33,6 +37,7 @@ class Content extends Component {
 					</div>
 					:
 					<Visualization
+						setLoaded={this.props.setLoaded}
 						setLoading={this.props.setLoading}
 						data={this.props.data}
 						updateCallback={this.props.updateCallback}
