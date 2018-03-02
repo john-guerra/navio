@@ -7,6 +7,7 @@ class Menu extends Component {
 	state = {
 		size: 'default',
 		value: '',
+		closed: false,
 	}
 	onChangeRadio = (e) => {
 	    console.log('radio checked', e.target.value);
@@ -43,15 +44,24 @@ class Menu extends Component {
 		console.log(attr,value)
 		this.props.changeTypeStatus(attr,value);
 	}
+	onCloseSidebar = () => {
+		this.setState({closed:!this.state.closed});
+	}
 	render(){
 		const radioStyle = {
 	      display: 'block',
 	      height: '30px',
 	      lineHeight: '30px',
 	    };
+	    const closedStyleMenu = {
+	    	position: 'relative',
+	    	right: '25%'
+	    }
+	    let styleMenu = this.state.closed?closedStyleMenu:{};
 		const { size } = this.state;
 		return(
-			<div id="menu" className="menu">
+			<div id="menu" style={styleMenu} className="menu">
+				<Button onClick={this.onCloseSidebar} >Close</Button>
 				<div className="ids">
 					<div className="ids-title">
 						<p>ID ({this.props.id}) selected</p>
