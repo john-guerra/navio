@@ -1,7 +1,11 @@
 import React, { Component } from 'react';
-import { Switch, Button } from 'antd';
+import { Switch, Button, Icon, Select } from 'antd';
 import * as d3 from "d3";
+const Option = Select.Option;
 class Menu extends Component {
+	state = {
+		size: 'default',
+	}
 	onChange(checked) {
 	  console.log(`switch to ${checked}`);
 	}
@@ -21,7 +25,12 @@ class Menu extends Component {
 		console.log(attributes)
 		this.props.setAttributes(attributes);
 	}
+	handleChange = (attr,value) => {
+		console.log(attr,value)
+		this.props.changeTypeStatus(attr,value);
+	}
 	render(){
+		const { size } = this.state;
 		return(
 			<div id="menu" className="menu">
 				<div className="attributes">
@@ -45,7 +54,19 @@ class Menu extends Component {
 						this.props.attributes.map((d,i)=>{
 							return (
 								<div key={i} className="attributes-container">
-									<Button className="attribute"  >{d.name}</Button>
+									<div>
+										<span>{d.name}</span> 
+										<Select
+								          size={size}
+								          defaultValue={d.type}
+								          onChange={(value)=>this.handleChange(d,value)}
+								          style={{ width: 200 }}
+								        >
+								        	<Option key={"categorical"} value={"categorical"} >categorical</Option>
+								        	<Option key={"sequential"} value={"sequential"}>sequential</Option>
+								        </Select>
+									</div>
+									
 									<Switch className="attribute" defaultChecked onChange={(checked)=>this.props.changeCheckStatus(d,checked)} />
 									{/*<Switch defaultChecked onChange={this.onChange.bind(this)} />*/}
 								</div>

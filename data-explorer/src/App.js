@@ -99,12 +99,14 @@ class App extends Component {
     this.setState({attributes:attrs})
   }
   changeTypeStatus = (attr,type) => {
+    console.log(attr,type,'changeTypeStatus');
     let attrs = this.state.attributes;
     attrs.forEach(a=> {
       if(a.name === attr.name){
         a.type = type;
       }
     })
+    this.setState({attributes:attrs});
   }
   changeCheckStatus = (attr, checked) => {
     console.log(attr,checked,this.state);
@@ -156,6 +158,7 @@ class App extends Component {
 
                 <Menu
                   changeCheckStatus={this.changeCheckStatus}
+                  changeTypeStatus={this.changeTypeStatus}
                   loaded={this.state.loaded}
                   attributes={this.state.attributes}
                   ids={this.state.ids}
