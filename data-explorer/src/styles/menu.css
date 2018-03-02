@@ -26,6 +26,8 @@
 	justify-self: center;
 }
 .ids-container {
+	overflow-y: scroll;
+	height: 20vh;
 	grid-area: ids-container;
 	display: grid;
 	grid-auto-rows: auto;
@@ -52,6 +54,7 @@
 }
 .attributes-container {
 	overflow-y: scroll;
+	height: 30vh;
 	grid-area: attributes-container;
 	display: grid;
 	grid-auto-rows: auto;

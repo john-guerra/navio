@@ -50,7 +50,7 @@ class Menu extends Component {
 			<div id="menu" className="menu">
 				<div className="ids">
 					<div className="ids-title">
-						<p>ID ({this.props.id}) </p>
+						<p>ID ({this.props.id}) selected</p>
 					</div>
 					
 					<div className="ids-container">
