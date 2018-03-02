@@ -1,16 +1,55 @@
 import React, { Component } from 'react';
+import { Upload, Icon, message, Button, Modal, Card } from 'antd';
 import * as vega from 'vega';
 import './load.css';
-
-class Load extends Component {
-  constructor(props){
-      super(props);
-      this.state = {
-        fileName: 'Upload a dataset',
-      }
-      this.getFileSize = this.getFileSize.bind(this);
+const Dragger = Upload.Dragger;
+const props = {
+  name: 'file',
+  multiple: true,
+  onChange(info) {
+    const status = info.file.status;
+    if (status !== 'uploading') {
+      console.log(info.file, info.fileList);
     }
-  onChange(e){
+    if (status === 'done') {
+      message.success(`${info.file.name} file uploaded successfully.`);
+    } else if (status === 'error') {
+      message.error(`${info.file.name} file upload failed.`);
+    }
+  },
+};
+class Load extends Component {
+  state = {
+    fileName: 'Upload a dataset',
+    ModalText: 'Content of the modal',
+    visible: false,
+    confirmLoading: false,
+  }
+  showModal = () => {
+    this.setState({
+      visible: true,
+    });
+  }
+  handleOk = (i) => {
+    console.log(i)
+    this.setState({
+      ModalText: 'The modal will be closed after two seconds',
+      confirmLoading: true,
+    });
+    setTimeout(() => {
+      this.setState({
+        visible: false,
+        confirmLoading: false,
+      });
+    }, 2000);
+  }
+  handleCancel = () => {
+    console.log('Clicked cancel button');
+    this.setState({
+      visible: false,
+    });
+  }
+  onChange = (e) =>{
     let fileName = e.target.value.split( '\\' ).pop()
     this.setState({
       fileName: fileName
@@ -23,7 +62,7 @@ class Load extends Component {
 
     this.handleFile(e.target.files[0]);
   }
-  getFileSize(file){
+  getFileSize = (file) => {
     let fSExt = ['Bytes', 'KB', 'MB', 'GB'];
     let fSize = file.size;
     let i=0;
@@ -58,16 +97,48 @@ class Load extends Component {
 
     reader.readAsText(file);
   }
-  
-  
   render() {
-
+    const { visible, confirmLoading, ModalText } = this.state;
     return (
       <div>
-        <div className="box">
-
-          <input type="file" name="file-5[]" id="file-5" className="inputfile inputfile-4" data-multiple-caption="{count} files selected" onChange={this.onChange.bind(this)} />
-          <label htmlFor="file-5"><figure><svg xmlns="http://www.w3.org/2000/svg" width="20" height="17" viewBox="0 0 20 17"><path d="M10 0l-5.2 4.9h3.3v5.1h3.8v-5.1h3.3l-5.2-4.9zm9.3 11.5l-3.2-2.1h-2l3.4 2.6h-3.5c-.1 0-.2.1-.2.1l-.8 2.3h-6l-.8-2.2c-.1-.1-.1-.2-.2-.2h-3.6l3.4-2.6h-2l-3.2 2.1c-.4.3-.7 1-.6 1.5l.6 3.1c.1.5.7.9 1.2.9h16.3c.6 0 1.1-.4 1.3-.9l.6-3.1c.1-.5-.2-1.2-.7-1.5z"/></svg></figure> <span>{this.state.fileName}</span></label>
+        <div className="dragger">
+          <Dragger {...props}>
+            <p className="ant-upload-drag-icon">
+              <Icon type="upload" />
+            </p>
+            <p className="ant-upload-text">Click or drag file to this area to upload</p>
+            <p className="ant-upload-hint">*.csv, *.tsv and *.txt files allowed.</p>
+          </Dragger>
+          {/*<input type="file" name="file-5[]" id="file-5" className="inputfile inputfile-4" data-multiple-caption="{count} files selected" onChange={this.onChange.bind(this)} />
+                    <label htmlFor="file-5"><figure><svg xmlns="http://www.w3.org/2000/svg" width="20" height="17" viewBox="0 0 20 17"><path d="M10 0l-5.2 4.9h3.3v5.1h3.8v-5.1h3.3l-5.2-4.9zm9.3 11.5l-3.2-2.1h-2l3.4 2.6h-3.5c-.1 0-.2.1-.2.1l-.8 2.3h-6l-.8-2.2c-.1-.1-.1-.2-.2-.2h-3.6l3.4-2.6h-2l-3.2 2.1c-.4.3-.7 1-.6 1.5l.6 3.1c.1.5.7.9 1.2.9h16.3c.6 0 1.1-.4 1.3-.9l.6-3.1c.1-.5-.2-1.2-.7-1.5z"/></svg></figure> <span>{this.state.fileName}</span></label>
+                    */}
+        </div>
+        <div>
+          <p> --------- or select one of our datasets --------- </p>
+        </div>
+        <div className="center">
+          <Button onClick={this.showModal} type="primary" ghost>Select</Button>
+          <Modal title="Datasets"
+            visible={visible}
+            onOk={this.handleOk}
+            confirmLoading={confirmLoading}
+            onCancel={this.handleCancel}
+            width="80%"
+          >
+            <div className="dataset-container">
+              {this.props.datasets.map((d,i)=> {
+                return(
+                  <div className="dataset">
+                    <Card key={i} title={d} extra={<a onClick={()=>this.handleOk(i)} href="#">select</a>} style={{ width: 300 }}>
+                      <p>Card content</p>
+                      <p>Card content</p>
+                      <p>Card content</p>
+                    </Card>
+                  </div>
+                  )
+              })}
+            </div>
+          </Modal>
         </div>
 
       </div>

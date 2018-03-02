@@ -1,0 +1,6 @@
+.menu {
+    grid-area: m;
+    display: none;
+    visibility: hidden;
+    transition: visibility 1s;
+}

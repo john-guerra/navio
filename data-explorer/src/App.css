@@ -1,3 +1,8 @@
+@import '~antd/dist/antd.css';
+@import 'styles/content.css';
+@import 'styles/menu.css';
+@import 'styles/load.css';
+
 body, html {
   height: 100%;
 }
@@ -17,22 +22,17 @@ body {
     grid-template-areas: 
         "h h h h h h h h h h h h"
         "m m c c c c c c c c c c"
-        "m m f f f f f f f f f f";
+        "f f f f f f f f f f f f";
 }
 
 .header {
     grid-area: h;
     padding: 1em;
 }
-
-.menu {
-    grid-area: m;
-}
-
-.content {
-    grid-area: c;
-}
-
 .footer {
     grid-area: f;
+}
+.center {
+  display: flex;
+  justify-content: center;
 }

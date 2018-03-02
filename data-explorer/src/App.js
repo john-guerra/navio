@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import './App.css';
-import './basic.css';
 import 'antd/dist/antd.css'; 
+import { Icon } from 'antd';
 import Menu from './menu/Menu.jsx';
 import Content from './content/Content.jsx';
 
@@ -15,6 +15,7 @@ class App extends Component {
       attributes: [],
       ids: [],
       id: "",
+      datasets:["moma","senate","other"],
     }
   }
   componentDidMount() {
@@ -55,8 +56,7 @@ class App extends Component {
     }
   }
   createId(data,atts){
-    let row = 1; //because row 0 is the attributes names
-
+    console.log(data,atts);
   }
   isDate(attr){
     var mydate = new Date(attr);
@@ -111,9 +111,9 @@ class App extends Component {
       <div id="openModal" className="modalDialog">
         <div>
           <a href="#close" title="Close" className="close">X</a>
-          <h2>Data Navigator</h2>
+          <h2>Data Explorer</h2>
           <p>NodeNavigator is a d3.js visualization widget to help summarizing, browsing and navigating large data sets.</p>
-          <iframe width="100%" height="315" src="https://www.youtube.com/embed/Co074RJXzdk" frameBorder="0" allow="encrypted-media" allowFullScreen></iframe>
+          {/*<iframe title="demo" width="100%" height="315" src="https://www.youtube.com/embed/Co074RJXzdk" frameBorder="0" allow="encrypted-media" allowFullScreen></iframe>*/}
         </div>
       </div>
     );
@@ -128,14 +128,14 @@ class App extends Component {
         }
            <div className="container">
                 <div className="header">
-                    <div> <i className="far fa-compass"></i> </div>
+                    <div> <Icon type="compass" /> </div>
                     <div>Data Navigator</div>
                     
                     <div className="info"> <a href="#openModal">  <i className="fas fa-info-circle" ></i> </a></div>
                 </div>
 
                 <Menu
-
+                  loaded={this.state.loaded}
                   attributes={this.state.attributes}
                   ids={this.state.ids}
                   setId={this.setID.bind(this)}
@@ -144,6 +144,7 @@ class App extends Component {
                 />
                 
                 <Content 
+                  datasets={this.state.datasets}
                   setData={this.setData.bind(this)} 
                   loaded={this.state.loaded} 
                   data={this.state.data} 

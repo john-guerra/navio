@@ -1,8 +1,6 @@
-/* global d3, NodeNavigator, crossfilter */
 var d3 = require("d3");
 //eleId must be the ID of a context element where everything is going to be drawn
 function NodeNavigator(eleId, h) {
-  "use strict";
   var nn = this,
     data = [], //Contains the original data attributes in an array
     links = [], //Contains the original data attributes in an array
@@ -159,15 +157,15 @@ function NodeNavigator(eleId, h) {
     nn.updateData(data, colScales, d.level);
   }
 
-  function getAttribs(obj) {
-    var attr;
-    dDimensions = d3.map();
-    for (attr in obj) {
-      if (obj.hasOwnProperty(attr)) {
-        dDimensions.set(attr, true);
-      }
-    }
-  }
+  // function getAttribs(obj) {
+  //   var attr;
+  //   dDimensions = d3.map();
+  //   for (attr in obj) {
+  //     if (obj.hasOwnProperty(attr)) {
+  //       dDimensions.set(attr, true);
+  //     }
+  //   }
+  // }
 
   function drawItem(item, level) {
     var attrib, i, y ;
@@ -589,31 +587,31 @@ function NodeNavigator(eleId, h) {
   }
 
 
-  function drawDimensionTitles(level) {
-    dDimensions.keys().forEach(function (attrib) {
-      // context.font = nn.legendFont;
-      // context.rotate(-Math.PI/4);
-      // context.fillText(attrib,x(attrib, level),y0);
-      // context.rotate(Math.PI/4);
+  // function drawDimensionTitles(level) {
+  //   dDimensions.keys().forEach(function (attrib) {
+  //     // context.font = nn.legendFont;
+  //     // context.rotate(-Math.PI/4);
+  //     // context.fillText(attrib,x(attrib, level),y0);
+  //     // context.rotate(Math.PI/4);
 
-      context.save();
-      context.translate(x(attrib, level)+xScale.bandwidth()/2 , y0-5);
-      context.rotate(-Math.PI/4);
-      // context.textAlign = "center";
-      context.fillStyle="black";
-      if (dSortBy.has(level) && dSortBy.get(level) === attrib) {
-        context.font="Bold 10px Arial";
-      } else {
-        context.font="10px Arial";
-      }
+  //     context.save();
+  //     context.translate(x(attrib, level)+xScale.bandwidth()/2 , y0-5);
+  //     context.rotate(-Math.PI/4);
+  //     // context.textAlign = "center";
+  //     context.fillStyle="black";
+  //     if (dSortBy.has(level) && dSortBy.get(level) === attrib) {
+  //       context.font="Bold 10px Arial";
+  //     } else {
+  //       context.font="10px Arial";
+  //     }
 
-      context.fillText(attrib, 0, 0);
-      context.restore();
-    } );
-    context.font="14px Arial";
-    context.fillStyle="black";
-    context.fillText(fmt(data[level].length), levelScale(level), yScales[level].range()[1] + 15);
-  }
+  //     context.fillText(attrib, 0, 0);
+  //     context.restore();
+  //   } );
+  //   context.font="14px Arial";
+  //   context.fillStyle="black";
+  //   context.fillText(fmt(data[level].length), levelScale(level), yScales[level].range()[1] + 15);
+  // }
 
 
 

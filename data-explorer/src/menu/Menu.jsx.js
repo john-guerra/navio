@@ -1,9 +1,17 @@
 import React, { Component } from 'react';
 import { Switch, Button } from 'antd';
-
+import * as d3 from "d3";
 class Menu extends Component {
 	onChange(checked) {
 	  console.log(`switch to ${checked}`);
+	}
+	componentDidUpdate(){
+		if(this.props.loaded){
+			let selection = d3.select("#menu")
+								.style("transition", "visibility 1s")
+								.style("visibility","visible");
+			console.log(selection,'selection')
+		}
 	}
 	clickAtt(i){
 		console.log(i,'i')
@@ -15,7 +23,7 @@ class Menu extends Component {
 	}
 	render(){
 		return(
-			<div className="menu">
+			<div id="menu" className="menu">
 				<div className="attributes">
 					<p>ID</p>
 					<div className="attributes-container">
