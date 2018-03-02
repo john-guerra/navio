@@ -23,7 +23,7 @@ function NodeNavigator(eleId, h) {
     fmt = d3.format(",.0d"),
     x0=0,
     y0=100,
-    id = "id",
+    id = "__seqId",
     updateCallback = function () {};
 
   nn.margin = 10;
@@ -625,11 +625,14 @@ function NodeNavigator(eleId, h) {
       dDimensions.set(d, true);
     });
     dData = d3.map();
-    mData[0].forEach(function (d, i) {
+    for (var i = 0; i < mData[0].length ; i++) {
+      var d = mData[0][i];
+      d.__seqId=i; //create a default id with the sequential number
       dData.set(d[id], d);
       d.__i={};
       d.__i[0] = i;
-    });
+
+    }
     // nn.updateData(mData, mColScales, mSortByAttr);
 
     var after = performance.now();
