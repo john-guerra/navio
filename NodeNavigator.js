@@ -272,6 +272,7 @@ function NodeNavigator(eleId, h) {
       console.log("first and last");
       console.log(first);
       console.log(last);
+      console.log("first id "+ first.__i[i]+ " last id " + last.__i[i] );
       // var brush0_minus_bandwidth = brushed[0] - yScales[i].bandwidth();
       // var filteredData = data[i].filter(function (d) {
       //   var y = yScales[i](d[id]);
@@ -338,7 +339,7 @@ function NodeNavigator(eleId, h) {
         d.visible = d[itemAttr] === sel[itemAttr];
         return d.visible;
       });
-      filteredData.forEach(function (d, i) { d.__i[data.length] = i;});
+      filteredData.forEach(function (d, itemI) { d.__i[i+1] = itemI;});
       after = performance.now();
       console.log("Click filtering " + (after-before) + "ms");
 
