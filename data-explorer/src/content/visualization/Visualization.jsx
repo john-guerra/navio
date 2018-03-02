@@ -47,10 +47,8 @@ class Visualization extends Component {
   }
 
 	render(){
-		return(
-			<div
-	          className="visualization"
-	          ref={(target) => this.target = target }>
+		return (
+    		  <div ref={(target) => this.target = target }>
 	        </div>
 		)
 	}

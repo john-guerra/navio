@@ -13,9 +13,9 @@ a:link {
     grid-area: c;
     margin-left: -40%; 
     transition: margin-left 1s;
+    display: flex;
+    justify-content: flex-start;
 }
-
-
 .container > div {
   display: flex;
   justify-content: center;
@@ -119,18 +119,3 @@ a:link {
   .close:hover { background: rgba(0,0,0,0.1); }
   /* End Modal Styling */
 
-  .attributes-container-wrapper {
-    display: grid;
-    grid-template-columns: auto;
-  }
-
-  .attributes-container {
-    display: grid;
-    grid-template-columns: auto 20%;
-    margin: 0.2em;
-  }
-  .attribute {
-    /*width: 100%;*/
-    align-self: center;
-    margin: 0.3em;
-  }
