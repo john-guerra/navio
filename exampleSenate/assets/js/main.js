@@ -32,7 +32,7 @@
     var dicNodes = d3.map();
     //mapping nodes
     graph.nodes.forEach(function (n) {
-      n.commonVotes = 0;
+      n.degree = 0;
       n.visible = true;
       n.id = n.name;
       dicNodes.set(n.id, n);
@@ -44,15 +44,14 @@
         e.source = {
           id:e.source,
           name:e.source,
-          commonVotes:0,
-          // cluster: -1,
+          degree:0,
           screen_name:e.target.name,
-          count:e.count
+          count:+e.count
         };
         dicNodes.set(e.source.id, e.source);
       }
 
-      e.source.commonVotes+=1;
+      e.source.degree+=1;
 
       if (dicNodes.has(e.target)) {
         e.target = dicNodes.get(e.target);
@@ -60,16 +59,20 @@
         e.target = {
           id:e.target,
           name:e.target,
-          commonVotes:0,
+          degree:0,
           // cluster: -1,
           screen_name:e.target.name,
-          count:e.count
+          count:+e.count
         };
         dicNodes.set(e.target.id, e.target);
       }
-      e.target.commonVotes+=1;
+      e.target.degree+=1;
+
+      e.sourceName = e.source.name;
+      e.targetName = e.target.name;
     });
-    var mincommonVotes = 2;
+    // var mindegree = 2;
+
     var filteredLinks = graph.links;
     var filteredGraph = {
       nodes: dicNodes.values(),
@@ -87,16 +90,26 @@
       });
     });
     update(filteredGraph);
-  };
+  }
 
 
   var nodeNavigator = new NodeNavigator(
     "#nn",
     height
   ).id("name");
-  nodeNavigator.addSequentialAttrib("commonVotes");
+  nodeNavigator.addSequentialAttrib("degree");
   nodeNavigator.addCategoricalAttrib("party");
   nodeNavigator.addCategoricalAttrib("cluster", color);
+
+
+  var nodeNavigatorLinks = new NodeNavigator(
+    "#nnLinks",
+    height
+  ).id("name");
+  nodeNavigatorLinks.addSequentialAttrib("degree");
+  nodeNavigatorLinks.addCategoricalAttrib("sourceName");
+  nodeNavigatorLinks.addCategoricalAttrib("targetName");
+
   function update(graph) {
     simulation.stop();
     var dVisibleNodes = {};
@@ -110,9 +123,9 @@
 
     var visible = nodeNavigator.getVisible();
     console.log("nodes = " + graph.nodes.length + " links="+visibleLinks.length);
-    size.domain(d3.extent(visible, function (d) { return d.commonVotes; }));
+    size.domain(d3.extent(visible, function (d) { return d.degree; }));
     graph.nodes.forEach(function (d) {
-      d.r = size(d.commonVotes);
+      d.r = size(d.degree);
     });
     var clusters = d3.nest()
       .key(function(d) { return d.cluster; })
