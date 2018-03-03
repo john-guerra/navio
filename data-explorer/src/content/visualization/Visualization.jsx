@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import PropTypes from "prop-types";
 import NodeNavigator from "./NodeNavigator.js";
-import { Button } from 'antd';
+import { Table, Input, Button, Icon } from 'antd';
 // let d3 = require("d3");
 const cat = "categorical";
 const seq = "sequential";
