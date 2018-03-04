@@ -1,6 +1,7 @@
 var d3 = require("d3");
 //eleId must be the ID of a context element where everything is going to be drawn
 function NodeNavigator(eleId, h) {
+  "use strict";
   var nn = this,
     data = [], //Contains the original data attributes in an array
     links = [], //Contains the original data attributes in an array
@@ -21,7 +22,7 @@ function NodeNavigator(eleId, h) {
     fmt = d3.format(",.0d"),
     x0=0,
     y0=100,
-    id = "id",
+    id = "__seqId",
     updateCallback = function () {};
 
   nn.margin = 10;
@@ -157,15 +158,15 @@ function NodeNavigator(eleId, h) {
     nn.updateData(data, colScales, d.level);
   }
 
-  // function getAttribs(obj) {
-  //   var attr;
-  //   dDimensions = d3.map();
-  //   for (attr in obj) {
-  //     if (obj.hasOwnProperty(attr)) {
-  //       dDimensions.set(attr, true);
-  //     }
-  //   }
-  // }
+  function getAttribs(obj) {
+    var attr;
+    dDimensions = d3.map();
+    for (attr in obj) {
+      if (obj.hasOwnProperty(attr)) {
+        dDimensions.set(attr, true);
+      }
+    }
+  }
 
   function drawItem(item, level) {
     var attrib, i, y ;
@@ -270,6 +271,7 @@ function NodeNavigator(eleId, h) {
       console.log("first and last");
       console.log(first);
       console.log(last);
+      console.log("first id "+ first.__i[i]+ " last id " + last.__i[i] );
       // var brush0_minus_bandwidth = brushed[0] - yScales[i].bandwidth();
       // var filteredData = data[i].filter(function (d) {
       //   var y = yScales[i](d[id]);
@@ -336,7 +338,7 @@ function NodeNavigator(eleId, h) {
         d.visible = d[itemAttr] === sel[itemAttr];
         return d.visible;
       });
-      filteredData.forEach(function (d, i) { d.__i[data.length] = i;});
+      filteredData.forEach(function (d, itemI) { d.__i[i+1] = itemI;});
       after = performance.now();
       console.log("Click filtering " + (after-before) + "ms");
 
@@ -403,6 +405,7 @@ function NodeNavigator(eleId, h) {
     //   []
     // );
 
+    // Send visible and seqId to the beginning
     var attribs = xScale.domain();
 
     var levelOverlay = svg.select(".attribs")
@@ -416,12 +419,12 @@ function NodeNavigator(eleId, h) {
         .each(addBrush);
 
     var attribOverlay = levelOverlayEnter.merge(levelOverlay)
-        .selectAll(".attribOverlay")
-        .data(function (_, i) {
-          return attribs.map(function (a) {
-            return {attrib:a, level:i};
-          });
+      .selectAll(".attribOverlay")
+      .data(function (_, i) {
+        return attribs.map(function (a) {
+          return {attrib:a, level:i};
         });
+      });
 
 
     var attribOverlayEnter = attribOverlay
@@ -451,7 +454,11 @@ function NodeNavigator(eleId, h) {
     attribOverlayEnter
       .append("text")
       .merge(attribOverlay.select("text"))
-      .text(function (d) { return d.attrib; })
+      .text(function (d) { 
+        return d.attrib === "__seqId" ?
+          "sequential Index" : 
+          d.attrib; 
+      })
       .attr("x", xScale.bandwidth()/2)
       .attr("y", 0)
       .style("font-weight", function (d) {
@@ -587,31 +594,31 @@ function NodeNavigator(eleId, h) {
   }
 
 
-  // function drawDimensionTitles(level) {
-  //   dDimensions.keys().forEach(function (attrib) {
-  //     // context.font = nn.legendFont;
-  //     // context.rotate(-Math.PI/4);
-  //     // context.fillText(attrib,x(attrib, level),y0);
-  //     // context.rotate(Math.PI/4);
+  function drawDimensionTitles(level) {
+    dDimensions.keys().forEach(function (attrib) {
+      // context.font = nn.legendFont;
+      // context.rotate(-Math.PI/4);
+      // context.fillText(attrib,x(attrib, level),y0);
+      // context.rotate(Math.PI/4);
 
-  //     context.save();
-  //     context.translate(x(attrib, level)+xScale.bandwidth()/2 , y0-5);
-  //     context.rotate(-Math.PI/4);
-  //     // context.textAlign = "center";
-  //     context.fillStyle="black";
-  //     if (dSortBy.has(level) && dSortBy.get(level) === attrib) {
-  //       context.font="Bold 10px Arial";
-  //     } else {
-  //       context.font="10px Arial";
-  //     }
+      context.save();
+      context.translate(x(attrib, level)+xScale.bandwidth()/2 , y0-5);
+      context.rotate(-Math.PI/4);
+      // context.textAlign = "center";
+      context.fillStyle="black";
+      if (dSortBy.has(level) && dSortBy.get(level) === attrib) {
+        context.font="Bold 10px Arial";
+      } else {
+        context.font="10px Arial";
+      }
 
-  //     context.fillText(attrib, 0, 0);
-  //     context.restore();
-  //   } );
-  //   context.font="14px Arial";
-  //   context.fillStyle="black";
-  //   context.fillText(fmt(data[level].length), levelScale(level), yScales[level].range()[1] + 15);
-  // }
+      context.fillText(attrib, 0, 0);
+      context.restore();
+    } );
+    context.font="14px Arial";
+    context.fillStyle="black";
+    context.fillText(fmt(data[level].length), levelScale(level), yScales[level].range()[1] + 15);
+  }
 
 
 
@@ -623,11 +630,14 @@ function NodeNavigator(eleId, h) {
       dDimensions.set(d, true);
     });
     dData = d3.map();
-    mData[0].forEach(function (d, i) {
+    for (var i = 0; i < mData[0].length ; i++) {
+      var d = mData[0][i];
+      d.__seqId=i; //create a default id with the sequential number
       dData.set(d[id], d);
       d.__i={};
       d.__i[0] = i;
-    });
+
+    }
     // nn.updateData(mData, mColScales, mSortByAttr);
 
     var after = performance.now();
@@ -689,10 +699,14 @@ function NodeNavigator(eleId, h) {
 
     xScale
       .domain(dDimensions.keys().sort(function (a,b) {
-        if (a==="visible") {
+        if (a === "visible") {
           return -1;
         }
         else if (b === "visible") {
+          return 1;
+        } else if (a === "__seqId") {
+          return -1;
+        } else if (b === "__seqId") {
           return 1;
         } else {
           return 0;
@@ -833,6 +847,13 @@ function NodeNavigator(eleId, h) {
             //, "#cddca3", "#8c6d31", "#bd9e39"]
       );
     }
+    if (!colScales.has("__seqId")) {
+      nn.addSequentialAttrib(
+        "__seqId"
+      );
+    }
+
+
     // nn.addCategoricalAttrib("group");
 
 
@@ -879,5 +900,4 @@ function NodeNavigator(eleId, h) {
 
   return nn;
 }
-
 export default NodeNavigator;

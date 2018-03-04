@@ -21,7 +21,8 @@ class Visualization extends Component {
     console.log("NodeNavigatorComponent did mount");
     console.log(this.props.data, 'this.props.data nn')
     this.nn = new NodeNavigator(this.target, 600)
-      .id(this.props.id)
+      // the next line is commented because the node navigator creates a sequential id 
+      // .id(this.props.id)
       .updateCallback(this.props.updateCallback);
       // .addSequentialAttrib("Timestamp",
       //   d3.scalePow()

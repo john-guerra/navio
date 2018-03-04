@@ -37,3 +37,7 @@ body {
 .logo {
   margin-right: 1em; 
 }
+.NodeNavigator {
+  width: 100%;
+  overflow-y: scroll;
+}
