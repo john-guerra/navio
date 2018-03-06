@@ -122,10 +122,10 @@ class Load extends Component {
                 console.log(d)
                 return(
                   <div key={i} className="dataset">
-                    <Card  title={d.name} extra={<a onClick={()=>this.handleOk(d.data)} href="#">select</a>} style={{ width: 300 }}>
-                      <h1>Size</h1>
+                    <Card  title={d.name} extra={<button onClick={()=>this.handleOk(d.data)}>select</button>} style={{ width: 300 }}>
+                      <h6>Size</h6>
                       <p>{d.size} rows</p>
-                      <h1>Attributes ({d.n_attributes})</h1>
+                      <h6>Attributes ({d.n_attributes})</h6>
                         { d.attributes?
                           <div>
                             

@@ -72,10 +72,10 @@ class Menu extends Component {
 							{
 								this.props.attributes.map((d,i)=>{
 									console.log(d.name,this.props.id);
-									let check = d.name == this.props.id;
+									let check = d.name === this.props.id;
 									console.log(check);
 									return (
-										<Radio defaultChecked={d.id} className="id" style={radioStyle} value={d.name}>{d.name}</Radio>
+										<Radio key={i} defaultChecked={d.id} className="id" style={radioStyle} value={d.name}>{d.name}</Radio>
 									)
 								})
 							}
@@ -91,7 +91,7 @@ class Menu extends Component {
 					{
 						this.props.attributes.map((d,i)=>{
 							return (
-								<div className="attribute">
+								<div key={i} className="attribute">
 									<div className="attribute-name">
 										<span>{d.name}</span> 
 									</div>

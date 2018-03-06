@@ -41,6 +41,7 @@ class Content extends Component {
 						setLoading={this.props.setLoading}
 						data={this.props.data}
 						updateCallback={this.props.updateCallback}
+						exportData={this.props.exportData}
 						attributes={this.props.attributes}
 						ids={this.props.ids}
 						id={this.props.id}

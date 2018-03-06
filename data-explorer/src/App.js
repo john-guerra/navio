@@ -18,6 +18,7 @@ class App extends Component {
       id: "",
       datasets:[{"name":"all_followers_id.csv"},{"name":"Artworks_less_columns.csv"},{"name":"Lekagul Sensor Data.csv"}],
       loading:false,
+      exportData:[],
     }
   }
   /*
@@ -150,6 +151,10 @@ class App extends Component {
   }
   updateCallback = (callback) => {
     console.log('updateCallback',callback);
+    this.setExportData(callback);
+  }
+  setExportData = (exportData) => {
+    this.setState({exportData})
   }
   toggleModal = () => {
     console.log('toggleModal')
@@ -212,6 +217,7 @@ class App extends Component {
                   loaded={this.state.loaded} 
                   data={this.state.data} 
                   updateCallback={this.updateCallback}
+                  exportData={this.state.exportData}
                   attributes={this.state.attributes}
                   ids={this.state.ids}
                   id={this.state.id}
