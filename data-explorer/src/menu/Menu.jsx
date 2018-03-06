@@ -10,17 +10,12 @@ class Menu extends Component {
 		closed: false,
 	}
 	onChangeRadio = (e) => {
-	    console.log('radio checked', e.target.value);
 	    this.setState({
 	      value: e.target.value,
 	    }, ()=>{
 	    	this.props.setId(e.target.value)
 	    });
 	 }
-
-	onChange(checked) {
-	  console.log(`switch to ${checked}`);
-	}
 	componentDidUpdate(){
 		if(this.props.loaded){
 			d3.select("#menu")
@@ -71,9 +66,7 @@ class Menu extends Component {
 					  	<RadioGroup onChange={this.onChangeRadio} value={this.state.value}>  
 							{
 								this.props.attributes.map((d,i)=>{
-									console.log(d.name,this.props.id);
 									let check = d.name === this.props.id;
-									console.log(check);
 									return (
 										<Radio key={i} defaultChecked={d.id} className="id" style={radioStyle} value={d.name}>{d.name}</Radio>
 									)

@@ -16,7 +16,6 @@ class Load extends Component {
     });
   }
   handleOk = (data) => {
-    console.log(data)
     this.setState({
       ModalText: 'The modal will be closed after two seconds',
       confirmLoading: true,
@@ -31,7 +30,6 @@ class Load extends Component {
     }, 2000);
   }
   handleCancel = () => {
-    console.log('Clicked cancel button');
     this.setState({
       visible: false,
     });
@@ -48,7 +46,6 @@ class Load extends Component {
     return finalSize
   }
   handleFile(file){
-    console.log('start handling file')
     const reader = new FileReader();
      if(file == null){
       alert('No file selected.');
@@ -68,7 +65,6 @@ class Load extends Component {
     };
 
     reader.readAsText(file);
-    console.log('end handling file')
   }
   beforeUpload = (e) => {
     this.props.setLoading(true);
@@ -119,7 +115,6 @@ class Load extends Component {
           >
             <div className="dataset-container">
               {this.props.datasets.map((d,i)=> {
-                console.log(d)
                 return(
                   <div key={i} className="dataset">
                     <Card  title={d.name} extra={<button onClick={()=>this.handleOk(d.data)}>select</button>} style={{ width: 300 }}>

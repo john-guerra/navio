@@ -13,9 +13,6 @@ class Visualization extends Component {
 
  componentWillUpdate(newProps) {
     if(newProps.exportData.length === this.props.exportData.length){
-      // this.nn.updateData(this.props.data);
-      // this.deleteWidget();
-      // this.setUpNodeNavigator();
       if(newProps.attChange !== this.props.attChange){
         this.deleteWidget();
         this.props.onChangeAtt(false);
