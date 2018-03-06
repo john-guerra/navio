@@ -139,7 +139,11 @@ class App extends Component {
     })
     this.setState({attributes:attrs});
   }
+  onChangeAtt = (attChange) => {
+    this.setState({attChange});
+  }
   changeCheckStatus = (attr, checked) => {
+
     console.log(attr,checked,this.state);
     let attrs = this.state.attributes;
     attrs.forEach(a=>{
@@ -147,7 +151,7 @@ class App extends Component {
         a.checked = checked;
       }
     })
-    this.setState({attributes:attrs});
+    this.setState({attributes:attrs, attChange:true});
   }
   updateCallback = (callback) => {
     console.log('updateCallback',callback);
@@ -209,6 +213,8 @@ class App extends Component {
                 />
                 
                 <Content 
+                  onChangeAtt={this.onChangeAtt}
+                  attChange={this.state.attChange}
                   setLoaded={this.setLoaded}
                   setLoading={this.setLoading}
                   loading={this.state.loading}

@@ -13,7 +13,21 @@ class Visualization extends Component {
 
  componentWillUpdate(newProps) {
     if(newProps.exportData.length === this.props.exportData.length){
-      this.setUpNodeNavigator();
+      // this.nn.updateData(this.props.data);
+      // this.deleteWidget();
+      // this.setUpNodeNavigator();
+      if(newProps.attChange !== this.props.attChange){
+        this.deleteWidget();
+        this.props.onChangeAtt(false);
+        this.setUpNodeNavigator();
+      }
+    }
+
+  }
+  deleteWidget = () => {
+    var myNode = document.getElementById("vis");
+    while (myNode.firstChild) {
+        myNode.removeChild(myNode.firstChild);
     }
   }
   setUpNodeNavigator = () => {
@@ -90,7 +104,7 @@ class Visualization extends Component {
   <div id="nodeNavigator"></div>
 
   <script src="https://d3js.org/d3.v4.min.js"></script>
-  <script type="text/javascript" src="NodeNavigator.js"></script>
+  <script type="text/javascript" src="https://john-guerra.github.io/NodeNavigator/NodeNavigator.js"></script>
   <script type="text/javascript">
     var nn = new NodeNavigator("#nodeNavigator", 600);
   var catColumns = [
@@ -102,7 +116,7 @@ class Visualization extends Component {
   ];
   catColumns.forEach((c) => nn.addCategoricalAttrib(c));
   seqColumns.forEach((c) => nn.addSequentialAttrib(c));
-    d3.csv("./data.csv", function (err, data) {
+    d3.csv("./export_data.csv", function (err, data) {
       if (err) throw err;
     data.forEach((d,i) => d.i = i);
     nn.data(data);
@@ -112,14 +126,19 @@ class Visualization extends Component {
 </html>`;
     let link = document.getElementById('downloadLink');
     mimeType = mimeType || 'text/plain';
-    let filename = 'data.html'
+    let filename = 'index.html'
     link.setAttribute('download', filename);
     link.setAttribute('href', 'data:' + mimeType  +  ';charset=utf-8,' + encodeURIComponent(elHtml));
-    link.click(); 
-    this.download();
+    // link.click(); 
+    if (this.props.exportData.length === 0) {
+      this.download(true);
+    }else {
+      this.download();  
+    }
   }
-  download = () => {
-    let data = this.props.exportData;
+
+  download = (full) => {
+    let data = full? this.props.data:this.props.exportData;
     data.forEach(d=>delete d.__i);
     const items = data;
     const replacer = (key, value) => value === null ? '' : value // specify how you want to handle null values here
@@ -129,7 +148,7 @@ class Visualization extends Component {
     csv.unshift(header.join(','))
     csv = csv.join('\r\n')
     var blob = new Blob([csv], {type: "text/csv;charset=utf-8"});
-    FileSaver.saveAs(blob, "data.csv");
+    FileSaver.saveAs(blob, "export_data.csv");
   }
 	render() {
     const filter = this.props.exportData.length === 0;
@@ -142,7 +161,7 @@ class Visualization extends Component {
                 <Button onClick={this.exportVisualization}><a  href="#" id="downloadLink">Export Visualization</a></Button>
               </ButtonGroup>
             </div>
-      		  <div ref={(target) => this.target = target }>
+      		  <div id="vis" ref={(target) => this.target = target }>
   	        </div>
           </div>
 		)

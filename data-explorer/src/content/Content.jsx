@@ -37,6 +37,8 @@ class Content extends Component {
 					</div>
 					:
 					<Visualization
+						onChangeAtt={this.props.onChangeAtt}
+                  		attChange={this.props.attChange}
 						setLoaded={this.props.setLoaded}
 						setLoading={this.props.setLoading}
 						data={this.props.data}
