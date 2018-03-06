@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import PropTypes from "prop-types";
 import NodeNavigator from "./NodeNavigator.js";
 import { Button } from 'antd';
-import {CSVLink, CSVDownload} from 'react-csv';
+let FileSaver = require('file-saver');
 
 const ButtonGroup = Button.Group;
 const cat = "categorical";
@@ -12,15 +12,9 @@ let d3_chromatic = require("d3-scale-chromatic");
 class Visualization extends Component {
 
  componentWillUpdate(newProps) {
-    // console.log("NodeNavigatorComponent will update data.length=" + newProps.data.length);
-    // if (newProps.data.length !== this.props.data.length)
-    //   this.nn.data(newProps.data);
     if(newProps.exportData.length === this.props.exportData.length){
       this.setUpNodeNavigator();
     }
-  }
-  componentDidUpdate(){
-    // this.setUpNodeNavigator();
   }
   setUpNodeNavigator = () => {
     console.log("NodeNavigatorComponent did mount");
@@ -108,7 +102,6 @@ class Visualization extends Component {
   ];
   catColumns.forEach((c) => nn.addCategoricalAttrib(c));
   seqColumns.forEach((c) => nn.addSequentialAttrib(c));
-  let data = ${JSON.stringify(this.props.data)}
     d3.csv("./data.csv", function (err, data) {
       if (err) throw err;
     data.forEach((d,i) => d.i = i);
@@ -123,23 +116,20 @@ class Visualization extends Component {
     link.setAttribute('download', filename);
     link.setAttribute('href', 'data:' + mimeType  +  ';charset=utf-8,' + encodeURIComponent(elHtml));
     link.click(); 
+    this.download();
   }
-  export2 = () => {
-    console.log('exporting data')
-    let link = document.getElementById('export');
-    let mimeType = 'text/csv';
-    let filename = 'data.csv';
-    link.setAttribute('download', filename);
-    let arr = this.props.exportData;
-    let csvContent = "data:text/csv;charset=utf-8,";
-    arr.forEach(rowArray => {
-      let row = rowArray.join(",");
-      csvContent += row + "\r\n";
-    })
-    console.log('end iterating over data')
-    let encodedUri = encodeURI(csvContent);
-    link.setAttribute('href',encodedUri);
-    link.click();
+  download = () => {
+    let data = this.props.exportData;
+    data.forEach(d=>delete d.__i);
+    const items = data;
+    const replacer = (key, value) => value === null ? '' : value // specify how you want to handle null values here
+    const header = Object.keys(items[0])
+    let csv = items.map(row => header.map(fieldName => JSON.stringify(row[fieldName], replacer)).join(','))
+    console.log('after csv')
+    csv.unshift(header.join(','))
+    csv = csv.join('\r\n')
+    var blob = new Blob([csv], {type: "text/csv;charset=utf-8"});
+    FileSaver.saveAs(blob, "data.csv");
   }
 	render() {
     const filter = this.props.exportData.length === 0;
@@ -148,9 +138,8 @@ class Visualization extends Component {
             <div className="change-dataset-button">
               <ButtonGroup>
                 <Button onClick={this.onClick}>Change dataset</Button>
-                <Button disabled={filter}><CSVLink  filename={"data.csv"} data={this.props.exportData} >Export Data</CSVLink></Button>
-                <Button onClick={this.export2}><a href="#" id="export">export2</a></Button>
-                <a onClick={this.exportVisualization} href="#" id="downloadLink">Download the inner html</a>
+                <Button onClick={this.download}><a href="#" id="export">Export Data</a></Button>
+                <Button onClick={this.exportVisualization}><a  href="#" id="downloadLink">Export Visualization</a></Button>
               </ButtonGroup>
             </div>
       		  <div ref={(target) => this.target = target }>
