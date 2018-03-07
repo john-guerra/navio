@@ -769,6 +769,7 @@ function NodeNavigator(eleId, h) {
       links = links.slice(0, data.length-1);
     data = data.slice(0, data.length-1);
     nn.updateData(data, colScales);
+    updateCallback(nn.getVisible());
   }
 
 
