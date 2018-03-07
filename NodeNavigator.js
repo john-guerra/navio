@@ -255,7 +255,7 @@ function NodeNavigator(eleId, h) {
       .call(dBrushes.get(i))
       .selectAll("rect")
       // .attr("x", -8)
-      .attr("width", xScale.bandwidth()* (dDimensions.size()+1));
+      .attr("width", xScale.bandwidth()* (dDimensions.size()+2));
 
     _brush.exit().remove();
 
@@ -289,11 +289,10 @@ function NodeNavigator(eleId, h) {
       filteredData.forEach(function(d, j) {
         d.__i[i+1] = j;
       });
-      
-      console.log("Found " + filteredData.length);
-      
+
       var after = performance.now();
       console.log("Brushend filtering " + (after-before) + "ms");
+
 
       var newData;
       if (filteredData.length===0) { // empty selection -> remove level
@@ -309,14 +308,14 @@ function NodeNavigator(eleId, h) {
           return d.source.visible && d.target.visible;
         }));
       }
-      
+
 
       nn.updateData(
         newData,
         colScales
       );
-      console.log("Selected " + filteredData.length + " calling updateCallback");
-      updateCallback(filteredData);
+      console.log("Selected " + nn.getVisible().length + " calling updateCallback");
+      updateCallback(nn.getVisible());
 
       // nn.update(false); //don't update brushes
 
