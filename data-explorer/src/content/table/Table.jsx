@@ -4,8 +4,8 @@ export default class Table extends Component {
 		return (
 				<div className="table">
 					<h1>	Table Component</h1>
-					{this.props.exportData.slice(15).map(d=>{
-						return (<p>{d.name}</p>)
+					{this.props.exportData.slice(0,50).map(d=>{
+						// return (<p>{d["car-id"]}</p>)
 					})}
 
 				</div>
