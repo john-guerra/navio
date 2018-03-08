@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import PropTypes from "prop-types";
 import NodeNavigator from "./NodeNavigator.js";
 import { Button } from 'antd';
+import Table from './../table/Table.jsx';
 let FileSaver = require('file-saver');
 
 const ButtonGroup = Button.Group;
@@ -16,6 +17,9 @@ class Visualization extends Component {
       if(newProps.attChange !== this.props.attChange){
         this.deleteWidget();
         this.props.onChangeAtt(false);
+        this.setUpNodeNavigator();
+      }
+      else {
         this.setUpNodeNavigator();
       }
     }
@@ -160,6 +164,7 @@ class Visualization extends Component {
             </div>
       		  <div id="vis" ref={(target) => this.target = target }>
   	        </div>
+            <Table exportData={this.props.exportData} />
           </div>
 		)
 	}
