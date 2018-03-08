@@ -4,8 +4,8 @@
 function NodeNavigator(eleId, h) {
   "use strict";
   var nn = this,
-    data = [], //Contains the original data attributes in an array
-    links = [], //Contains the original data attributes in an array
+    data = [], //Contains the original data attributes 
+    dataIs = [], //Contains only the indices to the data, is an array of arrays, one for each level
     dData = d3.map(), // A hash for the data
     dDimensions = d3.map(),
     dSortBy = d3.map(), //contains which attribute to sort by on each column
@@ -149,14 +149,14 @@ function NodeNavigator(eleId, h) {
   function nnOnClickLevel(d) {
     console.log("click " + d);
     var before = performance.now();
-    data[d.level] = data[d.level].sort(function (a, b) {
-      return d3.ascending(a[d.attrib], b[d.attrib]);
+    dataIs[d.level] = dataIs[d.level].sort(function (a, b) {
+      return d3.ascending(data[a][d.attrib], data[b][d.attrib]);
     });
-    data[d.level].forEach(function (row,i) { row.__i[d.level] = i; });
+    dataIs[d.level].forEach(function (row,i) { data[row].__i[d.level] = i; });
     var after = performance.now();
     console.log("Click sorting " + (after-before) + "ms");
     dSortBy.set(d.level, d.attrib);
-    nn.updateData(data, colScales, d.level);
+    nn.updateData(dataIs, colScales, d.level);
   }
 
   function getAttribs(obj) {
@@ -226,7 +226,7 @@ function NodeNavigator(eleId, h) {
   }
 
   function removeAllBrushesBut(but) {
-    for (var lev=0; lev< data.length ; lev+=1) {
+    for (var lev=0; lev< dataIs.length ; lev+=1) {
       if (lev===but) continue;
       removeBrushOnLevel(lev);
     }
@@ -243,7 +243,10 @@ function NodeNavigator(eleId, h) {
         .on("end", brushended));
     var _brush = d3.select(this)
       .selectAll(".brush")
-      .data([{data:d,level:i}]);// fake data
+      .data([{ 
+        data : data[d],
+        level : i
+      }]);// fake data
 
     _brush.enter()
       .merge(_brush)
@@ -255,7 +258,7 @@ function NodeNavigator(eleId, h) {
       .call(dBrushes.get(i))
       .selectAll("rect")
       // .attr("x", -8)
-      .attr("width", xScale.bandwidth()* (dDimensions.size()+1));
+      .attr("width", xScale.bandwidth()* (dDimensions.size()+2));
 
     _brush.exit().remove();
 
@@ -280,33 +283,28 @@ function NodeNavigator(eleId, h) {
       //   return d.visible;
       // });
 
-      var filteredData = data[i].filter(function (d) {
-        d.visible = d.__i[i] >= first.__i[i] && d.__i[i] <= last.__i[i];
-        return d.visible;
+      var filteredData = dataIs[i].filter(function (d) {
+        data[d].visible = data[d].__i[i] >= first.__i[i] && data[d].__i[i] <= last.__i[i];
+        return data[d].visible;
       });
 
       //Assign the index
-      filteredData.forEach(function(d, j) {
-        d.__i[i+1] = j;
-      });
+      for (var j = 0; j < filteredData.length; j++) {
+        data[filteredData[j]].__i[i+1] = j;
+      }
 
       var after = performance.now();
       console.log("Brushend filtering " + (after-before) + "ms");
 
 
-      var newData;
-      if (filteredData.length===0) { // empty selection -> remove level
+      console.log("Computing new data");
+      var newData = dataIs;
+      if (filteredData.length===0) { 
         console.log("Empty selection!");
         return;
       } else {
-        newData = data.slice(0,i+1);
+        newData = dataIs.slice(0,i+1);
         newData.push(filteredData);
-      }
-      if (links.length>0) {
-        links = links.slice(0, i+1);
-        links.push(links[i].filter(function (d) {
-          return d.source.visible && d.target.visible;
-        }));
       }
 
 
@@ -314,7 +312,8 @@ function NodeNavigator(eleId, h) {
         newData,
         colScales
       );
-      console.log("Selected " + nn.getVisible().length + " calling updateCallback");
+      console.log("out of updateData");
+      console.log("Selected " + filteredData.length + " calling updateCallback");
       updateCallback(nn.getVisible());
 
       // nn.update(false); //don't update brushes
@@ -335,15 +334,15 @@ function NodeNavigator(eleId, h) {
       var itemAttr = invertOrdinalScale(xScale, screenX - levelScale(i));
       var sel = dData.get(itemId);
       before = performance.now();
-      var filteredData = data[i].filter(function (d) {
-        d.visible = d[itemAttr] === sel[itemAttr];
-        return d.visible;
+      var filteredData = dataIs[i].filter(function (i) {
+        data[i].visible = data[i][itemAttr] === sel[itemAttr];
+        return data[i].visible;
       });
-      filteredData.forEach(function (d, itemI) { d.__i[i+1] = itemI;});
+      filteredData.forEach(function (d, itemI) { data[d].__i[i+1] = itemI;});
       after = performance.now();
       console.log("Click filtering " + (after-before) + "ms");
 
-      var newData = data.slice(0,i+1);
+      var newData = dataIs.slice(0,i+1);
       newData.push(filteredData);
 
       nn.updateData(
@@ -358,12 +357,12 @@ function NodeNavigator(eleId, h) {
   }
 
 
-  function onMouseOver(data) {
+  function onMouseOver(overData) {
     var screenY = d3.mouse(d3.event.target)[1],
       screenX = d3.mouse(d3.event.target)[0];
 
-    var itemId = invertOrdinalScale(yScales[data.level], screenY);
-    var itemAttr = invertOrdinalScale(xScale, screenX - levelScale(data.level));
+    var itemId = invertOrdinalScale(yScales[overData.level], screenY);
+    var itemAttr = invertOrdinalScale(xScale, screenX - levelScale(overData.level));
     var d = dData.get(itemId);
     // var itemId = d.data.filter(function (e) {
     //   var y = yScales[d.level](e[id]);
@@ -411,7 +410,7 @@ function NodeNavigator(eleId, h) {
 
     var levelOverlay = svg.select(".attribs")
       .selectAll(".levelOverlay")
-      .data(data);
+      .data(dataIs);
 
     var levelOverlayEnter = levelOverlay.enter()
       .append("g")
@@ -499,43 +498,10 @@ function NodeNavigator(eleId, h) {
   }
 
   function drawCloseButton() {
-    var maxLevel = data.length-1;
+    var maxLevel = dataIs.length-1;
     svg.select("#closeButton")
-      .style("display", data.length === 1 ? "none":"block")
+      .style("display", dataIs.length === 1 ? "none":"block")
       .attr("transform", "translate(" + (levelScale(maxLevel) + levelScale.bandwidth() - nn.levelsSeparation +15)  + "," + yScales[maxLevel].range()[0] + ")")
-  }
-
-  // Links between nodes
-  function drawLink(link) {
-    var
-      lastAttrib = xScale.domain()[xScale.domain().length-1],
-      rightBorder = x(lastAttrib, data.length-1)+ xScale.bandwidth(),
-      ys = yScales[data.length-1](link.source[id]) + yScales[data.length-1].bandwidth()/2,
-      yt = yScales[data.length-1](link.target[id]) + yScales[data.length-1].bandwidth()/2,
-      miny = Math.min(ys, yt),
-      maxy = Math.max(ys, yt),
-      midy = maxy-miny;
-    context.moveTo(rightBorder, miny); //starting point
-    context.quadraticCurveTo(
-      rightBorder + midy/8, miny + midy/2, // mid point
-      rightBorder, maxy // end point
-      );
-  }
-
-  function drawLinks() {
-    console.log("draw links ");
-    if (!links.length) return;
-
-    context.save();
-    context.beginPath();
-    context.strokeStyle = nn.linkColor;
-    context.globalAlpha = Math.min(1,
-      Math.max(0.01,100 / links[links.length-1].length )
-    ); // More links more transparency
-    // context.lineWidth = 0.5;
-    links[links.length-1].forEach(drawLink);
-    context.stroke();
-    context.restore();
   }
 
 
@@ -563,20 +529,20 @@ function NodeNavigator(eleId, h) {
     if (level <= 0) {
       return;
     }
-    data[level].representatives.forEach(function (item) {
+    dataIs[level].representatives.forEach(function (item) {
       // Compute the yPrev by calculating the index of the corresponding representative
-      var iOnPrev = dData.get(item[id]).__i[level-1];
-      var iRep = Math.floor(iOnPrev - iOnPrev%data[level-1].itemsPerpixel);
+      var iOnPrev = dData.get(data[item][id]).__i[level-1];
+      var iRep = Math.floor(iOnPrev - iOnPrev%dataIs[level-1].itemsPerpixel);
       // console.log("i rep = "+ iRep);
       // console.log(data[level-1][iRep]);
       // console.log(yScales[level-1](data[level-1][iRep][id]));
       var locPrevLevel = {
         x: levelScale(level-1) + xScale.range()[1],
-        y: yScales[level-1](data[level-1][iRep][id])
+        y: yScales[level-1]( data[dataIs[level-1][iRep]] [id])
       };
       var locLevel = {
         x: levelScale(level),
-        y: yScales[level](item[id]) };
+        y: yScales[level](data[item][id]) };
 
       var points = [ locPrevLevel,
         {x: locPrevLevel.x + nn.levelsSeparation * 0.3, y: locPrevLevel.y},
@@ -595,33 +561,6 @@ function NodeNavigator(eleId, h) {
   }
 
 
-  function drawDimensionTitles(level) {
-    dDimensions.keys().forEach(function (attrib) {
-      // context.font = nn.legendFont;
-      // context.rotate(-Math.PI/4);
-      // context.fillText(attrib,x(attrib, level),y0);
-      // context.rotate(Math.PI/4);
-
-      context.save();
-      context.translate(x(attrib, level)+xScale.bandwidth()/2 , y0-5);
-      context.rotate(-Math.PI/4);
-      // context.textAlign = "center";
-      context.fillStyle="black";
-      if (dSortBy.has(level) && dSortBy.get(level) === attrib) {
-        context.font="Bold 10px Arial";
-      } else {
-        context.font="10px Arial";
-      }
-
-      context.fillText(attrib, 0, 0);
-      context.restore();
-    } );
-    context.font="14px Arial";
-    context.fillStyle="black";
-    context.fillText(fmt(data[level].length), levelScale(level), yScales[level].range()[1] + 15);
-  }
-
-
 
   nn.initData = function (mData,  mColScales) {
     var before = performance.now();
@@ -631,9 +570,9 @@ function NodeNavigator(eleId, h) {
       dDimensions.set(d, true);
     });
     dData = d3.map();
-    for (var i = 0; i < mData[0].length ; i++) {
-      var d = mData[0][i];
-      d.__seqId=i; //create a default id with the sequential number
+    for (var i = 0; i < data.length ; i++) {
+      var d = data[i];
+      d.__seqId = i; //create a default id with the sequential number
       dData.set(d[id], d);
       d.__i={};
       d.__i[0] = i;
@@ -647,9 +586,12 @@ function NodeNavigator(eleId, h) {
   };
 
   function updateScales(levelToUpdate) {
+    console.log("Update scales");
     var before = performance.now();
     // yScales=[];
-    var lastLevel = data.length-1;
+    var lastLevel = dataIs.length-1;
+    
+    console.log("Delete unnecessary scales")
     // Delete unnecessary scales
     yScales.splice(lastLevel+1, yScales.length);
     levelToUpdate = levelToUpdate!==undefined ? levelToUpdate : lastLevel;
@@ -658,19 +600,23 @@ function NodeNavigator(eleId, h) {
       .paddingInner(0.0)
       .paddingOuter(0);
 
+
+
+    console.log("Compute representatives")
     var representatives = [];
-    if (data[levelToUpdate].length>h) {
-      var itemsPerpixel = Math.floor(data[levelToUpdate].length / (h*2));
-      data[levelToUpdate].itemsPerpixel = itemsPerpixel;
-      for (var i = 0; i< data[levelToUpdate].length; i+=itemsPerpixel ){
-        representatives.push(data[levelToUpdate][i]);
+    if (dataIs[levelToUpdate].length>h) {
+      var itemsPerpixel = Math.max(Math.floor(dataIs[levelToUpdate].length / (h*2)), 1);
+      console.log("itemsPerpixel", itemsPerpixel);
+      dataIs[levelToUpdate].itemsPerpixel = itemsPerpixel;
+      for (var i = 0; i< dataIs[levelToUpdate].length; i+=itemsPerpixel ) {
+        representatives.push(dataIs[levelToUpdate][i]);
       }
     } else {
-      data[levelToUpdate].itemsPerpixel=1;
-      representatives = data[levelToUpdate];
+      dataIs[levelToUpdate].itemsPerpixel=1;
+      representatives = dataIs[levelToUpdate];
     }
-    data[levelToUpdate].representatives = representatives;
-    yScales[levelToUpdate].domain(representatives.map(function (d) { return d[id];}));
+    dataIs[levelToUpdate].representatives = representatives;
+    yScales[levelToUpdate].domain(representatives.map(function (rep) { return data[rep][id];}));
 
 
 
@@ -686,6 +632,8 @@ function NodeNavigator(eleId, h) {
     //   );
     // });
 
+
+    console.log("Update color scale domains");
     // Update color scales domains
 
     // colScales = d3.map();
@@ -693,7 +641,9 @@ function NodeNavigator(eleId, h) {
       function (attrib) {
         if (attrib === "visible") return;
         var scale = colScales.get(attrib);
-        scale.domain(d3.extent(data[0].representatives.map(function (d) { return d[attrib]; }))); //TODO: make it compute it based on the local range
+        scale.domain(d3.extent(dataIs[0].representatives.map(function (rep) { 
+          return data[rep][attrib]; 
+        }))); //TODO: make it compute it based on the local range
         colScales.set(attrib, scale);
       }
     );
@@ -717,8 +667,8 @@ function NodeNavigator(eleId, h) {
       .range([0, nn.attribWidth * (dDimensions.keys().length)])
       .paddingInner(0.1)
       .paddingOuter(0);
-    levelScale.domain(data.map(function (d,i) { return i; }))
-      .range([x0+nn.margin, ((xScale.range()[1] + nn.levelsSeparation) * data.length) + x0])
+    levelScale.domain(dataIs.map(function (d,i) { return i; }))
+      .range([x0+nn.margin, ((xScale.range()[1] + nn.levelsSeparation) * dataIs.length) + x0])
       .paddingInner(0)
       .paddingOuter(0);
 
@@ -726,21 +676,22 @@ function NodeNavigator(eleId, h) {
     console.log("Updating Scales " + (after-before) + "ms");
   }
 
-  nn.updateData = function (mData, mColScales, levelToUpdate) {
+  nn.updateData = function (mDataIs, mColScales, levelToUpdate) {
+    console.log("updateData");
     var before = performance.now();
     var ctxWidth;
-    if (typeof mData !== typeof []) {
+    if (typeof mDataIs !== typeof []) {
       console.error("NodeNavigator updateData didn't receive an array");
       return;
     }
-    // if (!dSortBy.has(mData.length-1)) {
-    //   dSortBy.set(mData.length-1, mSortByAttr);
+    // if (!dSortBy.has(mDataIs.length-1)) {
+    //   dSortBy.set(mDataIs.length-1, mSortByAttr);
     // }
     colScales = mColScales;
-    data = mData;
-    context = canvas.getContext("2d");
-
+    dataIs = mDataIs;
+    
     updateScales(levelToUpdate);
+
     ctxWidth = levelScale.range()[1] + nn.margin + x0;
     d3.select(canvas)
       .attr("width", ctxWidth)
@@ -760,15 +711,14 @@ function NodeNavigator(eleId, h) {
   };
 
   function deleteOneLevel() {
-    if (data.length<=1) return;
+    if (dataIs.length<=1) return;
     console.log("Delete one level");
-    removeBrushOnLevel(data.length-2);
-    data[data.length-2].forEach(function (d) { d.visible=true; });
+    removeBrushOnLevel(dataIs.length-2);
+    dataIs[dataIs.length-2].forEach(function (d) { data[d].visible=true; });
 
-    if (links.length>1)
-      links = links.slice(0, data.length-1);
-    data = data.slice(0, data.length-1);
-    nn.updateData(data, colScales);
+    dataIs = dataIs.slice(0, dataIs.length-1);
+    nn.updateData(dataIs, colScales);
+    updateCallback(nn.getVisible());
   }
 
 
@@ -778,28 +728,23 @@ function NodeNavigator(eleId, h) {
 
     var w = levelScale.range()[1] + nn.margin + x0;
     context.clearRect(0,0,w+1,h+1);
-    data.forEach(function (levelData, i) {
+    dataIs.forEach(function (levelData, i) {
       // var itemsPerpixel = Math.floor(levelData.length/h);
       // if (itemsPerpixel>1) { //draw one per pixel
       //   for (var j = 0; j< levelData.length; j+=(itemsPerpixel-1)) {
       //     drawItem(levelData[j], i);
       //   }
       // } else { // draw all
-        levelData.representatives.forEach(function (d) {
-          drawItem(d, i);
-        });
+      levelData.representatives.forEach(function (rep) {
+        drawItem(data[rep], i);
+      });
       // }
 
       drawLevelBorder(i);
       drawLevelConnections(i);
-      // drawDimensionTitles(i);
-
-
-
 
     });
 
-    drawLinks();
 
     drawBrushes();
     drawCloseButton();
@@ -829,23 +774,13 @@ function NodeNavigator(eleId, h) {
     return nn;
   };
 
-  nn.links = function (_) {
-    if (arguments.length) {
-      links = [_];
-      return nn;
-    } else {
-      return links;
-    }
-  };
-
-
   nn.data = function(_) {
     if (!colScales.has("visible")) {
       nn.addAttrib("visible",
-                d3.scaleOrdinal()
-            .domain([false,true])
-            .range(visibleColorRange)
-            //, "#cddca3", "#8c6d31", "#bd9e39"]
+        d3.scaleOrdinal()
+          .domain([false,true])
+          .range(visibleColorRange)
+          //, "#cddca3", "#8c6d31", "#bd9e39"]
       );
     }
     if (!colScales.has("__seqId")) {
@@ -863,13 +798,16 @@ function NodeNavigator(eleId, h) {
         d.visible = true;
       });
 
-      data = [_];
+      data = _;
+      dataIs = [data.map(function (_, i) { return i; })];
+      
+
       nn.initData(
-        data,
+        dataIs,
         colScales
       );
       nn.updateData(
-        data,
+        dataIs,
         colScales
       );
       return nn;
@@ -879,7 +817,7 @@ function NodeNavigator(eleId, h) {
   };
 
   nn.getVisible = function() {
-    return data[data.length-1].filter(function (d) { return d.visible; });
+    return dataIs[dataIs.length-1].filter(function (d) { return data[d].visible; }).map(function (d) { return data[d]; });
   };
 
 
