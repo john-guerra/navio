@@ -4,25 +4,6 @@ export default class TablePreview extends Component {
 	state = {
 		n: 50,
 	}
-	componentDidMount(){
-		let preview = this.props.exportData.slice(0,this.state.n);
-		let columns = []
-		this.props.attributes.forEach(a=>{
-			let column = {};
-			column.title = a.name;
-			column.dataIndex = a.name;
-			column.key = a.name;
-			columns.push(column);
-		})
-		preview.forEach((p,i)=> {
-			p.key=p.__seqId;
-		})
-		console.log(columns);
-
-	}
-	componentDidUpdate(){
-
-	}
 	render(){
 		if(this.props.attributes.length!==0 && this.props.exportData.length !==0){
 			console.log(this.props.attributes)
@@ -49,7 +30,8 @@ export default class TablePreview extends Component {
 
 			return(
 				<div className="table">
-					<h1>	Table Preview</h1>
+					<h1>{`Sample ${preview.length} records` }</h1>
+
 					<Table bordered className="raw-table" pagination={false} dataSource={preview} columns={columns} scroll={{ x: columns.length*150, y: '70vh' }}/>
 				</div>
 
@@ -59,10 +41,7 @@ export default class TablePreview extends Component {
 		else{
 			return (
 				<div className="table">
-					<h1>	Table Component</h1>
-					{this.props.exportData.slice(0,50).map((d,i)=>{
-						return (<p>{`${i} ${d["car-id"]}`}</p>)
-					})}
+					<h1>	Sample Data</h1>
 				</div>
 			)
 		}

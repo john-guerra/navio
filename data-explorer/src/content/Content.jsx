@@ -19,7 +19,7 @@ class Content extends Component {
 		return(
 			<div id="content" className="content">
 				{ !this.props.loaded? 
-					<div>
+					<div className="load">
 						{!this.props.loading ? 
 							<Load 
 								setLoading={this.props.setLoading}

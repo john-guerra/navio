@@ -14,7 +14,7 @@ body {
 }
 
 .container {
-    height: 100%;
+    height: 100vh;
     display: grid;
     grid-template-columns: repeat(12, 1fr);
     grid-template-rows: 10vh auto 5vh;
@@ -23,7 +23,6 @@ body {
         "m m m m c c c c c c c c"
         "f f f f f f f f f f f f";
 }
-
 .header {
     grid-area: h;
     padding: 1em;
@@ -36,8 +35,4 @@ body {
 }
 .logo {
   margin-right: 1em; 
-}
-.NodeNavigator {
-  width: 100%;
-  overflow-y: scroll;
 }
