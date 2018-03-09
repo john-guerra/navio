@@ -10,16 +10,44 @@ a:link {
 }
 
 .content {
+  border: 1px solid black;
+    /*padding-left: 40%;*/
+    width: 100%;
     grid-area: c;
     margin-left: -50%; 
+    /*margin: 10px;*/
     transition: margin-left 1s;
-    display: flex;
-    justify-content: flex-start;
+    min-height: 50%;
+    display: grid;
+    overflow-x: scroll;
+    grid-template-columns: repeat(1, 1fr);
+    grid-template-rows: 100% 20%;
+    grid-template-areas: 
+        "visualization"
+        "table";
+}
+.visualization {
+  border: 1px solid black;
+  margin-top: 2vh;
+  grid-area: visualization;
+  min-height: 80vh;
+}
+.table {
+  border: 1px solid black;
+  grid-area: table;
+  width: 100%;
+  height: 80vh;
+  overflow-y: scroll;
+  padding:1em;
+}
+.raw-table{
+  border:1px solid black;
+  min-height: 80vh;
 }
 .container > div {
   display: flex;
-  justify-content: center;
-  align-items: center;
+  /*justify-content: flex-start;
+  align-items: flex-start;*/
   font-size: 2em;
 }
 

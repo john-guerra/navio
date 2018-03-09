@@ -2,7 +2,6 @@ import React, { Component } from 'react';
 import PropTypes from "prop-types";
 import NodeNavigator from "./NodeNavigator.js";
 import { Button } from 'antd';
-import Table from './../table/Table.jsx';
 let FileSaver = require('file-saver');
 
 const ButtonGroup = Button.Group;
@@ -154,7 +153,7 @@ class Visualization extends Component {
 	render() {
     const filter = this.props.exportData.length === 0;
 		return (
-          <div>
+          <div className="visualization">
             <div className="change-dataset-button">
               <ButtonGroup>
                 <Button onClick={this.onClick}>Change dataset</Button>
@@ -164,7 +163,6 @@ class Visualization extends Component {
             </div>
       		  <div id="vis" ref={(target) => this.target = target }>
   	        </div>
-            <Table exportData={this.props.exportData} />
           </div>
 		)
 	}

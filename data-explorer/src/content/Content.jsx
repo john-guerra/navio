@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import * as d3 from "d3";
 import { Spin } from 'antd';
+import TablePreview from './table/Table.jsx';
 import Load from './load/Load.jsx';
 import Visualization from './visualization/Visualization.jsx';
 class Content extends Component {
@@ -36,18 +37,24 @@ class Content extends Component {
 						
 					</div>
 					:
-					<Visualization
-						onChangeAtt={this.props.onChangeAtt}
-                  		attChange={this.props.attChange}
-						setLoaded={this.props.setLoaded}
-						setLoading={this.props.setLoading}
-						data={this.props.data}
-						updateCallback={this.props.updateCallback}
-						exportData={this.props.exportData}
-						attributes={this.props.attributes}
-						ids={this.props.ids}
-						id={this.props.id}
-					/>
+					<div>
+						<Visualization
+							onChangeAtt={this.props.onChangeAtt}
+	                  		attChange={this.props.attChange}
+							setLoaded={this.props.setLoaded}
+							setLoading={this.props.setLoading}
+							data={this.props.data}
+							updateCallback={this.props.updateCallback}
+							exportData={this.props.exportData}
+							attributes={this.props.attributes}
+							ids={this.props.ids}
+							id={this.props.id}
+						/>
+						<TablePreview
+							attributes={this.props.attributes}
+							exportData={this.props.exportData}
+						/>
+					</div>
 				}
 
 			</div>
