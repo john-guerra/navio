@@ -6,19 +6,16 @@ html, body {
   margin: 0px;
 }
 a:link {
-  text-decoration: none;
+  text-decoration: none !important;
+  color: white;
 }
 .load {
   align-self: center;
   margin: 0 auto;
 }
 .content {
-    /*padding-left: 40%;*/
-    /*width: 100%;*/
     grid-area: c;
-    margin-left: -25%; 
-
-    /*margin: 10px;*/
+    margin-left: -50%;
     transition: margin-left 1s;
     min-height: 50%;
     display: grid;
@@ -30,9 +27,10 @@ a:link {
         "table";
 }
 .visualization {
-  margin-top: 2vh;
+  margin-top: 10vh;
   grid-area: visualization;
   min-height: 70vh;
+  z-index: 999999999;
 }
 .table {
   grid-area: table;
@@ -147,5 +145,6 @@ a:link {
 .change-dataset-button{
   position: absolute;
   left: 37%;
-  z-index: 99999;
+  top: 11vh;
+  z-index: 99;
 }

@@ -26,9 +26,15 @@ body {
 .header {
     grid-area: h;
     padding: 1em;
+    align-items: center;
 }
 .footer {
     grid-area: f;
+    color: white;
+}
+#root > div > div.container > div.footer > a {
+  align-self: center;
+  color: white;
 }
 .center {
   display: flex;

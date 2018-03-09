@@ -10,6 +10,8 @@
     grid-template-areas: 
     	"ids"
     	"attributes";
+    justify-content: center;
+    align-items: center;
 }
 
 .ids {
@@ -39,6 +41,7 @@
 
 
 .attributes {
+
 	grid-area: attributes;
 	display: grid !important;
 	grid-template-columns: repeat(1, 1fr) !important;
@@ -46,7 +49,6 @@
 	grid-template-areas: 
 		"attributes-title"
 		"attributes-container" !important;
-	align-self: flex-start;
 }
 .attributes-title {
 	grid-area: attributes-title;
@@ -64,26 +66,34 @@
 	display: grid;
 	grid-template-columns: 3fr 2fr 1fr !important;
 	grid-template-rows: auto;
-	align-self: center;
+	/*align-self: flex-start !important;*/
+	align-items: flex-end;
 	border-bottom: 1px solid black;
 	padding-bottom: 0.5em;
 }
 .attribute-name {
 	text-align: left;
 	font-size: 0.5em;
-	align-self: center;
+	align-self: auto;
+	justify-self: flex-start;
 
 }
 .attribute-select {
 	margin-right: 0.5em;
-	margin-left: 0.5em;
+	align-self: center;
+	justify-content: center;
+	width: 100%;
+
 }
 .attribute-select-item {
 	width: 100%;
+	justify-self: center !important;
+	align-self: center !important;
 }
 
 .attribute-switch {
 	width: 100%;
+	padding-left: 0.5em;
 	justify-self: flex-end;
 }
 .divider {

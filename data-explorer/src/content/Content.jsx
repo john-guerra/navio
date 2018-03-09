@@ -6,11 +6,13 @@ import Load from './load/Load.jsx';
 import Visualization from './visualization/Visualization.jsx';
 class Content extends Component {
 	componentDidUpdate(){
+		console.log('update',this.props.closed, this.props.loaded)
 		if(this.props.loaded){
 			d3.select("#content")
 			  .style("transition","margin-left 1s")
 			  .style("margin-left", 0);
-		}else{
+		}
+		else{
 			d3.select("#content")
 			  .style("margin-left", "-50%");
 		}

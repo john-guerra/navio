@@ -42,6 +42,7 @@ export default class TablePreview extends Component {
 			return (
 				<div className="table">
 					<h1>	Sample Data</h1>
+					<p>Filter data to show a sample from the dataset.</p>
 				</div>
 			)
 		}

@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import { Upload, Icon, Button, Modal, Card } from 'antd';
 import * as vega from 'vega';
+import * as d3 from "d3";
 import './load.css';
 const Dragger = Upload.Dragger;
 class Load extends Component {
@@ -56,11 +57,18 @@ class Load extends Component {
       let values;
       try {
         values = vega.read(lEvent.target.result, {type: format});
-        // this.props.setData(values);
         this.props.setData(values);
         this.setState({loading:false})
       } catch (err) {
-        window.alert(err.message);
+        let ssv = d3.dsvFormat(";");
+        let values = ssv.parse(lEvent.target.result);
+        console.log(values);
+        // console.log(lEvent);
+        // console.log(lEvent.target);
+        // console.log(lEvent.target.result);
+        // var data = d3.csv.parse(csvString);
+        this.props.setData(values);
+        this.setState({loading:false});
       }
     };
 

@@ -17,7 +17,7 @@ class Menu extends Component {
 	    });
 	 }
 	componentDidUpdate(){
-		if(this.props.loaded){
+		if(this.props.loaded ){
 			d3.select("#menu")
 					.style("transition", "visibility 1s")
 					.style("visibility","visible");
@@ -40,6 +40,7 @@ class Menu extends Component {
 		this.props.changeTypeStatus(attr,value);
 	}
 	onCloseSidebar = () => {
+		this.props.setClosed(!this.state.closed);
 		this.setState({closed:!this.state.closed});
 	}
 	render(){
@@ -96,7 +97,7 @@ class Menu extends Component {
 								          className="attribute-select-item"
 								        >
 								        	<Option key={"categorical"} value={"categorical"} >categorical</Option>
-								        	<Option key={"sequential"} value={"sequential"}>sequential</Option>
+								        	<Option key={"sequential"} value={"sequential"}>ordinal</Option>
 								        </Select>
 									</div>
 									<div className="attribute-switch">

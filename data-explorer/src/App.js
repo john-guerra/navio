@@ -19,6 +19,7 @@ class App extends Component {
       datasets:[{"name":"all_followers_id.csv"},{"name":"Artworks_less_columns.csv"},{"name":"Lekagul Sensor Data.csv"}],
       loading:false,
       exportData:[],
+      closed:false,
     }
   }
   /*
@@ -88,6 +89,7 @@ class App extends Component {
   };
   setData = (data) => {
     console.log('setting data')
+    this.setState({originalData:data});
     /*Creates an empty array that will contain the metadata of the attributes*/
     let atts = []
     let ids = []
@@ -104,7 +106,21 @@ class App extends Component {
     data.forEach((row) => {
       atts.forEach(att=> {
         if(att.data === "date"){
-          row[att.name] = new Date(row[att.name]);
+          let mydate = new Date(row[att.name]);
+          if(isNaN(mydate.getDate())){
+            row[att.name] = null;
+          }else {
+            row[att.name] = mydate
+          }
+          
+        }
+        else if(att.data=== "number"){
+          let mynumber = +row[att.name];
+          if(isNaN(mynumber)){
+            row[att.name] = null;
+          }else{
+            row[att.name] = mynumber;
+          }
         }
       })
     })
@@ -172,6 +188,9 @@ class App extends Component {
       loading:false,
     });
   }
+  setClosed = (closed) => {
+    this.setState({closed})
+  }
   getModal(){
     return (
       <div id="openModal" className="modalDialog">
@@ -201,6 +220,7 @@ class App extends Component {
                 </div>
 
                 <Menu
+                  setClosed={this.setClosed}
                   changeCheckStatus={this.changeCheckStatus}
                   changeTypeStatus={this.changeTypeStatus}
                   loaded={this.state.loaded}
@@ -213,6 +233,7 @@ class App extends Component {
                 />
                 
                 <Content 
+                  closed={this.state.closed}
                   onChangeAtt={this.onChangeAtt}
                   attChange={this.state.attChange}
                   setLoaded={this.setLoaded}
@@ -231,7 +252,7 @@ class App extends Component {
                 
                 <div className="footer">
 
-                 <a href="https://github.com/jgmurillo10/thesis" target="_blank" rel="noopener noreferrer"> Github Project MIT License <i className="fab fa-github"></i> </a> 
+                 <a href="https://github.com/john-guerra/nodenavigator" target="_blank" rel="noopener noreferrer"> Github Project MIT License <i className="fab fa-github"></i> </a> 
                 </div>
             </div>
         </div>
