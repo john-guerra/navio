@@ -63,10 +63,6 @@ class Load extends Component {
         let ssv = d3.dsvFormat(";");
         let values = ssv.parse(lEvent.target.result);
         console.log(values);
-        // console.log(lEvent);
-        // console.log(lEvent.target);
-        // console.log(lEvent.target.result);
-        // var data = d3.csv.parse(csvString);
         this.props.setData(values);
         this.setState({loading:false});
       }
