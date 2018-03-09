@@ -89,6 +89,15 @@ class Visualization extends Component {
     console.log(nn);
     console.log(nnhtml)
     let mimeType = 'text/html';
+    let catColumns = [];
+    let seqColumns = [];
+    this.props.attributes.forEach((a)=>{
+      if(a.type === "categorical"){
+        catColumns.push(a.name);
+      }else {
+        seqColumns.push(a.name);
+      }
+    })
 
     let elHtml = `<!DOCTYPE html>
 <html lang="en">
@@ -107,13 +116,8 @@ class Visualization extends Component {
   <script type="text/javascript" src="https://john-guerra.github.io/NodeNavigator/NodeNavigator.js"></script>
   <script type="text/javascript">
     var nn = new NodeNavigator("#nodeNavigator", 600);
-  var catColumns = [
-    "car-type",
-    "gate-name"
-  ];
-  var seqColumns = [
-    "Timestamp"
-  ];
+  var catColumns = "${catColumns}".split(",");
+  var seqColumns = "${seqColumns}".split(",");
   catColumns.forEach((c) => nn.addCategoricalAttrib(c));
   seqColumns.forEach((c) => nn.addSequentialAttrib(c));
     d3.csv("./export_data.csv", function (err, data) {
