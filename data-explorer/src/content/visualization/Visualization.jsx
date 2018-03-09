@@ -131,16 +131,18 @@ class Visualization extends Component {
     link.setAttribute('href', 'data:' + mimeType  +  ';charset=utf-8,' + encodeURIComponent(elHtml));
     // link.click(); 
     if (this.props.exportData.length === 0) {
-      this.download(true);
+      this.download();
     }else {
       this.download();  
     }
   }
 
   download = (full) => {
-    let data = full? this.props.data:this.props.exportData;
-    data.forEach(d=>delete d.__i);
-    const items = data;
+    // let data = this.props.data;
+    let data = this.props.exportData.length === 0? this.props.data : this.props.exportData;
+    // data.forEach(d=>delete d.__i);
+    const items = data.slice();
+    // items.forEach(d=>delete d.__i);
     const replacer = (key, value) => value === null ? '' : value // specify how you want to handle null values here
     const header = Object.keys(items[0])
     let csv = items.map(row => header.map(fieldName => JSON.stringify(row[fieldName], replacer)).join(','))
