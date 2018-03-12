@@ -130,6 +130,7 @@ class App extends Component {
       attributes: atts,
       ids: ids,
       data: data,
+      exportData:data,
       id: ids[0],
     })
     console.log('end setting data')
