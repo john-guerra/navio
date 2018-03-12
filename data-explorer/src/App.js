@@ -16,7 +16,23 @@ class App extends Component {
       attributes: [],
       ids: [],
       id: "",
-      datasets:[{"name":"all_followers_id.csv"},{"name":"Artworks_less_columns.csv"},{"name":"Lekagul Sensor Data.csv"}],
+      datasets:[
+        {
+          "name":"all_followers_id.csv",
+          "size":1048575,
+          "n_attributes":10
+        },
+        {
+          "name":"Artworks_less_columns.csv",
+          "size": 131585,
+          "n_attributes": 14
+        },
+        {
+          "name":"Lekagul Sensor Data.csv",
+          "size":171477,
+          "n_attributes":4
+        }
+      ],
       loading:false,
       exportData:[],
       closed:false,
@@ -29,22 +45,22 @@ class App extends Component {
     also gets the attributte that is id
   */
   componentWillMount(){
-    let datasets = this.state.datasets;
-    datasets.forEach(d=>{
-      d3.csv(`datasets/${d.name}`, function(err,data) {
-        if(err) return err;
-        console.log(d.name)
-        console.log(data)
-        d.size = data.length;
-        d.data = data;
-        d.attributes = []
-        for (let prop in data[0]){
-          d.attributes.push(prop);
-        };
-        d.n_attributes = d.attributes.length;
-      })
-    })
-    this.setState({datasets});
+    // let datasets = this.state.datasets;
+    // datasets.forEach(d=>{
+    //   d3.csv(`datasets/${d.name}`, function(err,data) {
+    //     if(err) return err;
+    //     console.log(d.name)
+    //     console.log(data)
+    //     d.size = data.length;
+    //     d.data = data;
+    //     d.attributes = []
+    //     for (let prop in data[0]){
+    //       d.attributes.push(prop);
+    //     };
+    //     d.n_attributes = d.attributes.length;
+    //   })
+    // })
+    // this.setState({datasets});
   }
   getAttributesType(data,atts,ids){
     let seq = "sequential";

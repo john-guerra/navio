@@ -16,12 +16,33 @@ class Load extends Component {
       visible: true,
     });
   }
-  handleOk = (data) => {
+  getData = (name) => {
+    console.log(name);
+    let res = []; 
+    d3.csv(`datasets/${name}`, function(err,data) {
+        console.log('d3')
+        if(err) {
+          console.log(err)
+        }
+        else {
+          console.log(data); 
+          res = data; 
+        }
+    }, ()=>{return res})
+  }
+  handleOk = (name) => {
+    console.log(name);
     this.setState({
       ModalText: 'The modal will be closed after two seconds',
       confirmLoading: true,
     }, ()=>{
-      this.props.setData(data)
+      // this.props.setData(this.getData(name))
+      let response;
+      d3.csv(`../datasets/${name}`, (err, data) => {
+        if(err) return err;
+        console.log(data)
+        this.props.setData(data);
+      })
     });
     setTimeout(() => {
       this.setState({
@@ -121,7 +142,7 @@ class Load extends Component {
               {this.props.datasets.map((d,i)=> {
                 return(
                   <div key={i} className="dataset">
-                    <Card  title={d.name} extra={<button onClick={()=>this.handleOk(d.data)}>select</button>} style={{ width: 300 }}>
+                    <Card  title={d.name} extra={<button onClick={()=>this.handleOk(d.name)}>select</button>} style={{ width: 300 }}>
                       <h6>Size</h6>
                       <p>{d.size} rows</p>
                       <h6>Attributes ({d.n_attributes})</h6>

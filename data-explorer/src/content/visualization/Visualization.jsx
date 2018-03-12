@@ -98,7 +98,7 @@ class Visualization extends Component {
         seqColumns.push(a.name);
       }
     })
-
+    console.log(this.props.attributes);
     let elHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
