@@ -31,19 +31,10 @@ class Visualization extends Component {
     }
   }
   setUpNodeNavigator = () => {
-    console.log("NodeNavigatorComponent did mount");
-    console.log(this.props.data, 'this.props.data nn')
     this.nn = new NodeNavigator(this.target, 600)
       // the next line is commented because the node navigator creates a sequential id 
       // .id(this.props.id)
       .updateCallback(this.props.updateCallback);
-      // .addSequentialAttrib("Timestamp",
-      //   d3.scalePow()
-      //     .exponent(0.25)
-      //     .range([d3_chromatic.interpolatePurples(0), d3_chromatic.interpolatePurples(1)]))
-      // .addCategoricalAttrib("car-type")
-      // .addCategoricalAttrib("gate-name");
-
       this.props.attributes.forEach((d,i)=>{
         if(d.checked){
         console.log(this.props.data)
@@ -86,8 +77,6 @@ class Visualization extends Component {
   exportVisualization = () => {
     let nn = d3.select("#nodeNavigator");
     let nnhtml = document.getElementById("nodeNavigator");
-    console.log(nn);
-    console.log(nnhtml)
     let mimeType = 'text/html';
     let catColumns = [];
     let seqColumns = [];
@@ -113,21 +102,72 @@ class Visualization extends Component {
   <div id="nodeNavigator"></div>
 
   <script src="https://d3js.org/d3.v4.min.js"></script>
+  <script src="https://d3js.org/d3-interpolate.v1.min.js"></script>
+  <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
   <script type="text/javascript" src="https://john-guerra.github.io/NodeNavigator/NodeNavigator.js"></script>
   <script type="text/javascript">
-    var nn = new NodeNavigator("#nodeNavigator", 600);
-  var catColumns = "${catColumns}".split(",");
-  var seqColumns = "${seqColumns}".split(",");
-  catColumns.forEach((c) => nn.addCategoricalAttrib(c));
-  seqColumns.forEach((c) => nn.addSequentialAttrib(c));
+    let nn = new NodeNavigator("#nodeNavigator", 600);
+    let cat = "categorical"
+    let seq = "sequential";
+  let attributes = JSON.parse('${JSON.stringify(this.props.attributes)}');
     d3.csv("./export_data.csv", function (err, data) {
       if (err) throw err;
-    data.forEach((d,i) => d.i = i);
+    data.forEach((row) => {
+      attributes.forEach(att=> {
+        if(att.data === "date"){
+          let mydate = new Date(row[att.name]);
+          if(isNaN(mydate.getDate())){
+            row[att.name] = null;
+          }else {
+            row[att.name] = mydate
+          }
+          
+        }
+        else if(att.data=== "number"){
+          let mynumber = +row[att.name];
+          if(isNaN(mynumber)){
+            row[att.name] = null;
+          }else{
+            row[att.name] = mynumber;
+          }
+        }
+      })
+    })
+
+    attributes.forEach((d,i)=>{
+        if(d.checked){
+        console.log("------------");
+
+          if(d.type === cat){
+            console.log('cat',d.name);
+            nn.addCategoricalAttrib(d.name);
+          }else if(d.type === seq){
+            console.log('seq',d.name);
+            if(d.data=== "date"){
+              console.log('date')
+              nn.addSequentialAttrib(d.name,
+                        d3.scalePow()
+                          .exponent(0.25)
+                          .range([d3.interpolatePurples(0), d3.interpolatePurples(1)]))
+            }
+            else {
+              nn.addSequentialAttrib(d.name);
+            }
+            
+          }
+
+         console.log("------------");
+       }
+      })
+
     nn.data(data);
   });
   </script>
 </body>
 </html>`;
+console.log(elHtml);
+
+
     let link = document.getElementById('downloadLink');
     mimeType = mimeType || 'text/plain';
     let filename = 'index.html'

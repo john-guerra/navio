@@ -16,40 +16,23 @@ class Load extends Component {
       visible: true,
     });
   }
-  getData = (name) => {
-    console.log(name);
-    let res = []; 
-    d3.csv(`datasets/${name}`, function(err,data) {
-        console.log('d3')
-        if(err) {
-          console.log(err)
-        }
-        else {
-          console.log(data); 
-          res = data; 
-        }
-    }, ()=>{return res})
-  }
   handleOk = (name) => {
     console.log(name);
     this.setState({
       ModalText: 'The modal will be closed after two seconds',
       confirmLoading: true,
     }, ()=>{
-      // this.props.setData(this.getData(name))
       let response;
       d3.csv(`../datasets/${name}`, (err, data) => {
         if(err) return err;
         console.log(data)
         this.props.setData(data);
+        this.setState({
+          visible: false,
+          confirmLoading: false,
+        });
       })
     });
-    setTimeout(() => {
-      this.setState({
-        visible: false,
-        confirmLoading: false,
-      });
-    }, 2000);
   }
   handleCancel = () => {
     this.setState({
