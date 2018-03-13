@@ -51,21 +51,28 @@ class Load extends Component {
     return finalSize
   }
   handleFile(file){
+    console.log('handleFile')
     const reader = new FileReader();
      if(file == null){
       alert('No file selected.');
       return;
     }
     reader.onload = (lEvent: any) => {
+      console.log('onload')
       const format = file.name.split('.').pop();
       let values;
       try {
+        console.log('try')
+        if(format === "txt") throw true
         values = vega.read(lEvent.target.result, {type: format});
+        console.log('try2')
         this.props.setData(values);
         this.setState({loading:false})
       } catch (err) {
+        console.log('err')
         let ssv = d3.dsvFormat(";");
-        let values = ssv.parse(lEvent.target.result);
+        console.log('err2');
+        values = ssv.parse(lEvent.target.result);
         console.log(values);
         this.props.setData(values);
         this.setState({loading:false});
