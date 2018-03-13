@@ -1,6 +1,101 @@
 .menu {
     grid-area: m;
-    display: none;
     visibility: hidden;
     transition: visibility 1s;
+    width: 100%;
+    padding: 0.5em;
+    display: grid !important;
+    grid-template-columns: repeat(1, 1fr);
+    grid-template-rows: auto auto;
+    grid-template-areas: 
+    	"ids"
+    	"attributes";
+    justify-content: center;
+    align-items: center;
+}
+
+.ids {
+	grid-area: ids;
+	display: grid !important;
+	grid-template-columns: repeat(1, 1fr) !important;
+	grid-template-rows: auto auto !important;
+	grid-template-areas: 
+		"ids-title"
+		"ids-container" !important;
+}
+.ids-title {
+	grid-area: ids-title;
+	justify-self: center;
+}
+.ids-container {
+	overflow-y: scroll;
+	height: 20vh;
+	grid-area: ids-container;
+	display: grid;
+	grid-auto-rows: auto;
+	grid-template-columns: repeat(1,1fr);
+}
+.id {
+	justify-self: center;
+}
+
+
+.attributes {
+
+	grid-area: attributes;
+	display: grid !important;
+	grid-template-columns: repeat(1, 1fr) !important;
+	grid-template-rows: auto auto !important;
+	grid-template-areas: 
+		"attributes-title"
+		"attributes-container" !important;
+}
+.attributes-title {
+	grid-area: attributes-title;
+	justify-self:center;
+}
+.attributes-container {
+	overflow-y: scroll;
+	height: 30vh;
+	grid-area: attributes-container;
+	display: grid;
+	grid-auto-rows: auto;
+	grid-template-columns: repeat(1,1fr);
+}
+.attribute {
+	display: grid;
+	grid-template-columns: 3fr 2fr 1fr !important;
+	grid-template-rows: auto;
+	/*align-self: flex-start !important;*/
+	align-items: flex-end;
+	border-bottom: 1px solid black;
+	padding-bottom: 0.5em;
+}
+.attribute-name {
+	text-align: left;
+	font-size: 0.5em;
+	align-self: auto;
+	justify-self: flex-start;
+
+}
+.attribute-select {
+	margin-right: 0.5em;
+	align-self: center;
+	justify-content: center;
+	width: 100%;
+
+}
+.attribute-select-item {
+	width: 100%;
+	justify-self: center !important;
+	align-self: center !important;
+}
+
+.attribute-switch {
+	width: 100%;
+	padding-left: 0.5em;
+	justify-self: flex-end;
+}
+.divider {
+	width: 100%;
 }

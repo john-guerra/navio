@@ -14,27 +14,30 @@ body {
 }
 
 .container {
-    height: 100%;
+    height: 100vh;
     display: grid;
-    grid-gap: 0px;
     grid-template-columns: repeat(12, 1fr);
-    grid-template-rows: 10vh 85vh 5vh;
+    grid-template-rows: 10vh auto 5vh;
     grid-template-areas: 
         "h h h h h h h h h h h h"
-        "m m c c c c c c c c c c"
+        "m m m m c c c c c c c c"
         "f f f f f f f f f f f f";
 }
-
 .header {
     grid-area: h;
     padding: 1em;
+    align-items: center;
 }
 .footer {
     grid-area: f;
+    color: white;
+}
+#root > div > div.container > div.footer > a {
+  align-self: center;
+  color: white;
 }
 .center {
   display: flex;
-  justify-content: center;
 }
 .logo {
   margin-right: 1em; 

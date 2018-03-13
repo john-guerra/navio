@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
-import { Upload, Icon, message, Button, Modal, Card } from 'antd';
+import { Upload, Icon, Button, Modal, Card } from 'antd';
 import * as vega from 'vega';
+import * as d3 from "d3";
 import './load.css';
 const Dragger = Upload.Dragger;
 class Load extends Component {
@@ -15,21 +16,25 @@ class Load extends Component {
       visible: true,
     });
   }
-  handleOk = (i) => {
-    console.log(i)
+  handleOk = (name) => {
+    console.log(name);
     this.setState({
       ModalText: 'The modal will be closed after two seconds',
       confirmLoading: true,
+    }, ()=>{
+      let response;
+      d3.csv(`../datasets/${name}`, (err, data) => {
+        if(err) return err;
+        console.log(data)
+        this.props.setData(data);
+        this.setState({
+          visible: false,
+          confirmLoading: false,
+        });
+      })
     });
-    setTimeout(() => {
-      this.setState({
-        visible: false,
-        confirmLoading: false,
-      });
-    }, 2000);
   }
   handleCancel = () => {
-    console.log('Clicked cancel button');
     this.setState({
       visible: false,
     });
@@ -46,7 +51,6 @@ class Load extends Component {
     return finalSize
   }
   handleFile(file){
-    console.log('start handling file')
     const reader = new FileReader();
      if(file == null){
       alert('No file selected.');
@@ -57,16 +61,18 @@ class Load extends Component {
       let values;
       try {
         values = vega.read(lEvent.target.result, {type: format});
-        // this.props.setData(values);
         this.props.setData(values);
         this.setState({loading:false})
       } catch (err) {
-        window.alert(err.message);
+        let ssv = d3.dsvFormat(";");
+        let values = ssv.parse(lEvent.target.result);
+        console.log(values);
+        this.props.setData(values);
+        this.setState({loading:false});
       }
     };
 
     reader.readAsText(file);
-    console.log('end handling file')
   }
   beforeUpload = (e) => {
     this.props.setLoading(true);
@@ -106,8 +112,8 @@ class Load extends Component {
         <div>
           <p> --------- or select one of our datasets --------- </p>
         </div>
-        <div className="center">
-          <Button onClick={this.showModal} type="primary" ghost>Select</Button>
+        <div>
+          <Button className="button" onClick={this.showModal} type="primary" ghost>Select</Button>
           <Modal title="Datasets"
             visible={visible}
             onOk={this.handleOk}
@@ -119,10 +125,17 @@ class Load extends Component {
               {this.props.datasets.map((d,i)=> {
                 return(
                   <div key={i} className="dataset">
-                    <Card  title={d} extra={<a onClick={()=>this.handleOk(i)} href="#">select</a>} style={{ width: 300 }}>
-                      <p>Card content</p>
-                      <p>Card content</p>
-                      <p>Card content</p>
+                    <Card  title={d.name} extra={<button onClick={()=>this.handleOk(d.name)}>select</button>} style={{ width: 300 }}>
+                      <h6>Size</h6>
+                      <p>{d.size} rows</p>
+                      <h6>Attributes ({d.n_attributes})</h6>
+                        { d.attributes?
+                          <div>
+                            
+                          </div>
+                          :''
+                        }
+                      
                     </Card>
                   </div>
                   )

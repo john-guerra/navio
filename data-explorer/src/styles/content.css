@@ -6,19 +6,43 @@ html, body {
   margin: 0px;
 }
 a:link {
-  text-decoration: none;
+  text-decoration: none !important;
+  color: white;
+}
+.load {
+  align-self: center;
+  margin: 0 auto;
 }
 .content {
     grid-area: c;
-    margin-left: -20%; 
+    margin-left: -50%;
     transition: margin-left 1s;
+    min-height: 50%;
+    display: grid;
+    overflow-x: scroll;
+    grid-template-columns: repeat(1, 1fr);
+    grid-template-rows: 60vh 30vh;
+    grid-template-areas: 
+        "visualization"
+        "table";
 }
-
-
+.visualization {
+  margin-top: 10vh;
+  grid-area: visualization;
+  min-height: 70vh;
+  z-index: 999999999;
+}
+.table {
+  grid-area: table;
+  height: 80vh;
+  padding:1em;
+  justify-content: flex-start !important;
+}
+.raw-table{
+  min-height: 80vh;
+}
 .container > div {
   display: flex;
-  justify-content: center;
-  align-items: center;
   font-size: 2em;
 }
 
@@ -48,12 +72,6 @@ a:link {
 }
 .container > .header > .info > i {
   margin: 1em;
-}
-.container > .menu {
-  flex-direction: column;
-  padding: 0.5em;
-
-
 }
 #root > div > div.footer > svg {
   margin: 1em;
@@ -93,7 +111,6 @@ a:link {
     position: relative;
     margin: 10% auto;
     padding: 5px 20px 13px 20px;
-    /*border-radius: 10px;*/
     background: rgba(0,0,0,0.3);
     color: white;
 /*    background: -moz-linear-gradient(#fff, #999);
@@ -124,18 +141,10 @@ a:link {
   .close:hover { background: rgba(0,0,0,0.1); }
   /* End Modal Styling */
 
-  .attributes-container-wrapper {
-    display: grid;
-    grid-template-columns: auto;
-  }
 
-  .attributes-container {
-    display: grid;
-    grid-template-columns: auto 20%;
-    margin: 0.2em;
-  }
-  .attribute {
-    /*width: 100%;*/
-    align-self: center;
-    margin: 0.3em;
-  }
+.change-dataset-button{
+  position: absolute;
+  left: 37%;
+  top: 11vh;
+  z-index: 99;
+}

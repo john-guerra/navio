@@ -4,6 +4,7 @@ import 'antd/dist/antd.css';
 import { Icon } from 'antd';
 import Menu from './menu/Menu.jsx';
 import Content from './content/Content.jsx';
+import * as d3 from "d3";
 
 class App extends Component {
   constructor(props){
@@ -15,8 +16,26 @@ class App extends Component {
       attributes: [],
       ids: [],
       id: "",
-      datasets:["moma","senate","other"],
+      datasets:[
+        {
+          "name":"all_followers_id.csv",
+          "size":1048575,
+          "n_attributes":10
+        },
+        {
+          "name":"Artworks_less_columns.csv",
+          "size": 131585,
+          "n_attributes": 14
+        },
+        {
+          "name":"Lekagul Sensor Data.csv",
+          "size":171477,
+          "n_attributes":4
+        }
+      ],
       loading:false,
+      exportData:[],
+      closed:false,
     }
   }
   /*
@@ -25,7 +44,24 @@ class App extends Component {
     returns an array with the types of the attributes of the data
     also gets the attributte that is id
   */
-
+  componentWillMount(){
+    // let datasets = this.state.datasets;
+    // datasets.forEach(d=>{
+    //   d3.csv(`datasets/${d.name}`, function(err,data) {
+    //     if(err) return err;
+    //     console.log(d.name)
+    //     console.log(data)
+    //     d.size = data.length;
+    //     d.data = data;
+    //     d.attributes = []
+    //     for (let prop in data[0]){
+    //       d.attributes.push(prop);
+    //     };
+    //     d.n_attributes = d.attributes.length;
+    //   })
+    // })
+    // this.setState({datasets});
+  }
   getAttributesType(data,atts,ids){
     let seq = "sequential";
     let cat = "categorical";
@@ -40,10 +76,13 @@ class App extends Component {
       let isDate = this.isDate(attr);
       if(!notNumber){
         atts[count].type = seq;
+        atts[count].data = "number";
       }else if(isDate){
         atts[count].type = seq;
+        atts[count].data = "date";
       }else {
          atts[count].type = cat;
+         atts[count].data = "string";
       }
       count++;
     }
@@ -66,6 +105,7 @@ class App extends Component {
   };
   setData = (data) => {
     console.log('setting data')
+    this.setState({originalData:data});
     /*Creates an empty array that will contain the metadata of the attributes*/
     let atts = []
     let ids = []
@@ -78,16 +118,40 @@ class App extends Component {
       atts.push(i);
     }
     this.getAttributesType(data,atts,ids);
-    console.log(atts,'atts');
+    console.log(atts,'atts', ids,'ids');
+    data.forEach((row) => {
+      atts.forEach(att=> {
+        if(att.data === "date"){
+          let mydate = new Date(row[att.name]);
+          if(isNaN(mydate.getDate())){
+            row[att.name] = null;
+          }else {
+            row[att.name] = mydate
+          }
+          
+        }
+        else if(att.data=== "number"){
+          let mynumber = +row[att.name];
+          if(isNaN(mynumber)){
+            row[att.name] = null;
+          }else{
+            row[att.name] = mynumber;
+          }
+        }
+      })
+    })
+    console.log(data,'dataParsed');
     this.setState({
       loaded: true,
       attributes: atts,
       ids: ids,
       data: data,
+      exportData:data,
+      id: ids[0],
     })
     console.log('end setting data')
   }
-  setID(id){
+  setId = (id) => {
     console.log('setID');
     this.setState({id:id})
   }
@@ -99,14 +163,20 @@ class App extends Component {
     this.setState({attributes:attrs})
   }
   changeTypeStatus = (attr,type) => {
+    console.log(attr,type,'changeTypeStatus');
     let attrs = this.state.attributes;
     attrs.forEach(a=> {
       if(a.name === attr.name){
         a.type = type;
       }
     })
+    this.setState({attributes:attrs});
+  }
+  onChangeAtt = (attChange) => {
+    this.setState({attChange});
   }
   changeCheckStatus = (attr, checked) => {
+
     console.log(attr,checked,this.state);
     let attrs = this.state.attributes;
     attrs.forEach(a=>{
@@ -114,10 +184,14 @@ class App extends Component {
         a.checked = checked;
       }
     })
-    this.setState({attributes:attrs});
+    this.setState({attributes:attrs, attChange:true});
   }
   updateCallback = (callback) => {
     console.log('updateCallback',callback);
+    this.setExportData(callback);
+  }
+  setExportData = (exportData) => {
+    this.setState({exportData})
   }
   toggleModal = () => {
     console.log('toggleModal')
@@ -125,7 +199,15 @@ class App extends Component {
       showModal: !this.state.showModal,
     })
   }
-  
+  setLoaded = () => {
+    this.setState({
+      loaded:false,
+      loading:false,
+    });
+  }
+  setClosed = (closed) => {
+    this.setState({closed})
+  }
   getModal(){
     return (
       <div id="openModal" className="modalDialog">
@@ -155,16 +237,23 @@ class App extends Component {
                 </div>
 
                 <Menu
+                  setClosed={this.setClosed}
                   changeCheckStatus={this.changeCheckStatus}
+                  changeTypeStatus={this.changeTypeStatus}
                   loaded={this.state.loaded}
                   attributes={this.state.attributes}
                   ids={this.state.ids}
-                  setId={this.setID.bind(this)}
+                  id={this.state.id}
+                  setId={this.setId}
                   setAttributes={this.setAttributes.bind(this)}
 
                 />
                 
                 <Content 
+                  closed={this.state.closed}
+                  onChangeAtt={this.onChangeAtt}
+                  attChange={this.state.attChange}
+                  setLoaded={this.setLoaded}
                   setLoading={this.setLoading}
                   loading={this.state.loading}
                   datasets={this.state.datasets}
@@ -172,14 +261,15 @@ class App extends Component {
                   loaded={this.state.loaded} 
                   data={this.state.data} 
                   updateCallback={this.updateCallback}
+                  exportData={this.state.exportData}
                   attributes={this.state.attributes}
                   ids={this.state.ids}
-                  id={this.state.ids[0]}
+                  id={this.state.id}
                 />
                 
                 <div className="footer">
 
-                 <a href="https://github.com/jgmurillo10/thesis" target="_blank" rel="noopener noreferrer"> Github Project MIT License <i className="fab fa-github"></i> </a> 
+                 <a href="https://github.com/john-guerra/nodenavigator" target="_blank" rel="noopener noreferrer"> Github Project MIT License <i className="fab fa-github"></i> </a> 
                 </div>
             </div>
         </div>
