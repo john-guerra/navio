@@ -27,11 +27,13 @@ function NodeNavigator(eleId, h) {
     updateCallback = function () {};
 
   nn.margin = 10;
-  nn.attribWidth = 10;
+  nn.attribWidth = 15;
   nn.levelsSeparation = 40;
   nn.divisionsColor = "white";
   nn.levelConnectionsColor = "rgba(205, 220, 163, 0.5)";
   nn.divisionsThreshold = 3;
+  nn.attribFontSize = 12;
+  nn.attribFontSizeSelected = 24;
 
   nn.startColor = "white";
   nn.endColor = "red";
@@ -470,9 +472,9 @@ function NodeNavigator(eleId, h) {
             "normal";
       })
       .style("font-family", "sans-serif")
-      .style("font-size", "9px")
-      .on("mousemove", function (d) { d3.select(this).style("font-size", "24px"); })
-      .on("mouseout", function (d) { d3.select(this).style("font-size", "9px"); })
+      .style("font-size", nn.attribFontSize+"px")
+      .on("mousemove", function (d) { d3.select(this).transition().duration(150).style("font-size", nn.attribFontSizeSelected+"px"); })
+      .on("mouseout", function (d) { d3.select(this).transition().duration(150).style("font-size", nn.attribFontSize+"px"); })
       .attr("transform", "rotate(-45)")
       .on("click", nnOnClickLevel);
 
