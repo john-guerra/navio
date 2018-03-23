@@ -233,7 +233,7 @@ class App extends Component {
                     <div className="logo"> <Icon type="compass" /> </div>
                     <div> Data Navigator</div>
                     
-                    <div className="info"> <a href="#openModal">  <i className="fas fa-info-circle" ></i> </a></div>
+                    {/*<div className="info"> <a href="#openModal">  <i className="fas fa-info-circle" ></i> </a></div>*/}
                 </div>
 
                 <Menu

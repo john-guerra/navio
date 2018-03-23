@@ -17,7 +17,7 @@ body {
     height: 100vh;
     display: grid;
     grid-template-columns: repeat(12, 1fr);
-    grid-template-rows: 10vh auto 5vh;
+    grid-template-rows: 5vh auto 5vh;
     grid-template-areas: 
         "h h h h h h h h h h h h"
         "m m m m c c c c c c c c"
@@ -25,7 +25,8 @@ body {
 }
 .header {
     grid-area: h;
-    padding: 1em;
+    padding-left: 1em;
+    padding-right: 1em;
     align-items: center;
 }
 .footer {

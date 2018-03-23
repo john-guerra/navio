@@ -4,6 +4,7 @@ html, body {
   height: 100%;
   padding: 0px;
   margin: 0px;
+  /*background-color: #4682b4; */
 }
 a:link {
   text-decoration: none !important;
@@ -14,6 +15,7 @@ a:link {
   margin: 0 auto;
 }
 .content {
+    /*z-index: 9999 !important;*/
     grid-area: c;
     margin-left: -50%;
     transition: margin-left 1s;
@@ -47,7 +49,7 @@ a:link {
 }
 
 .container > div:nth-child(1n) {
-  background-color: #FFFFB3;	
+  background-color: rgba(70,130,180,0.7);	
 }
 
 .container > div:nth-child(3n) {
@@ -56,16 +58,17 @@ a:link {
 }
 
 .container > div:nth-child(2n) {
-  background-color: #D3A88E;
+  background-color: #E8E8E8;
 }
 
 .container > div:nth-child(4n) {
   /*background-color: #e56a20;*/
-  background-color: rgba(229, 106, 32,0.8);
+  background-color: rgba(70,130,180,0.7);
 }
 
 .container > .header {
   justify-content: flex-start;
+  z-index: -99999 !important;
 }
 .container > .header > .info {
   margin-left: auto;

@@ -58,25 +58,25 @@ class Menu extends Component {
 		return(
 			<div id="menu" style={styleMenu} className="menu">
 				<Button onClick={this.onCloseSidebar} >Close</Button>
-				<div className="ids">
-					<div className="ids-title">
-						<p>ID ({this.props.id}) selected</p>
-					</div>
-					
-					<div className="ids-container">
-					  	<RadioGroup onChange={this.onChangeRadio} value={this.state.value}>  
-							{
-								this.props.attributes.map((d,i)=>{
-									let check = d.name === this.props.id;
-									return (
-										<Radio key={i} defaultChecked={d.id} className="id" style={radioStyle} value={d.name}>{d.name}</Radio>
-									)
-								})
-							}
-						</RadioGroup>
-					</div>
-
-				</div>
+				{/*<div className="ids">
+									<div className="ids-title">
+										<p>ID ({this.props.id}) selected</p>
+									</div>
+									
+									<div className="ids-container">
+									  	<RadioGroup onChange={this.onChangeRadio} value={this.state.value}>  
+											{
+												this.props.attributes.map((d,i)=>{
+													let check = d.name === this.props.id;
+													return (
+														<Radio key={i} defaultChecked={d.id} className="id" style={radioStyle} value={d.name}>{d.name}</Radio>
+													)
+												})
+											}
+										</RadioGroup>
+									</div>
+				
+								</div>*/}
 				<div className="attributes">
 					<div className="attributes-title">
 						<p>Attributes</p>

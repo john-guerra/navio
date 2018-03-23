@@ -3,7 +3,7 @@ var d3 = require("d3");
 function NodeNavigator(eleId, h) {
   "use strict";
   var nn = this,
-    data = [], //Contains the original data attributes 
+    data = [], //Contains the original data attributes
     dataIs = [], //Contains only the indices to the data, is an array of arrays, one for each level
     dData = d3.map(), // A hash for the data
     dDimensions = d3.map(),
@@ -26,11 +26,13 @@ function NodeNavigator(eleId, h) {
     updateCallback = function () {};
 
   nn.margin = 10;
-  nn.attribWidth = 10;
+  nn.attribWidth = 15;
   nn.levelsSeparation = 40;
   nn.divisionsColor = "white";
   nn.levelConnectionsColor = "rgba(205, 220, 163, 0.5)";
   nn.divisionsThreshold = 3;
+  nn.attribFontSize = 12;
+  nn.attribFontSizeSelected = 24;
 
   nn.startColor = "white";
   nn.endColor = "red";
@@ -237,12 +239,12 @@ function NodeNavigator(eleId, h) {
       d3.brushY()
         .extent([
           [x(xScale.domain()[0], i),yScales[i].range()[0]],
-          [x(xScale.domain()[xScale.domain().length-1], i) + xScale.bandwidth(), yScales[i].range()[1]]
+          [x(xScale.domain()[xScale.domain().length-1], i) + xScale.bandwidth()*1.1, yScales[i].range()[1]]
         ])
         .on("end", brushended));
     var _brush = d3.select(this)
       .selectAll(".brush")
-      .data([{ 
+      .data([{
         data : data[d],
         level : i
       }]);// fake data
@@ -257,7 +259,7 @@ function NodeNavigator(eleId, h) {
       .call(dBrushes.get(i))
       .selectAll("rect")
       // .attr("x", -8)
-      .attr("width", xScale.bandwidth()* (dDimensions.size()+2));
+      .attr("width", x(xScale.domain()[xScale.domain().length-1], i) + xScale.bandwidth()*1.1);
 
     _brush.exit().remove();
 
@@ -298,7 +300,7 @@ function NodeNavigator(eleId, h) {
 
       console.log("Computing new data");
       var newData = dataIs;
-      if (filteredData.length===0) { 
+      if (filteredData.length===0) {
         console.log("Empty selection!");
         return;
       } else {
@@ -447,16 +449,18 @@ function NodeNavigator(eleId, h) {
       // .style("opacity", "0.1")
       .attr("x", 0)
       .attr("y", 0)
-      .attr("width", function () { return xScale.bandwidth(); })
+      .attr("width", function () {
+        return xScale.bandwidth()*1.1;
+      })
       .attr("height", function (d) { return yScales[d.level].range()[1] - yScales[d.level].range()[0]; });
 
     attribOverlayEnter
       .append("text")
       .merge(attribOverlay.select("text"))
-      .text(function (d) { 
+      .text(function (d) {
         return d.attrib === "__seqId" ?
-          "sequential Index" : 
-          d.attrib; 
+          "sequential Index" :
+          d.attrib;
       })
       .attr("x", xScale.bandwidth()/2)
       .attr("y", 0)
@@ -467,9 +471,9 @@ function NodeNavigator(eleId, h) {
             "normal";
       })
       .style("font-family", "sans-serif")
-      .style("font-size", "9px")
-      .on("mousemove", function (d) { d3.select(this).style("font-size", "24px"); })
-      .on("mouseout", function (d) { d3.select(this).style("font-size", "9px"); })
+      .style("font-size", nn.attribFontSize+"px")
+      .on("mousemove", function (d) { d3.select(this).transition().duration(150).style("font-size", nn.attribFontSizeSelected+"px"); })
+      .on("mouseout", function (d) { d3.select(this).transition().duration(150).style("font-size", nn.attribFontSize+"px"); })
       .attr("transform", "rotate(-45)")
       .on("click", nnOnClickLevel);
 
@@ -589,7 +593,7 @@ function NodeNavigator(eleId, h) {
     var before = performance.now();
     // yScales=[];
     var lastLevel = dataIs.length-1;
-    
+
     console.log("Delete unnecessary scales")
     // Delete unnecessary scales
     yScales.splice(lastLevel+1, yScales.length);
@@ -640,8 +644,8 @@ function NodeNavigator(eleId, h) {
       function (attrib) {
         if (attrib === "visible") return;
         var scale = colScales.get(attrib);
-        scale.domain(d3.extent(dataIs[0].representatives.map(function (rep) { 
-          return data[rep][attrib]; 
+        scale.domain(d3.extent(dataIs[0].representatives.map(function (rep) {
+          return data[rep][attrib];
         }))); //TODO: make it compute it based on the local range
         colScales.set(attrib, scale);
       }
@@ -688,7 +692,7 @@ function NodeNavigator(eleId, h) {
     // }
     colScales = mColScales;
     dataIs = mDataIs;
-    
+
     updateScales(levelToUpdate);
 
     ctxWidth = levelScale.range()[1] + nn.margin + x0;
@@ -799,7 +803,7 @@ function NodeNavigator(eleId, h) {
 
       data = _;
       dataIs = [data.map(function (_, i) { return i; })];
-      
+
 
       nn.initData(
         dataIs,
