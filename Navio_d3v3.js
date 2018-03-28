@@ -3,7 +3,7 @@
 
 
 //eleId must be the ID of a context element where everything is going to be drawn
-function NodeNavigator(eleId, x0, y0, h) {
+function Navio(eleId, x0, y0, h) {
     "use strict";
     var self = this,
         data, //Contains the original data attributes
@@ -31,7 +31,7 @@ function NodeNavigator(eleId, x0, y0, h) {
     d3.select("#"+eleId)
         // .attr("width", 150)
         // .attr("height", h)
-        .attr("class", "NodeNavigator");
+        .attr("class", "Navio");
 
 
     xScale = d3.scale
@@ -275,7 +275,7 @@ function NodeNavigator(eleId, x0, y0, h) {
     self.updateData = function (mData, mColScales, mSortByAttr) {
         var ctxWidth;
         if (typeof mData !== typeof []) {
-            console.error("NodeNavigator setData didn't receive an array");
+            console.error("Navio setData didn't receive an array");
             return;
         }
         if (!dSortBy.has(mData.length-1)) {

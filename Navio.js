@@ -1,7 +1,7 @@
-/* global d3, NodeNavigator, crossfilter */
+/* global d3, Navio, crossfilter */
 // var d3 = require("d3");
 //eleId must be the ID of a context element where everything is going to be drawn
-function NodeNavigator(eleId, h) {
+function Navio(eleId, h) {
   "use strict";
   var nn = this,
     data = [], //Contains the original data attributes
@@ -47,16 +47,16 @@ function NodeNavigator(eleId, h) {
     // .attr("width", 150)
     .style("height", h + "px")
     .style("float", "left")
-    .attr("class", "NodeNavigator")
+    .attr("class", "Navio")
     .append("div")
       .style("float", "left")
-      .attr("id", "nodeNavigator")
+      .attr("id", "Navio")
       .style("position", "relative");
   d3.select(eleId)
-    .select("#nodeNavigator")
+    .select("#Navio")
     .append("canvas");
   var svg = d3.select(eleId)
-    .select("#nodeNavigator")
+    .select("#Navio")
     .append("svg")
       .style("overflow", "visible")
       .style("position", "absolute")
@@ -685,7 +685,7 @@ function NodeNavigator(eleId, h) {
     var before = performance.now();
     var ctxWidth;
     if (typeof mDataIs !== typeof []) {
-      console.error("NodeNavigator updateData didn't receive an array");
+      console.error("Navio updateData didn't receive an array");
       return;
     }
     // if (!dSortBy.has(mDataIs.length-1)) {
@@ -844,4 +844,4 @@ function NodeNavigator(eleId, h) {
   return nn;
 }
 
-// export default NodeNavigator;
+// export default Navio;
