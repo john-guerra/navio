@@ -272,8 +272,11 @@ function Navio(eleId, h) {
       var before = performance.now();
       var brushed = d3.event.selection;
 
-      var first = dData.get(invertOrdinalScale(yScales[i], brushed[0] -yScales[i].bandwidth())),
-        last = dData.get(invertOrdinalScale(yScales[i], brushed[1] -yScales[i].bandwidth()));
+      var
+        // first = dData.get(invertOrdinalScale(yScales[i], brushed[0] -yScales[i].bandwidth())),
+        first = dData.get(invertOrdinalScale(yScales[i], brushed[0])),
+        // last = dData.get(invertOrdinalScale(yScales[i], brushed[1] -yScales[i].bandwidth()))
+        last = dData.get(invertOrdinalScale(yScales[i], brushed[1]));
       console.log("first and last");
       console.log(first);
       console.log(last);

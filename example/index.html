@@ -18,9 +18,9 @@
 
 <script src="https://d3js.org/d3.v4.min.js"></script>
 <script src="https://square.github.io/crossfilter/crossfilter.v1.min.js"></script>
-<script src="NodeNavigator.js"></script>
+<script src="../Navio.js"></script>
 <script>
-/* global d3, NodeNavigator */
+/* global d3, Navio */
 
 var svg = d3.select("svg"),
     width = +svg.attr("width"),
@@ -38,7 +38,7 @@ var simulation = d3.forceSimulation()
     .force("charge", d3.forceManyBody())
     .force("center", d3.forceCenter(width / 2, height / 2));
 
-var nn = new NodeNavigator("#nn", height);
+var nn = new Navio("#nn", height);
 nn.addCategoricalAttrib("group", color);
 
 function update(graph) {
@@ -117,7 +117,7 @@ d3.json("miserables.json", function(error, graph) {
     d.target = dNodes[d.target];
   });
 
-  nn.links(graph.links);
+  // nn.links(graph.links);
   nn.data(graph.nodes);
   nn.updateCallback(function (nodes) {
     update({
