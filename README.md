@@ -1,34 +1,34 @@
-# NodeNavigator
+# Navio
 
-**NodeNavigator** is a d3 visualization widget to help summarizing, browsing and navigating large network visualizations.
+**Navio** is a d3 visualization widget to help summarizing, browsing and navigating large network visualizations.
 <br>
-<img src="src/example.png" alt="NodeNavigator widget" height="400">
+<img src="src/example.png" alt="Navio widget" height="400">
 
 ## Live Demo
 
-[Live Demo: Data-explorer](https://john-guerra.github.io/NodeNavigator/data-explorer/build/index.html)
+[Live Demo: Data-explorer](https://john-guerra.github.io/Navio/data-explorer/build/index.html)
 
 ## Resources
 
 ### Example with SVG
-* [Code](https://github.com/john-guerra/NodeNavigator/tree/master/example)
-* [Visualization](https://john-guerra.github.io/NodeNavigator/example/)
+* [Code](https://github.com/john-guerra/Navio/tree/master/example)
+* [Visualization](https://john-guerra.github.io/Navio/example/)
 ### Example with Canvas
-* [Code](https://github.com/john-guerra/NodeNavigator/tree/master/exampleSenate)
-* [Visualization](https://john-guerra.github.io/NodeNavigator/exampleSenate/)
+* [Code](https://github.com/john-guerra/Navio/tree/master/exampleSenate)
+* [Visualization](https://john-guerra.github.io/Navio/exampleSenate/)
 
 ### Libraries
 #### D3v4
 ```html
 <script src="https://d3js.org/d3.v4.min.js"></script>
 ```
-#### NodeNavigator
-[Download](https://raw.githubusercontent.com/john-guerra/NodeNavigator/master/NodeNavigator.js)
+#### Navio
+[Download](https://raw.githubusercontent.com/john-guerra/Navio/master/Navio.js)
 ## Installing
 
 ```html
 <script src="path/to/d3.v4.min.js"></script>
-<script src="path/to/NodeNavigator.js"></script>
+<script src="path/to/Navio.js"></script>
 ```
 ## Basic Usage
 
@@ -45,22 +45,22 @@
 <body>
 
   <h1>Example</h1>
-  <div id="nodeNavigator"></div>
+  <div id="Navio"></div>
 
   <script src="https://d3js.org/d3.v4.min.js"></script>
-  <script src="path/to/NodeNavigator.js"></script>
+  <script src="path/to/Navio.js"></script>
 </body>
 </html>
 
 ```
-2. Create and import a new JavaScript file below the scripts (d3 and NodeNavigator) or right in the html like in the example below.
+2. Create and import a new JavaScript file below the scripts (d3 and Navio) or right in the html like in the example below.
 ```html
 <script src="path/to/d3.v4.min.js"></script>
-<script src="path/to/NodeNavigator.js"></script>
+<script src="path/to/Navio.js"></script>
 <script type="text/javascript">
   (function () {
     "use strict";
-    /* global d3, NodeNavigator */
+    /* global d3, Navio */
   })();
 </script>
 ```
@@ -79,9 +79,9 @@ var seqColumns = [
   "month"
 ];
 ```
-4. Set the NodeNavigator and its attributes
+4. Set the Navio and its attributes
 ``` javascript
-var nn = new NodeNavigator("#nodeNavigator", 600)
+var nn = new Navio("#Navio", 600)
   .id("i");
 catColumns.forEach((c) => nn.addCategoricalAttrib(c));
 seqColumns.forEach((c) => nn.addSequentialAttrib(c));
@@ -98,8 +98,8 @@ d3.csv("./dataset.csv", function (err, data) {
 
 ## Demo
 
-[vastChallenge2017](http://john-guerra.github.io/NodeNavigator/example_vastChallenge2017/index.html)
+[vastChallenge2017](http://john-guerra.github.io/Navio/example_vastChallenge2017/index.html)
 
 
 ## License
-NodeNavigator.js is licensed under the MIT license. (http://opensource.org/licenses/MIT)
+Navio.js is licensed under the MIT license. (http://opensource.org/licenses/MIT)

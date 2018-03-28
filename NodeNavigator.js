@@ -32,8 +32,8 @@ function NodeNavigator(eleId, h) {
   nn.divisionsColor = "white";
   nn.levelConnectionsColor = "rgba(205, 220, 163, 0.5)";
   nn.divisionsThreshold = 3;
-  nn.attribFontSize = 12;
-  nn.attribFontSizeSelected = 24;
+  nn.attribFontSize = 13;
+  nn.attribFontSizeSelected = 32;
 
   nn.startColor = "white";
   nn.endColor = "red";
