@@ -81,16 +81,18 @@ var seqColumns = [
 ```
 4. Set the Navio and its attributes
 ``` javascript
-var nn = new Navio("#Navio", 600)
-  .id("i");
+var nn = new Navio("#Navio", 600);
 catColumns.forEach((c) => nn.addCategoricalAttrib(c));
 seqColumns.forEach((c) => nn.addSequentialAttrib(c));
+
+// If you have one field that you would like to use to identify each row
+nn.id("nameAttrib");
+
 ```
 5. Read CSV dataset and set the data
 ``` javascript
 d3.csv("./dataset.csv", function (err, data) {
   if (err) throw err;
-  data.forEach((d,i) => d.i = i);
   nn.data(data);
 });
 

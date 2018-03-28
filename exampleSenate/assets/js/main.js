@@ -1,6 +1,6 @@
 (function () {
   "use strict";
-  /* global d3, forceInABox, NodeNavigator */
+  /* global d3, forceInABox, Navio */
   var margin = {
     x: 0,
     y: 0
@@ -27,7 +27,7 @@
       // .force("center", d3.forceCenter(width/2, height/2));
 
   d3.json("VotacionesSenado2017_de_CongresoVisible.json", onLoad);
-  
+
   function onLoad(error, graph) {
     var dicNodes = d3.map();
     //mapping nodes
@@ -81,9 +81,9 @@
 
     if (error) throw error;
 
-    nodeNavigator.links(filteredGraph.links);
-    nodeNavigator.data(filteredGraph.nodes);
-    nodeNavigator.updateCallback(function (nodes) {
+
+    nn.data(filteredGraph.nodes);
+    nn.updateCallback(function (nodes) {
       update({
         nodes:nodes,
         links:graph.links
@@ -93,22 +93,22 @@
   }
 
 
-  var nodeNavigator = new NodeNavigator(
+  var nn = new Navio(
     "#nn",
     height
   ).id("name");
-  nodeNavigator.addSequentialAttrib("degree");
-  nodeNavigator.addCategoricalAttrib("party");
-  nodeNavigator.addCategoricalAttrib("cluster", color);
+  nn.addSequentialAttrib("degree");
+  nn.addCategoricalAttrib("party");
+  nn.addCategoricalAttrib("cluster", color);
 
 
-  var nodeNavigatorLinks = new NodeNavigator(
-    "#nnLinks",
-    height
-  ).id("name");
-  nodeNavigatorLinks.addSequentialAttrib("degree");
-  nodeNavigatorLinks.addCategoricalAttrib("sourceName");
-  nodeNavigatorLinks.addCategoricalAttrib("targetName");
+  // var nnLinks = new nn(
+  //   "#nnLinks",
+  //   height
+  // ).id("name");
+  // nnLinks.addSequentialAttrib("degree");
+  // nnLinks.addCategoricalAttrib("sourceName");
+  // nnLinks.addCategoricalAttrib("targetName");
 
   function update(graph) {
     simulation.stop();
@@ -121,7 +121,7 @@
         dVisibleNodes[d.target.id];
     });
 
-    var visible = nodeNavigator.getVisible();
+    var visible = nn.getVisible();
     console.log("nodes = " + graph.nodes.length + " links="+visibleLinks.length);
     size.domain(d3.extent(visible, function (d) { return d.degree; }));
     graph.nodes.forEach(function (d) {

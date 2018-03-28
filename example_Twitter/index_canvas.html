@@ -17,9 +17,9 @@
 <script src="d3.v4.min.js"></script>
 <script src="netClustering.js"></script>
 <script src="forceInABox.js"></script>
-<script src="../NodeNavigator.js"></script>
+<script src="../Navio.js"></script>
 <script>
-/* global d3, forceInABox, NodeNavigator */
+/* global d3, forceInABox, Navio */
 
 var canvas = d3.select("#graph").node(),
   context = canvas.getContext("2d"),
@@ -104,9 +104,9 @@ d3.json("duto_guerraNetworkCooccurrence_clustered.json", function(error, graph) 
 
   if (error) throw error;
 
-  nodeNavigator.links(filteredGraph.links);
-  nodeNavigator.data(filteredGraph.nodes);
-  nodeNavigator.updateCallback(function (nodes) {
+  // navio.links(filteredGraph.links);
+  navio.data(filteredGraph.nodes);
+  navio.updateCallback(function (nodes) {
     update({
       nodes:nodes,
       links:graph.links
@@ -117,24 +117,26 @@ d3.json("duto_guerraNetworkCooccurrence_clustered.json", function(error, graph) 
 });
 
 
-var nodeNavigator = new NodeNavigator(
+var navio = new Navio(
   "#nn",
   height
 ).id("screen_name");
 
-nodeNavigator.addSequentialAttrib("degree");
+navio.addSequentialAttrib("degree");
 
-nodeNavigator.addSequentialAttrib("friends_count");
-nodeNavigator.addSequentialAttrib("favourites_count");
-nodeNavigator.addSequentialAttrib("followers_count");
-nodeNavigator.addSequentialAttrib("listed_count");
-nodeNavigator.addSequentialAttrib("statuses_count");
-nodeNavigator.addCategoricalAttrib("utc_offset");
+navio.addSequentialAttrib("friends_count");
+navio.addSequentialAttrib("favourites_count");
+navio.addSequentialAttrib("followers_count");
+navio.addSequentialAttrib("listed_count");
+navio.addSequentialAttrib("statuses_count");
+navio.addCategoricalAttrib("utc_offset");
 
-nodeNavigator.addCategoricalAttrib("cluster", color);
+navio.addCategoricalAttrib("cluster", color);
 
 
 function update(graph) {
+
+
 
   simulation.stop();
 
@@ -148,7 +150,7 @@ function update(graph) {
   });
   console.log("nodes = " + graph.nodes.length + " links="+visibleLinks.length);
 
-  size.domain(d3.extent(nodeNavigator.getVisible(), function (d) { return d.degree; }));
+  size.domain(d3.extent(navio.getVisible(), function (d) { return d.degree; }));
 
   graph.nodes.forEach(function (d) {
     d.r = size(d.degree);
@@ -157,7 +159,7 @@ function update(graph) {
 
   var clusters = d3.nest()
     .key(function(d) { return d.cluster; })
-    .entries(nodeNavigator.getVisible())
+    .entries(navio.getVisible())
     .sort(function(a, b) { return b.values.length - a.values.length; });
 
   var groupingForce = forceInABox()
@@ -171,7 +173,7 @@ function update(graph) {
     // .force("grouping", groupingForce);
 
   simulation
-      .nodes(nodeNavigator.getVisible())
+      .nodes(navio.getVisible())
       .on("tick", ticked);
 
   simulation.force("link")
@@ -191,7 +193,7 @@ function update(graph) {
   d3.select("#recluster")
     .on("click", function () {
       console.log("Clustering");
-      netClustering.cluster(nodeNavigator.getVisible(), visibleLinks);
+      netClustering.cluster(navio.getVisible(), visibleLinks);
       console.log("done");
       update(graph);
     });

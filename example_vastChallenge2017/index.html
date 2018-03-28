@@ -12,9 +12,9 @@
 </style>
 <body>
   <h1>Vast Challenge 2017 <small>Mini challenge 1</small></h1>
-<div id="nodeNavigator"></div>
+<div id="navio"></div>
 <script src="https://d3js.org/d3.v4.min.js"></script>
-<script src="../NodeNavigator.js"></script>
+<script src="../Navio.js"></script>
 
 <script>
 
@@ -37,10 +37,10 @@
   ];
 
 
-  var nn = new NodeNavigator("#nodeNavigator", 600);
-    // .id("i");
+  var nn = new Navio("#navio", 600);
+    // .id("car-id");
 
-  
+
   catColumns.forEach((c) => nn.addCategoricalAttrib(c));
   seqColumns.forEach((c) => nn.addSequentialAttrib(c));
 

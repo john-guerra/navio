@@ -133,6 +133,8 @@ function Navio(eleId, h) {
   canvas.style.height = h + "px";
 
   context = canvas.getContext("2d");
+
+  context.globalCompositeOperation = 'source-over';
   // context.strokeStyle = "rgba(0,100,160,1)";
   // context.strokeStyle = "rgba(0,0,0,0.02)";
 
@@ -180,8 +182,8 @@ function Navio(eleId, h) {
       // y = yScales[level](item[id]) + yScales[level].bandwidth()/2;
 
       context.beginPath();
-      context.moveTo(x(attrib, level), y);
-      context.lineTo(x(attrib, level) + xScale.bandwidth(), y);
+      context.moveTo(Math.round(x(attrib, level)), y);
+      context.lineTo(Math.round(x(attrib, level) + xScale.bandwidth()), y);
       context.lineWidth = Math.round(yScales[level].bandwidth());
       // context.lineWidth = 1;
       context.strokeStyle = item[attrib] === undefined ||
@@ -777,7 +779,7 @@ function Navio(eleId, h) {
 
   nn.addCategoricalAttrib = function (attr, scale ) {
     nn.addAttrib(attr,scale ||
-      d3.scaleOrdinal(d3.schemeCategory20));
+      d3.scaleOrdinal(d3.schemeCategory10));
     return nn;
   };
 

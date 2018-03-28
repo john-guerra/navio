@@ -39,6 +39,7 @@ var simulation = d3.forceSimulation()
     .force("center", d3.forceCenter(width / 2, height / 2));
 
 var nn = new Navio("#nn", height);
+nn.id("id");
 nn.addCategoricalAttrib("group", color);
 
 function update(graph) {
@@ -117,7 +118,7 @@ d3.json("miserables.json", function(error, graph) {
     d.target = dNodes[d.target];
   });
 
-  // nn.links(graph.links);
+
   nn.data(graph.nodes);
   nn.updateCallback(function (nodes) {
     update({
