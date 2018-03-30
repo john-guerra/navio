@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import './App.css';
-import 'antd/dist/antd.css'; 
+import 'antd/dist/antd.css';
 import { Icon } from 'antd';
 import Menu from './menu/Menu.jsx';
 import Content from './content/Content.jsx';
@@ -65,7 +65,7 @@ class App extends Component {
   getAttributesType(data,atts,ids){
     let seq = "sequential";
     let cat = "categorical";
-    let count = 0;     
+    let count = 0;
     for(let prop in data[1]){
       let attr =data[1][prop];
       if(atts[count].name.includes("id") || atts[count].name.includes("key")){
@@ -128,7 +128,7 @@ class App extends Component {
           }else {
             row[att.name] = mydate
           }
-          
+
         }
         else if(att.data=== "number"){
           let mynumber = +row[att.name];
@@ -214,7 +214,7 @@ class App extends Component {
         <div>
           <a href="#close" title="Close" className="close">X</a>
           <h2>Data Explorer</h2>
-          <p>NodeNavigator is a d3.js visualization widget to help summarizing, browsing and navigating large data sets.</p>
+          <p>Navio is a d3.js visualization widget to help summarizing, browsing and navigating large data sets.</p>
           {/*<iframe title="demo" width="100%" height="315" src="https://www.youtube.com/embed/Co074RJXzdk" frameBorder="0" allow="encrypted-media" allowFullScreen></iframe>*/}
         </div>
       </div>
@@ -231,8 +231,8 @@ class App extends Component {
            <div className="container">
                 <div className="header">
                     <div className="logo"> <Icon type="compass" /> </div>
-                    <div> Data Navigator</div>
-                    
+                    <div> Navio Shipyard</div>
+
                     {/*<div className="info"> <a href="#openModal">  <i className="fas fa-info-circle" ></i> </a></div>*/}
                 </div>
 
@@ -248,8 +248,8 @@ class App extends Component {
                   setAttributes={this.setAttributes.bind(this)}
 
                 />
-                
-                <Content 
+
+                <Content
                   closed={this.state.closed}
                   onChangeAtt={this.onChangeAtt}
                   attChange={this.state.attChange}
@@ -257,19 +257,19 @@ class App extends Component {
                   setLoading={this.setLoading}
                   loading={this.state.loading}
                   datasets={this.state.datasets}
-                  setData={this.setData} 
-                  loaded={this.state.loaded} 
-                  data={this.state.data} 
+                  setData={this.setData}
+                  loaded={this.state.loaded}
+                  data={this.state.data}
                   updateCallback={this.updateCallback}
                   exportData={this.state.exportData}
                   attributes={this.state.attributes}
                   ids={this.state.ids}
                   id={this.state.id}
                 />
-                
+
                 <div className="footer">
 
-                 <a href="https://github.com/john-guerra/nodenavigator" target="_blank" rel="noopener noreferrer"> Github Project MIT License <i className="fab fa-github"></i> </a> 
+                 <a href="https://github.com/john-guerra/Navio" target="_blank" rel="noopener noreferrer"> Github Project MIT License <i className="fab fa-github"></i> </a>
                 </div>
             </div>
         </div>
