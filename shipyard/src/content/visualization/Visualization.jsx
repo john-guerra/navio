@@ -94,19 +94,17 @@ class Visualization extends Component {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
-  <title>Basic Usage</title>
+  <title>Navio</title>
 </head>
 <body>
-
-  <h1>Example</h1>
-  <div id="nodeNavigator"></div>
+  <div id="Navio"></div>
 
   <script src="https://d3js.org/d3.v4.min.js"></script>
   <script src="https://d3js.org/d3-interpolate.v1.min.js"></script>
   <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
-  <script type="text/javascript" src="https://john-guerra.github.io/NodeNavigator/NodeNavigator.js"></script>
+  <script type="text/javascript" src="https://john-guerra.github.io/Navio/Navio.js"></script>
   <script type="text/javascript">
-    let nn = new NodeNavigator("#nodeNavigator", 600);
+    let nn = new Navio("#Navio", 600);
     let cat = "categorical"
     let seq = "sequential";
   let attributes = JSON.parse('${JSON.stringify(this.props.attributes)}');

@@ -4,6 +4,8 @@
 
 [Repository](https://github.com/john-guerra/Navio/shipyard)
 
+<img src="demo.png" alt="Navio Shipyard" height="400">
+
 ## Synopsis
 The Navio Shipyard is a web application that eases the use of the Navio without programming. The Navio is a d3 visualization widget to helps summarizing, exploring and navigating large network visualizations.
 
