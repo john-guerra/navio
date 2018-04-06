@@ -3,15 +3,18 @@
 **Navio** is a d3 visualization widget to help summarizing, exploring and navigating large datasets.
 ![Navio Demo with the MoMa Collection](Navio_MomaExplorer.gif)
 
-## Use it:
+## Use it with Shipyard:
 
-[Shipyard Test it with your data!](https://john-guerra.github.io/Navio/shipyard/build/index.html)
+If you have data and just want a quick way of summarize it, explore it or filter it, you can try Shipyard, our stand-alone application for Navio. (You can also export template code to use it)
 
-Demos:
+[Try Shipyard](https://john-guerra.github.io/Navio/shipyard/build/index.html)
+![Shipyard demo](shipyard/demo.png)
 
-* [MoMa Collection](https://john-guerra.github.io/momaExplorer/)
-* [Vast 2017 MiniChallenge1 ](http://john-guerra.github.io/Navio/example_vastChallenge2017/index.html)
-* [Co-voting patterns of the Colombian senate](http://johnguerra.co/viz/senadoColombia)
+## Demos:
+
+* [MoMa Collection](https://john-guerra.github.io/momaExplorer/) ([Code](https://github.com/john-guerra/momaExplorer))
+* [Vast 2017 MiniChallenge1 ](http://john-guerra.github.io/Navio/example_vastChallenge2017/index.html) ([Code](https://github.com/john-guerra/Navio/tree/master/example_vastChallenge2017))
+* [Co-voting patterns of the Colombian senate](http://johnguerra.co/viz/senadoColombia) 
 
 
 ## Resources
