@@ -10,36 +10,19 @@ If you have data and just want a quick way of summarize it, explore it or filter
 [Try Shipyard](https://john-guerra.github.io/Navio/shipyard/build/index.html)
 ![Shipyard demo](shipyard/demo.png)
 
-## Demos:
+### Demos:
 
 * [MoMa Collection](https://john-guerra.github.io/momaExplorer/) ([Code](https://github.com/john-guerra/momaExplorer))
 * [Vast 2017 MiniChallenge1 ](http://john-guerra.github.io/Navio/example_vastChallenge2017/index.html) ([Code](https://github.com/john-guerra/Navio/tree/master/example_vastChallenge2017))
 * [Co-voting patterns of the Colombian senate](http://johnguerra.co/viz/senadoColombia) 
+* [Simplest example on SVG](https://john-guerra.github.io/Navio/example/) ([Code](https://github.com/john-guerra/Navio/tree/master/example))
+* [Simple example with Networks]((https://john-guerra.github.io/Navio/exampleSenate/) ([Code](https://github.com/john-guerra/Navio/tree/master/exampleSenate))
 
-
-## Resources
-
-### Example with SVG
-* [Code](https://github.com/john-guerra/Navio/tree/master/example)
-* [Visualization](https://john-guerra.github.io/Navio/example/)
-### Example with Canvas
-* [Code](https://github.com/john-guerra/Navio/tree/master/exampleSenate)
-* [Visualization](https://john-guerra.github.io/Navio/exampleSenate/)
-
-### Libraries
-#### D3v4
-```html
-<script src="https://d3js.org/d3.v4.min.js"></script>
-```
-#### Navio
-[Download](https://raw.githubusercontent.com/john-guerra/Navio/master/Navio.js)
-## Installing
+# Usage
 
 ```html
-<script src="path/to/d3.v4.min.js"></script>
-<script src="path/to/Navio.js"></script>
+
 ```
-## Basic Usage
 
 1. Use the next template. The id of the div is crucial for proper execution
 ```html
