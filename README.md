@@ -1,6 +1,6 @@
 # Navio
 
-**Navio** is a d3 visualization widget to help summarizing, exploring and navigating large datasets.
+**Navio** is a d3 visualization widget to help summarizing, exploring and navigating large datasets. It supports three main interactions, click on a header to sort the data, click on a value to select it, or drag to select a range. 
 ![Navio Demo with the MoMa Collection](Navio_MomaExplorer.gif)
 
 ## Use it with Shipyard:
