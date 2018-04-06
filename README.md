@@ -13,10 +13,10 @@ If you have data and just want a quick way of summarize it, explore it or filter
 ### Demos:
 
 * [MoMa Collection](https://john-guerra.github.io/momaExplorer/) ([Code](https://github.com/john-guerra/momaExplorer))
-* [Vast 2017 MiniChallenge1 ](http://john-guerra.github.io/Navio/example_vastChallenge2017/index.html) ([Code](https://github.com/john-guerra/Navio/tree/master/example_vastChallenge2017))
+* [Navio-only Vast 2017 MiniChallenge1 ](http://john-guerra.github.io/Navio/example_vastChallenge2017/index.html) ([Code](https://github.com/john-guerra/Navio/tree/master/example_vastChallenge2017))
 * [Co-voting patterns of the Colombian senate](http://johnguerra.co/viz/senadoColombia) 
-* [Simplest example on SVG](https://john-guerra.github.io/Navio/example/) ([Code](https://github.com/john-guerra/Navio/tree/master/example))
-* [Simple example with Networks]((https://john-guerra.github.io/Navio/exampleSenate/) ([Code](https://github.com/john-guerra/Navio/tree/master/exampleSenate))
+* [Simplest example with Networks on SVG](https://john-guerra.github.io/Navio/example/) ([Code](https://github.com/john-guerra/Navio/tree/master/example))
+* [Simple example with Networks on Canvas](https://john-guerra.github.io/Navio/exampleSenate/) ([Code](https://github.com/john-guerra/Navio/tree/master/exampleSenate))
 
 # Usage
 
