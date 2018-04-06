@@ -23,7 +23,7 @@ class Load extends Component {
       confirmLoading: true,
     }, ()=>{
       let response;
-      d3.csv(`../datasets/${name}`, (err, data) => {
+      d3.csv(`../build/datasets/${name}`, (err, data) => {
         if(err) return err;
         console.log(data)
         this.props.setData(data);
@@ -126,23 +126,16 @@ class Load extends Component {
             onOk={this.handleOk}
             confirmLoading={confirmLoading}
             onCancel={this.handleCancel}
-            width="80%"
+            width="90%"
           >
             <div className="dataset-container">
               {this.props.datasets.map((d,i)=> {
                 return(
                   <div key={i} className="dataset">
-                    <Card  title={d.name} extra={<button onClick={()=>this.handleOk(d.name)}>select</button>} style={{ width: 300 }}>
-                      <h6>Size</h6>
-                      <p>{d.size} rows</p>
-                      <h6>Attributes ({d.n_attributes})</h6>
-                        { d.attributes?
-                          <div>
-                            
-                          </div>
-                          :''
-                        }
-                      
+                    <Card  title={d.title} extra={<button onClick={()=>this.handleOk(d.name)}>select</button>} style={{ width: 300 }}>
+                      <p>Description: {d.description}</p>
+                      <p>Records(rows): {d.size}</p>
+                      <p>Attributes: {d.n_attributes}</p>
                     </Card>
                   </div>
                   )

@@ -18,16 +18,22 @@ class App extends Component {
       id: "",
       datasets:[
         {
+          "title":"Followers of presidential candidates Colombia 2018",
+          "description":"Dataset with information about followers on twitter of the presidential cadidates.",
           "name":"all_followers_id.csv",
           "size":1048575,
           "n_attributes":10
         },
         {
+          "title":"MoMA Collection",
+          "description":"Evolving collection contains almost 130,000 works of modern and contemporary art.",
           "name":"Artworks_less_columns.csv",
           "size": 131585,
           "n_attributes": 14
         },
         {
+          "title":"VAST Challenge 2017",
+          "description":"The VAST Challenge 2017 offered three mini-challenges and a grand challenge dealing with environmental problems potentially caused by human patterns of life and potentially harmful chemically laden effluent plumes being emitted from factory smokestacks. The data provided included traffic patterns, sensor data though the Boonsong Lekagul Nature Preserve.",
           "name":"Lekagul Sensor Data.csv",
           "size":171477,
           "n_attributes":4
