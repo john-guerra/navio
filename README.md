@@ -1,12 +1,18 @@
 # Navio
 
-**Navio** is a d3 visualization widget to help summarizing, browsing and navigating large network visualizations.
-<br>
-<img src="src/example.png" alt="Navio widget" height="400">
+**Navio** is a d3 visualization widget to help summarizing, exploring and navigating large datasets.
+![Navio Demo with the MoMa Collection](Navio_MomaExplorer.gif)
 
-## Live Demo
+## Use it:
 
-[Live Demo: Data-explorer](https://john-guerra.github.io/Navio/data-explorer/build/index.html)
+[Shipyard Test it with your data!](https://john-guerra.github.io/Navio/shipyard/build/index.html)
+
+Demos:
+
+* [MoMa Collection](https://john-guerra.github.io/momaExplorer/)
+* [Vast 2017 MiniChallenge1 ](http://john-guerra.github.io/Navio/example_vastChallenge2017/index.html)
+* [Co-voting patterns of the Colombian senate](http://johnguerra.co/viz/senadoColombia)
+
 
 ## Resources
 
