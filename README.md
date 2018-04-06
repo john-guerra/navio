@@ -66,21 +66,19 @@ TLDR
 </head>
 <body>
 
-  <h1>Example</h1>
+  // Your Navio widget goes here
   <div id="Navio"></div>
 
-  <script src="https://d3js.org/d3.v4.min.js"></script>
-  <script type="text/javascript" src="https://john-guerra.github.io/Navio/Navio.js"></script>
 </body>
 </html>
 
 ```
 2. Create and import a new JavaScript file below the scripts (d3 and Navio) or right in the html like in the example below.
 ```html
-<script src="path/to/d3.v4.min.js"></script>
-<script src="path/to/Navio.js"></script>
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script type="text/javascript" src="https://john-guerra.github.io/Navio/Navio.js"></script>
 <script type="text/javascript">
-   YOUR_JS_CODE_HERE
+  //   YOUR_JS_CODE_HERE
 </script>
 ```
 3. Create an array with the columns that are categorical and another for the sequential.
@@ -119,4 +117,5 @@ d3.csv("./dataset.csv", function (err, data) {
 ```
 
 ## License
+
 Navio.js is licensed under the MIT license. (http://opensource.org/licenses/MIT)
