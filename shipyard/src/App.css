@@ -1,45 +1,60 @@
 @import '~antd/dist/antd.css';
-@import 'styles/content.css';
-@import 'styles/menu.css';
-@import 'styles/load.css';
+@import url('https://fonts.googleapis.com/css?family=Roboto:100,300,400');
+/* http://meyerweb.com/eric/tools/css/reset/ 
+   v2.0 | 20110126
+   License: none (public domain)
+*/
 
-body, html {
-  height: 100%;
+html, body, div, span, applet, object, iframe,
+h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+a, abbr, acronym, address, big, cite, code,
+del, dfn, em, img, ins, kbd, q, s, samp,
+small, strike, strong, sub, sup, tt, var,
+b, u, i, center,
+dl, dt, dd, ol, ul, li,
+fieldset, form, label, legend,
+table, caption, tbody, tfoot, thead, tr, th, td,
+article, aside, canvas, details, embed, 
+figure, figcaption, footer, header, hgroup, 
+menu, nav, output, ruby, section, summary,
+time, mark, audio, video {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	font-size: 100%;
+	font: inherit;
+	vertical-align: baseline;
+	display: 
+}
+/* HTML5 display-role reset for older browsers */
+article, aside, details, figcaption, figure, 
+footer, header, hgroup, menu, nav, section {
+	display: block;
 }
 body {
-  font-family: serif;
-  font-family: 'Lato', sans-serif;
-  font-weight: 300;
-  color: black;
+	line-height: 1;
 }
-
-.container {
-    height: 100vh;
-    display: grid;
-    grid-template-columns: repeat(12, 1fr);
-    grid-template-rows: 5vh auto 5vh;
-    grid-template-areas: 
-        "h h h h h h h h h h h h"
-        "m m m m c c c c c c c c"
-        "f f f f f f f f f f f f";
+ol, ul {
+	list-style: none;
 }
-.header {
-    grid-area: h;
-    padding-left: 1em;
-    padding-right: 1em;
-    align-items: center;
+blockquote, q {
+	quotes: none;
 }
-.footer {
-    grid-area: f;
-    color: white;
+blockquote:before, blockquote:after,
+q:before, q:after {
+	content: '';
+	content: none;
 }
-#root > div > div.container > div.footer > a {
-  align-self: center;
-  color: white;
+table {
+	border-collapse: collapse;
+	border-spacing: 0;
 }
-.center {
-  display: flex;
+html {
+	font-family: 'Roboto', sans-serif;
 }
-.logo {
-  margin-right: 1em; 
+.hoverable {
+	box-shadow: 0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23);
+}
+.hoverable:hover {
+	box-shadow: 0 14px 28px rgba(0,0,0,0.25), 0 10px 10px rgba(0,0,0,0.22);
 }
