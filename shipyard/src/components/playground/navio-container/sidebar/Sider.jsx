@@ -21,7 +21,7 @@ const SortableItem = SortableElement(({value, number, toggleVisible}) => {
   const componentClasses = ['box'];
   if (!value.settings) { componentClasses.push('hide'); }
   return (
-    <div style={{ padding: '1em', backgroundColor: 'white', marginBottom: '0.2em', cursor: 'move', borderRadius: '5px'}}>
+    <div style={{ padding: '0.25em', backgroundColor: 'white', marginBottom: '0.25em', cursor: 'move', borderRadius: '5px'}}>
       <Attribute attribute={value} index={number} />
       <div className={componentClasses.join(' ')}> 
         <p style={{paddingTop: '1em'}}>color:</p>

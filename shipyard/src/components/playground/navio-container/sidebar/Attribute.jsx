@@ -14,27 +14,23 @@ class Attribute extends Component {
     const { index, attribute, toggleVisible, changeCheckStatus } = this.props;
     return (
       <Row type="flex" align="middle" justify="center">
-        <Col span={4}>
-          <Button onClick={() => {
+        <Col span={2}>
+          <Button icon={attribute.settings ? 'up' : 'setting'} shape="circle" size="small" onClick={() => {
               this.setState({settings: !attribute.settings});
               toggleVisible(index, !attribute["settings"]);
             }}
-          >
-            {
-              !attribute.settings ? <Icon type="setting" /> : <Icon type="up" />
-            }
-          </Button>
+          />
         </Col>
-        <Col span={6}>{attribute.name}</Col>
-        <Col span={7}>
-          <Select style={{ width: '100%' }} dropdownMatchSelectWidth={false}>
+        <Col span={10}>{attribute.name}</Col>
+        <Col span={8}>
+          <Select size="small" style={{ width: '100%' }} dropdownMatchSelectWidth={false}>
             <Option key="categorical" value="categorical" >categorical</Option>
             <Option key="sequential" value="sequential">ordinal</Option>
           </Select>
         </Col>
-        <Col span={6} offset={1}>
+        <Col span={4}>
           <Tooltip placement="right" title="Here you can change this dimension visibility">
-            <Switch defaultChecked={true} checked={attribute.checked} style={{ marginLeft: '2em' }} onChange={checked => { console.log(checked);this.setState({checked}); changeCheckStatus(attribute, checked);}} />
+            <Switch size="small" defaultChecked={true} checked={attribute.checked} style={{ marginLeft: '2em' }} onChange={checked => { console.log(checked);this.setState({checked}); changeCheckStatus(attribute, checked);}} />
           </Tooltip>
         </Col>
       </Row>
