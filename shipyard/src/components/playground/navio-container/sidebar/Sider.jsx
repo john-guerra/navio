@@ -1,14 +1,12 @@
 import React, {Component} from 'react';
 import { SortableContainer, SortableElement, arrayMove } from 'react-sortable-hoc';
-import { Card, Switch, Select, Tooltip, Row, Col, Icon, Collapse, Button, Input, Form, Checkbox } from 'antd';
+import { Select, Row, Col, Collapse, Form } from 'antd';
+import { SketchPicker } from 'react-color';
 import './card.css';
 import { connect } from 'react-redux';
 import Attribute from './Attribute';
 import { changeCheckStatus, updateAttribute, changeTypeStatus, toggleSettingsVisible, setAttributes } from './../../../../actions';
 
-const FormItem = Form.Item;
-const Option = Select.Option;
-const Panel = Collapse.Panel;
 const customPanelStyle = {
   background: '#fff',
   borderRadius: 4,
@@ -24,8 +22,15 @@ const SortableItem = SortableElement(({value, number, toggleVisible}) => {
     <div style={{ padding: '0.25em', backgroundColor: 'white', marginBottom: '0.25em', cursor: 'move', borderRadius: '5px'}}>
       <Attribute attribute={value} index={number} />
       <div className={componentClasses.join(' ')}> 
-        <p style={{paddingTop: '1em'}}>color:</p>
-        <p>alias:</p>
+        <Row>
+          <Col>
+            <div>color:</div>
+            <SketchPicker />
+          </Col>
+          <Col>
+            <div>alias</div>
+          </Col>
+        </Row>
       </div>
     </div>
   )

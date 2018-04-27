@@ -35,7 +35,7 @@ const ModalDefault = ({ visible, datasets, confirmLoading, showModal, handleOk, 
       >
         <Row gutter={32}>
           { datasets.map(d => (
-            <Col xs={24} sm={12} md={6} lg={6} xl={6}key={d.id}>
+            <Col xs={24} sm={12} md={12} lg={6} xl={6} key={d.id}>
               <Card
                 onClick={() => handleDataset(d.name)}
                 className="hoverable"

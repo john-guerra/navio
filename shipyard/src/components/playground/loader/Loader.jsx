@@ -1,5 +1,5 @@
 import React from 'react';
-import { Upload, Icon } from 'antd';
+import { Upload, Icon, Divider } from 'antd';
 import ModalDefault from './ModalDefault';
 import { connect } from 'react-redux';
 import { toggleLoading, setData, toggleDataLoaded } from './../../../actions';
@@ -51,13 +51,17 @@ const Loader = ({ toggleLoading, setData, toggleDataLoaded }) => {
           <p className="ant-upload-drag-icon">
             <Icon type="upload" />
           </p>
-          <p className="ant-upload-text">Drag and drop a file to this area or click to upload it!</p>
+          <h1 style={{fontSize: '2em'}}>
+            Drag and drop or click here to upload your dataset
+          </h1>
           <p className="ant-upload-hint">*.csv, *.tsv and *.txt files allowed.</p>
         </div>
       </Dragger>
-      <br />
-      <p> or </p>
-      <br />
+      <div>
+        <Divider>
+          <p>or you can click below to explore pre-loaded datasets</p>
+        </Divider>
+      </div>
       <div>
         <ModalDefault />
       </div>

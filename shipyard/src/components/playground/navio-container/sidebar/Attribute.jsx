@@ -11,7 +11,7 @@ class Attribute extends Component {
     settings: this.props.settings,
   }
   render () {
-    const { index, attribute, toggleVisible, changeCheckStatus } = this.props;
+    const { index, attribute, toggleVisible, changeCheckStatus, changeTypeStatus } = this.props;
     return (
       <Row type="flex" align="middle" justify="center">
         <Col span={2}>
@@ -23,7 +23,13 @@ class Attribute extends Component {
         </Col>
         <Col span={10}>{attribute.name}</Col>
         <Col span={8}>
-          <Select size="small" style={{ width: '100%' }} dropdownMatchSelectWidth={false}>
+          <Select
+            size="small"
+            style={{ width: '100%' }}
+            dropdownMatchSelectWidth={false}
+            defaultValue={attribute.type}
+            onChange={value => changeTypeStatus(attribute, value)}
+          >
             <Option key="categorical" value="categorical" >categorical</Option>
             <Option key="sequential" value="sequential">ordinal</Option>
           </Select>
