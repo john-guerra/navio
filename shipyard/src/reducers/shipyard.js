@@ -75,7 +75,7 @@ const shipyard = (state = initialState, action) => {
     case SET_ATTRIBUTES:
       return Object.assign({}, state, {
         attributes: action.attributes,
-      })
+      });
     default:
       return state;
   }

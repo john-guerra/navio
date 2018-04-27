@@ -5,8 +5,7 @@ import { Row, Col } from 'antd';
 import { connect } from 'react-redux';
 import * as d3 from 'd3';
 import ActionGroup from './ActionGroup';
-import Sidebar from './sidebar/Sidebar';
-import Side from './sidebar/Sid';
+import Side from './sidebar/Sider';
 import { updateAttribute, updateFilteredData } from './../../../actions';
 import './sidebar.css';
 

@@ -33,14 +33,14 @@ const ModalDefault = ({ visible, datasets, confirmLoading, showModal, handleOk, 
           <Button onClick={handleCancel} key="back">Cancel</Button>,
         ]}
       >
-        <Row>
+        <Row gutter={32}>
           { datasets.map(d => (
-            <Col span={8} key={d.id}>
+            <Col xs={24} sm={12} md={6} lg={6} xl={6}key={d.id}>
               <Card
                 onClick={() => handleDataset(d.name)}
                 className="hoverable"
                 title={d.title}
-                style={{ width: 300, height: '30vh', overflowY: 'scroll', cursor: 'pointer' }}
+                style={{ width: '100%', height: '30vh', overflowY: 'scroll', cursor: 'pointer' }}
               >
                 <p>Description: {d.description}</p>
                 <p>Records(rows): {d.size}</p>

@@ -143,7 +143,7 @@ export const changeCheckStatus = (attribute, status) => ({
   status,
 });
 
-export const changeTypeStatus = (attribute, status) => ({
+export const changeTypeStatus = (attribute, status, callback) => ({
   type: CHANGE_TYPE_STATUS,
   attribute,
   status,

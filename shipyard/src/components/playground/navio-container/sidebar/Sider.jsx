@@ -3,6 +3,7 @@ import { SortableContainer, SortableElement, arrayMove } from 'react-sortable-ho
 import { Card, Switch, Select, Tooltip, Row, Col, Icon, Collapse, Button, Input, Form, Checkbox } from 'antd';
 import './card.css';
 import { connect } from 'react-redux';
+import Attribute from './Attribute';
 import { changeCheckStatus, updateAttribute, changeTypeStatus, toggleSettingsVisible, setAttributes } from './../../../../actions';
 
 const FormItem = Form.Item;
@@ -15,38 +16,13 @@ const customPanelStyle = {
   border: 0,
   overflow: 'hidden',
 };
-const header = (value, index, toggleVisible) => (
-    <Row type="flex" align="middle" justify="center">
-      <Col span={4}>
-        <Button onClick={() => {
-            toggleVisible(index, !value["settings"]);
-          }}
-        >
-          {
-            !value.settings ? <Icon type="setting" /> : <Icon type="up" />
-          }
-        </Button>
-      </Col>
-      <Col span={6}>{value.name}</Col>
-      <Col span={7}>
-        <Select style={{width: '100%'}} dropdownMatchSelectWidth={false}>
-          <Option key="categorical" value="categorical" >categorical</Option>
-          <Option key="sequential" value="sequential">ordinal</Option>
-        </Select>
-      </Col>
-      <Col span={6} offset={1}>
-        <Tooltip placement="right"  title="Here you can change this dimension visibility">
-          <Switch defaultChecked style={{marginLeft: '2em'}} />
-        </Tooltip>
-      </Col>
-    </Row>
-)
+
 const SortableItem = SortableElement(({value, number, toggleVisible}) => {
   const componentClasses = ['box'];
   if (!value.settings) { componentClasses.push('hide'); }
   return (
-    <div style={{ padding: '1em', backgroundColor: 'white', marginBottom: '0.2em', cursor: 'move'}}>
-      { header(value, number, toggleVisible) }
+    <div style={{ padding: '1em', backgroundColor: 'white', marginBottom: '0.2em', cursor: 'move', borderRadius: '5px'}}>
+      <Attribute attribute={value} index={number} />
       <div className={componentClasses.join(' ')}> 
         <p style={{paddingTop: '1em'}}>color:</p>
         <p>alias:</p>
@@ -67,10 +43,10 @@ const SortableList = SortableContainer(({items, toggleVisible}) => {
 
 const SortableComponent = ({ attributes, toggleVisible, reorderAttributes}) => {
   const onSortEnd = ({oldIndex, newIndex}) => {
+    if (oldIndex === newIndex) { return; };
     let copy = attributes.splice(0);
     let newArr = arrayMove(copy, oldIndex, newIndex);
-    console.log(copy, newArr);
-    reorderAttributes(newArr)
+    reorderAttributes(newArr);
   }
   return (
     <SortableList
@@ -86,10 +62,13 @@ const mapStateToProps = state => ({
 });
 
 const mapDispatchToProps = dispatch => ({
-  changeCheckStatus: (att, status) => { dispatch(changeCheckStatus(att, status)); dispatch(updateAttribute())},
-  changeTypeStatus: (att, value) => { dispatch(changeTypeStatus(att, value)); dispatch(updateAttribute())},
-  toggleVisible: (index, visible) => { dispatch(toggleSettingsVisible(index, visible))},
-  reorderAttributes: atts => {dispatch(setAttributes(atts)); dispatch(updateAttribute())},
+  changeCheckStatus: (att, status) => {
+    dispatch(changeCheckStatus(att, status));
+    dispatch(updateAttribute())
+  },
+  changeTypeStatus: (att, value) => { dispatch(changeTypeStatus(att, value)); dispatch(updateAttribute()); },
+  toggleVisible: (index, visible) => { dispatch(toggleSettingsVisible(index, visible)); },
+  reorderAttributes: atts => { dispatch(setAttributes(atts)); dispatch(updateAttribute()); },
 });
 
 export default connect(mapStateToProps, mapDispatchToProps)(SortableComponent);

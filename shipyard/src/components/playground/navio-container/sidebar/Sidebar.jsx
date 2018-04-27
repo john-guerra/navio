@@ -8,7 +8,7 @@ const Sidebar = ({ attributes, changeCheckStatus, changeTypeStatus }) => {
   return (
     <div id="sidebar">
       { attributes.map(att => (
-        <Row key={att.name} style={{ margin:'0.3em' }}>
+        <Row key={att.name} style={{ margin: '0.3em' }}>
           <Col span={8}>{att.name}</Col>
           <Col span={8}>
             <Select
