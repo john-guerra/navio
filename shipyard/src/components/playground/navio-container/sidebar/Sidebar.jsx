@@ -1,10 +1,6 @@
 import React from 'react';
 import { connect } from 'react-redux';
 import { Switch, Select, Tooltip, Row, Col } from 'antd';
-import { Table } from 'antd';
-import { DragDropContext, DragSource, DropTarget } from 'react-dnd';
-import HTML5Backend from 'react-dnd-html5-backend';
-import update from 'immutability-helper';
 import { changeCheckStatus, updateAttribute, changeTypeStatus } from './../../../../actions';
 
 const Option = Select.Option;
@@ -24,7 +20,7 @@ const Sidebar = ({ attributes, changeCheckStatus, changeTypeStatus }) => {
             </Select>
           </Col>
           <Col span={8}>
-            <Tooltip placement="right"  title="Here you can change this dimension visibility">
+            <Tooltip placement="right" title="Here you can change this dimension visibility">
               <Switch defaultChecked onChange={checked => changeCheckStatus(att, checked)} />
             </Tooltip>
           </Col>

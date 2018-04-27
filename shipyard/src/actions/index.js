@@ -3,6 +3,7 @@
  */
 
 export const SET_DATA = 'SET_DATA';
+export const SET_ATTRIBUTES = 'SET_ATTRIBUTES';
 export const SHOW_MODAL = 'SHOW_MODAL';
 export const HANDLE_OK = 'HANDLE_OK';
 export const HANDLE_CANCEL = 'HANDLE_CANCEL';
@@ -14,6 +15,7 @@ export const CHANGE_CHECK_STATUS = 'CHANGE_CHECK_STATUS';
 export const CHANGE_TYPE_STATUS = 'CHANGE_TYPE_STATUS';
 export const UPDATE_ATTRIBUTE = 'UPDATE_ATTRIBUTE';
 export const UPDATE_FILTERED_DATA = 'UPDATE_FILTERED_DATA';
+export const TOGGLE_SETTINGS_VISIBLE = 'TOGGLE_SETTINGS_VISIBLE';
 
 /*
  * complementary functions
@@ -81,6 +83,7 @@ export const setData = data => {
     i.checked = true;
     i.type = '';
     i.id = false;
+    i.settings = false;
     atts.push(i);
   }
   getAttributesType(data, atts, ids);
@@ -149,3 +152,14 @@ export const changeTypeStatus = (attribute, status) => ({
 export const updateAttribute = () => ({ type: UPDATE_ATTRIBUTE });
 
 export const updateFilteredData = exportData => ({ type: UPDATE_FILTERED_DATA, exportData });
+
+export const toggleSettingsVisible = (index, visible) => ({
+  type: TOGGLE_SETTINGS_VISIBLE,
+  index,
+  visible,
+})
+
+export const setAttributes = attributes => ({
+  type: SET_ATTRIBUTES,
+  attributes,
+})

@@ -1,4 +1,4 @@
-import { SET_DATA, RESET_DATA, CHANGE_CHECK_STATUS, CHANGE_TYPE_STATUS, UPDATE_ATTRIBUTE, UPDATE_FILTERED_DATA } from './../actions/index';
+import { SET_DATA, RESET_DATA, CHANGE_CHECK_STATUS, CHANGE_TYPE_STATUS, UPDATE_ATTRIBUTE, UPDATE_FILTERED_DATA, TOGGLE_SETTINGS_VISIBLE, SET_ATTRIBUTES } from './../actions/index';
 
 const initialState = {
   data: [],
@@ -65,6 +65,16 @@ const shipyard = (state = initialState, action) => {
     case UPDATE_FILTERED_DATA:
       return Object.assign({}, state, {
         exportData: action.exportData,
+      });
+    case TOGGLE_SETTINGS_VISIBLE:
+      let items = state.attributes.slice(0);
+      items[action.index]["settings"] = action.visible;
+      return Object.assign({}, state, {
+        attributes: items,
+      });
+    case SET_ATTRIBUTES:
+      return Object.assign({}, state, {
+        attributes: action.attributes,
       })
     default:
       return state;

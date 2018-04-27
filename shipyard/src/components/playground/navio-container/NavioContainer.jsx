@@ -6,8 +6,9 @@ import { connect } from 'react-redux';
 import * as d3 from 'd3';
 import ActionGroup from './ActionGroup';
 import Sidebar from './sidebar/Sidebar';
-import Side from './sidebar/Side';
+import Side from './sidebar/Sid';
 import { updateAttribute, updateFilteredData } from './../../../actions';
+import './sidebar.css';
 
 const d3_chromatic = require("d3-scale-chromatic");
 const cat = 'categorical';
@@ -34,8 +35,9 @@ class NavioContainer extends Component {
   }
   setupNavio = () => {
     this.nn = new Navio(this.target, 600).updateCallback(this.props.updateFilteredData);
-    this.props.attributes.forEach((d, i) => {
-      if (d.checked) {
+    for (var i = 0; i < this.props.attributes.length; i++) {
+        let d = this.props.attributes[i];
+            if (d.checked) {
         if (d.type === cat) {
           this.nn.addCategoricalAttrib(d.name);
         } else if (d.type === seq) {
@@ -54,16 +56,18 @@ class NavioContainer extends Component {
           }
         }
       }
-    });
+    }
     this.nn.data(this.props.data);
   };
   render () {
     const { showSidebar } = this.props;
+    const sidebarStyles = ['sidebar'];
+    if (!showSidebar) {sidebarStyles.push('hide')}
     return (
       <div>
         <ActionGroup />
         <Row>
-          <Col span={10} className="sidebar" style={showSidebar ? showStyle : mainStyle}>
+          <Col span={10} className={sidebarStyles.join(' ')}>
             <Side />
           </Col>
           <Col span={showSidebar ? 14 : 24}>
