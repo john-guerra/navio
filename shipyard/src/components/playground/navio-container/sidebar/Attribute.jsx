@@ -16,12 +16,12 @@ class Attribute extends Component {
       <Row type="flex" align="middle" justify="center">
         <Col span={4}>
           <Button onClick={() => {
-              // this.setState({!settings});
+              this.setState({settings: !attribute.settings});
               toggleVisible(index, !attribute["settings"]);
             }}
           >
             {
-              !this.state.settings ? <Icon type="setting" /> : <Icon type="up" />
+              !attribute.settings ? <Icon type="setting" /> : <Icon type="up" />
             }
           </Button>
         </Col>
