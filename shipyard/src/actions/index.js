@@ -21,6 +21,7 @@ export const TOGGLE_COLOR_VISIBLE = 'TOGGLE_COLOR_VISIBLE';
 export const DELETE_COMPONENT_CLASS = 'DELETE_COMPONENT_CLASS';
 export const ADD_COMPONENT_CLASS = 'ADD_COMPONENT_CLASS';
 export const SET_COMPONENT_CLASSES = 'SET_COMPONENT_CLASSES';
+export const SWAP_COMPONENT_CLASSES = 'SWAP_COMPONENT_CLASSES';
 
 /*
  * complementary functions
@@ -190,12 +191,19 @@ export const toggleColorVisible = index => ({
   index,
 });
 
-export const deleteLastComponentClass = () => ({
+export const deleteLastComponentClass = index => ({
   type: DELETE_COMPONENT_CLASS,
+  index,
 });
 
 export const addComponentClass = (className, index) => ({
   type: ADD_COMPONENT_CLASS,
   className,
   index,
+})
+
+export const swapComponentClasses = (i, j) => ({
+  type: SWAP_COMPONENT_CLASSES,
+  i,
+  j,
 })

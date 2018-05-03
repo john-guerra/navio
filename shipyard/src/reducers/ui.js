@@ -1,4 +1,4 @@
-import { SHOW_MODAL, TOGGLE_LOADING, TOGGLE_DATA_LOADED, RESET_DATA, TOGGLE_SIDEBAR, DELETE_COMPONENT_CLASS, ADD_COMPONENT_CLASS, SET_COMPONENT_CLASSES } from './../actions/index';
+import { SHOW_MODAL, TOGGLE_LOADING, TOGGLE_DATA_LOADED, RESET_DATA, TOGGLE_SIDEBAR, DELETE_COMPONENT_CLASS, ADD_COMPONENT_CLASS, SET_COMPONENT_CLASSES, SWAP_COMPONENT_CLASSES } from './../actions/index';
 
 const initialState = {
   confirmLoading: false,
@@ -31,7 +31,7 @@ const ui = (state = initialState, action) => {
       });
     case DELETE_COMPONENT_CLASS:
       let componentsDeleted = state.componentClasses.splice(0);
-      componentsDeleted.splice(1, action.index);
+      componentsDeleted[action.index].classes = ["box"];
       return Object.assign({}, state, {
         componentClasses: componentsDeleted,
       });
@@ -42,6 +42,15 @@ const ui = (state = initialState, action) => {
       componentsAdd[action.index].classes = componentAdd; 
       return Object.assign({}, state, {
         componentClasses: componentsAdd,
+      });
+    case SWAP_COMPONENT_CLASSES:
+      let temp;
+      let swaped = state.componentClasses.splice(0);
+      temp = swaped[action.i];
+      swaped[action.i] = swaped[action.j];
+      swaped[action.j] = temp;
+      return Object.assign({}, state, {
+        componentClasses: swaped,
       });
     case SET_COMPONENT_CLASSES:
       let array = [];

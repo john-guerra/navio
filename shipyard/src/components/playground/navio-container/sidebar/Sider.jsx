@@ -4,7 +4,7 @@ import { ChromePicker } from 'react-color';
 import './card.css';
 import { connect } from 'react-redux';
 import SortableList from './SortableList';
-import { changeCheckStatus, updateAttribute, changeTypeStatus, toggleSettingsVisible, setAttributes, setAttributeColor } from './../../../../actions';
+import { changeCheckStatus, updateAttribute, changeTypeStatus, toggleSettingsVisible, setAttributes, setAttributeColor, swapComponentClasses } from './../../../../actions';
 
 const content = setColor => (
   <div>
@@ -12,12 +12,12 @@ const content = setColor => (
   </div>
 );
 
-const SortableComponent = ({ attributes, toggleVisible, reorderAttributes, setColor}) => {
+const SortableComponent = ({ attributes, toggleVisible, reorderAttributes, setColor }) => {
   const onSortEnd = ({oldIndex, newIndex}) => {
     if (oldIndex === newIndex) { return; };
     let copy = attributes.splice(0);
     let newArr = arrayMove(copy, oldIndex, newIndex);
-    reorderAttributes(newArr);
+    reorderAttributes(newArr, oldIndex, newIndex);
   }
   return (
     <SortableList
@@ -37,7 +37,7 @@ const mapDispatchToProps = dispatch => ({
   },
   changeTypeStatus: (att, value) => { dispatch(changeTypeStatus(att, value)); dispatch(updateAttribute()); },
   toggleVisible: (index, visible) => { dispatch(toggleSettingsVisible(index, visible)); },
-  reorderAttributes: atts => { dispatch(setAttributes(atts)); dispatch(updateAttribute()); },
+  reorderAttributes: (atts, oldIndex, newIndex) => { dispatch(setAttributes(atts)); dispatch(swapComponentClasses(oldIndex, newIndex)); dispatch(updateAttribute()); },
   setColor: (color, event, type) => dispatch(setAttributeColor(color, event, type)),
 });
 
