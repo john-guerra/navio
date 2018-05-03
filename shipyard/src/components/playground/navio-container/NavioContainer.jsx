@@ -1,5 +1,4 @@
 import React, { Component } from 'react';
-// import Navio from '@jg.murillo10/test-npm';
 import Navio from './Navio.js';
 import { Row, Col } from 'antd';
 import { connect } from 'react-redux';
@@ -12,8 +11,6 @@ import './sidebar.css';
 const d3_chromatic = require("d3-scale-chromatic");
 const cat = 'categorical';
 const seq = 'sequential';
-const showStyle = { visibility: 'visible', overflowX: 'scroll', overflowY: 'scroll' };
-const mainStyle = { visibility: 'hidden', display: 'none', transition: 'all 0.5s ease' };
 class NavioContainer extends Component {
   componentDidMount() {
     this.setupNavio();

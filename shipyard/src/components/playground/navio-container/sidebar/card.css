@@ -15,15 +15,15 @@
 }
 
 .box {
-  height: 100px;
+  height: 60vh;
   width: 100%;
   opacity: 1.0;
   box-sizing: border-box;
-  transition: height 500ms 0ms, opacity 500ms 500ms;
+  transition: min-height 500ms 0ms, height 500ms 500ms, opacity 500ms 500ms;
 }
 
 .box.hide {
-  transition: height 500ms 500ms, opacity 500ms 0ms;
+  transition: min-height 500ms 500ms, height 500ms 500ms, opacity 500ms 0ms;
   opacity: 0.0;
   height: 0px;
 }

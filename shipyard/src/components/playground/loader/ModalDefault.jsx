@@ -1,6 +1,6 @@
 import React from 'react';
 import { connect } from 'react-redux';
-import { Button, Modal, Card, Row, Col, Icon } from 'antd';
+import { Button, Modal, Card, Row, Col } from 'antd';
 import { showModal, handleOk, setData, toggleLoading, toggleDataLoaded } from './../../../actions';
 import * as d3 from 'd3';
 
@@ -40,7 +40,7 @@ const ModalDefault = ({ visible, datasets, confirmLoading, showModal, handleOk, 
                 onClick={() => handleDataset(d.name)}
                 className="hoverable"
                 title={d.title}
-                style={{ width: '100%', height: '30vh', overflowY: 'scroll', cursor: 'pointer' }}
+                style={{ width: '100%', height: '30vh', overflowY: 'scroll', cursor: 'pointer', marginBottom: 32 }}
               >
                 <p>Description: {d.description}</p>
                 <p>Records(rows): {d.size}</p>

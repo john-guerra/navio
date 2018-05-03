@@ -1,4 +1,15 @@
-import { SET_DATA, RESET_DATA, CHANGE_CHECK_STATUS, CHANGE_TYPE_STATUS, UPDATE_ATTRIBUTE, UPDATE_FILTERED_DATA, TOGGLE_SETTINGS_VISIBLE, SET_ATTRIBUTES } from './../actions/index';
+import {
+  SET_DATA,
+  RESET_DATA,
+  CHANGE_CHECK_STATUS,
+  CHANGE_TYPE_STATUS,
+  UPDATE_ATTRIBUTE,
+  UPDATE_FILTERED_DATA,
+  TOGGLE_SETTINGS_VISIBLE,
+  SET_ATTRIBUTES,
+  SET_ATTRIBUTE_COLOR,
+  TOGGLE_COLOR_VISIBLE,
+} from './../actions/index';
 
 const initialState = {
   data: [],
@@ -69,6 +80,7 @@ const shipyard = (state = initialState, action) => {
     case TOGGLE_SETTINGS_VISIBLE:
       let items = state.attributes.slice(0);
       items[action.index]["settings"] = action.visible;
+      console.log(items)
       return Object.assign({}, state, {
         attributes: items,
       });
@@ -76,6 +88,14 @@ const shipyard = (state = initialState, action) => {
       return Object.assign({}, state, {
         attributes: action.attributes,
       });
+    case SET_ATTRIBUTE_COLOR:
+      let itemsColors = state.attributes.slice(0);
+      itemsColors[action.index]["color"] = action.color;
+      return Object.assign({}, state, {
+        attributes: itemsColors,
+      });
+      case TOGGLE_COLOR_VISIBLE:
+        return state;
     default:
       return state;
   }
