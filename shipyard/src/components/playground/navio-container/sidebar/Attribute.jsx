@@ -14,13 +14,13 @@ class Attribute extends Component {
     const { index, attribute, toggleVisible, changeCheckStatus, changeTypeStatus, addComponentClass, deleteLastComponentClass } = this.props;
     const ico = attribute.settings ? 'up' : 'setting';
     return (
-      <Row type="flex" align="middle" justify="center">
-        <Col span={2}>
+      <Row type="flex" align="middle" justify="center" className="attribute">
+        <Col span={2} offset={1}>
           <Button shape="circle" size="small" onClick={() => {
               console.log('onClick')
               this.setState({settings: !attribute.settings});
               toggleVisible(index, !attribute["settings"]);
-              if (!attribute.settings) {
+              if (attribute.settings) {
                 deleteLastComponentClass(index);
               } else {
                 addComponentClass('hide', index);
@@ -30,7 +30,7 @@ class Attribute extends Component {
             <Icon type={ico} />
           </Button>
         </Col>
-        <Col span={10}>{attribute.name}</Col>
+        <Col span={8}  offset={1}>{attribute.name}</Col>
         <Col span={8}>
           <Select
             size="small"

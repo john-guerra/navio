@@ -5,10 +5,11 @@ import { Button, Input } from 'antd';
 import { ChromePicker } from 'react-color';
 import Attribute from './Attribute';
 import { toggleColorVisible, setAttributeColor } from './../../../../actions';
+import './sortableItem.css';
 
 const SortableItem = SortableElement(({attribute, number, componentClasses, setColor, toggleColorVisible}) => {
   return (
-    <div style={{ padding: '0.25em', backgroundColor: 'white', marginBottom: '0.25em', cursor: 'move', borderRadius: '5px'}}>
+    <div className="sortableItem" style={{ padding: '0.25em', backgroundColor: 'white', marginBottom: '0.25em', cursor: 'move', borderRadius: '2px'}}>
       <Attribute attribute={attribute} index={number} />
       <div className={componentClasses.join(' ')}>
         <div>

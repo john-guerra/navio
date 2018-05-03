@@ -58,7 +58,7 @@ const ui = (state = initialState, action) => {
       console.log(state.componentClasses)
       action.attributes.forEach((d, k)=> {
         let i = {};
-        i.classes = ['box'];
+        i.classes = ['box', 'hide'];
         i.index = k;
         array.push(i);
       })

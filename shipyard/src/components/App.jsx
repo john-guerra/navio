@@ -7,7 +7,7 @@ import Playground from './playground/Playground';
 
 const { Header, Content, Footer } = Layout;
 const headerStyle = {
-  margin: 0, padding: 0, backgroundColor: 'white', boxShadow: '0 10px 8px rgba(0,0,0,0.15), 0 8px 8px rgba(0,0,0,0.12)',
+  marginBottom: '1em', padding: 0, backgroundColor: 'white', boxShadow: '0 5px 4px rgba(0,0,0,0.15), 0 4px 4px rgba(0,0,0,0.12)',
 };
 const App = loading => (
   <div>
