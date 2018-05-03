@@ -9,16 +9,16 @@ import './sortableItem.css';
 
 const SortableItem = SortableElement(({attribute, number, componentClasses, setColor, toggleColorVisible}) => {
   return (
-    <div className="sortableItem" style={{ padding: '0.25em', backgroundColor: 'white', marginBottom: '0.25em', cursor: 'move', borderRadius: '2px'}}>
+    <div className="sortableItem" style={{ padding: '0.25em', backgroundColor: 'white', marginBottom: '0em', cursor: 'move', borderRadius: '2px'}}>
       <Attribute attribute={attribute} index={number} />
       <div className={componentClasses.join(' ')}>
         <div>
-          <span style={{ paddingTop: '1em' }}>
+          <span style={{ paddingTop: '0em' }}>
             color
           </span>
-          <Button shape="circle" style={{ backgroundColor: attribute.hex || '#fff', border: '1px solid grey', margin: '2em' }} />
+          <Button shape="circle" style={{ backgroundColor: attribute.hex || '#fff', border: '1px solid grey', margin: '0em' }} />
           <Button onClick={() => toggleColorVisible(number)} shape="circle" style={{ backgroundColor: attribute.hex || '#fff', border: '1px solid grey', margin: '2em' }} />
-          { true ?  <ChromePicker onChangeComplete={(color, event) => setColor(color, event, 0)} /> : ''}
+          { false ?  <ChromePicker onChangeComplete={(color, event) => setColor(color, event, 0)} /> : ''}
         </div>
         <div>
           <span style={{ paddingTop: '1em' }}>
