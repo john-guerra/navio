@@ -33,17 +33,116 @@ class NavioContainer extends Component {
     this.nn = new Navio(this.target, 600).updateCallback(this.props.updateFilteredData);
     for (var i = 0; i < this.props.attributes.length; i++) {
         let d = this.props.attributes[i];
+        console.log(d);
+        if (d.checked) {
+          let color;
+          switch (d.type) {
+            case cat:
+              switch (d.color) {
+                case 'scheme10':
+                  color = d3.scaleOrdinal(d3_chromatic.schemeCategory10);
+                  break;
+                case 'scheme20':
+                  color = d3.scaleOrdinal(d3_chromatic.schemeCategory20);
+                  break;
+                case 'scheme20b':
+                  color = d3.scaleOrdinal(d3_chromatic.schemeCategory20b);
+                  break;
+                case 'scheme20c':
+                  color = d3.scaleOrdinal(d3_chromatic.schemeCategory20c);
+                  break;
+                default:
+                  //scheme 10 default
+                  color = d3.scaleOrdinal(d3_chromatic.schemeCategory10);
+                  break;
+              }
+              console.log(d.name, color)
+              this.nn.addCategoricalAttrib(d.name, color);
+              break;
+            default:
+              if (d.data == 'date') {
+                 switch (d.color) {
+                  case 'blue':
+                    color = d3.scaleTime(d3_chromatic.schemeBlues);
+                    break;
+                  case 'purple':
+                    color = d3.scaleTime(d3_chromatic.schemePurples);
+                    break;
+                  case 'red':
+                    color = d3.scaleTime(d3_chromatic.schemeReds);
+                    break;
+                  case 'green':
+                    color = d3.scaleTime(d3_chromatic.schemeGreens);
+                    break;
+                  case 'gray':
+                    color = d3.scaleTime(d3_chromatic.schemeGrays);
+                    break;
+                  case 'orange':
+                    color = d3.scaleTime(d3_chromatic.schemeOranges);
+                    break;
+                  default:
+                    // purple
+                    color = d3.scaleLinear(d3_chromatic.schemePurples);
+                    break;
+                }
+                console.log(d.name, color)
+                this.nn.addSequentialAttrib(d.name, color);
+                break;
+              }
+              else {
+                  switch (d.color) {
+                    case 'blue':
+                      color = d3.scaleOrdinal(d3_chromatic.schemeBlues);
+                      break;
+                    case 'purple':
+                      color = d3.scaleOrdinal(d3_chromatic.schemePurples);
+                      break;
+                    case 'red':
+                      color = d3.scaleOrdinal(d3_chromatic.schemeReds);
+                      break;
+                    case 'green':
+                      color = d3.scaleOrdinal(d3_chromatic.schemeGreens);
+                      break;
+                    case 'gray':
+                      color = d3.scaleOrdinal(d3_chromatic.schemeGrays);
+                      break;
+                    case 'orange':
+                      color = d3.scaleOrdinal(d3_chromatic.schemeOranges);
+                      break;
+                    default:
+                      // purple
+                      color = d3.scaleLinear(d3_chromatic.schemeOranges);
+                      console.log('default', color);
+                      break;
+                  }
+                  console.log(d.name, color)
+                  this.nn.addSequentialAttrib(d.name, color);
+                  break;
+              }
+
+          }
+      }
+    }
+    this.nn.data(this.props.data);
+  }
+  setupNavio2 = () => {
+    this.nn = new Navio(this.target, 600).updateCallback(this.props.updateFilteredData);
+    for (var i = 0; i < this.props.attributes.length; i++) {
+        let d = this.props.attributes[i];
             if (d.checked) {
         if (d.type === cat) {
-          this.nn.addCategoricalAttrib(d.name);
+          this.nn.addCategoricalAttrib(d.name, 
+            d3.scaleOrdinal(d3.schemeCategory10));
         } else if (d.type === seq) {
           if (d.data === 'date') {
             this.nn.addSequentialAttrib(d.name,
-              d3.scaleLinear()
+              d3.scaleTime(d3_chromatic.schemeBlues))
                 // .domain(d.min, d.max)
-                .range([d3_chromatic.interpolatePurples(0), d3_chromatic.interpolatePurples(1)]))
+                // .range([d3_chromatic.interpolatePurples(0), d3_chromatic.interpolatePurples(1)]))
           }
           else {
+            console.log(d3)
+            console.log(d3_chromatic)
             this.nn.addSequentialAttrib(d.name) 
               // d3.scaleLinear()
               //   // .base(Math.E)

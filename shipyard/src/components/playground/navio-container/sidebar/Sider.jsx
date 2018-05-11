@@ -1,10 +1,10 @@
 import React from 'react';
 import { arrayMove } from 'react-sortable-hoc';
 import { ChromePicker } from 'react-color';
-import './card.css';
 import { connect } from 'react-redux';
 import SortableList from './SortableList';
 import { changeCheckStatus, updateAttribute, changeTypeStatus, toggleSettingsVisible, setAttributes, setAttributeColor, swapComponentClasses } from './../../../../actions';
+import './card.css';
 
 const content = setColor => (
   <div>
@@ -13,9 +13,9 @@ const content = setColor => (
 );
 
 const SortableComponent = ({ attributes, toggleVisible, reorderAttributes, setColor }) => {
-  const onSortEnd = ({oldIndex, newIndex}) => {
+  const onSortEnd = ({ oldIndex, newIndex }) => {
     if (oldIndex === newIndex) { return; };
-    let copy = attributes.splice(0);
+    let copy = [...attributes];
     let newArr = arrayMove(copy, oldIndex, newIndex);
     reorderAttributes(newArr, oldIndex, newIndex);
   }

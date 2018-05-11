@@ -1,30 +1,50 @@
 import React from 'react';
 import { connect } from 'react-redux';
 import { SortableElement } from 'react-sortable-hoc';
-import { Button, Input } from 'antd';
+import { Button, Input, Divider, Icon } from 'antd';
 import { ChromePicker } from 'react-color';
 import Attribute from './Attribute';
-import { toggleColorVisible, setAttributeColor } from './../../../../actions';
+import ColorPicker from './ColorPicker';
+import { toggleColorVisible, setAttributeColor, setAlias } from './../../../../actions';
 import './sortableItem.css';
 
+const ButtonGroup = Button.Group;
+const onChangeInput = (event, f, attribute) => {
+  console.log('onChangeInput')
+  console.log(event, f, attribute);
+}
 const SortableItem = SortableElement(({attribute, number, componentClasses, setColor, toggleColorVisible}) => {
   return (
     <div className="sortableItem" style={{ padding: '0.25em', backgroundColor: 'white', marginBottom: '0em', cursor: 'move', borderRadius: '2px'}}>
       <Attribute attribute={attribute} index={number} />
       <div className={componentClasses.join(' ')}>
-        <div>
-          <span style={{ paddingTop: '0em' }}>
-            color
-          </span>
-          <Button shape="circle" style={{ backgroundColor: attribute.hex || '#fff', border: '1px solid grey', margin: '0em' }} />
-          <Button onClick={() => toggleColorVisible(number)} shape="circle" style={{ backgroundColor: attribute.hex || '#fff', border: '1px solid grey', margin: '2em' }} />
-          { false ?  <ChromePicker onChangeComplete={(color, event) => setColor(color, event, 0)} /> : ''}
-        </div>
-        <div>
-          <span style={{ paddingTop: '1em' }}>
-            alias
-          </span>
-          <Input placeholder="alias" />
+        <div className="settings">
+          <hr />
+          <div className="color">
+            <div>
+              <div>
+                color
+              </div>
+            </div>
+            <div>
+              <ColorPicker type={attribute.type} />
+            </div>
+          </div>
+          <hr />
+          <div className="alias">
+            <div>
+              alias
+            </div>
+            <div>
+               <Input
+                size="small"
+                addonAfter={[<Icon key={attribute.name} style={{ color: 'blue' }} type="check" />, <Divider key={attribute.name +'1'} type="vertical" />, <Icon key={attribute.name+'2'} style={{ color: 'red' }} type="delete"/>]}
+                defaultValue={attribute.alias}
+                onChange={onChangeInput}
+                onPressEnter={onChangeInput}
+              />
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -37,9 +57,14 @@ const mapStateToProps = (state, props) => ({
   number: props.number,
 });
 
+// const mapDispatchToProps = (dispatch, param) => {
+//   console.log('dispatch', dispatch, 'param', param);
+// };
+
 const mapDispatchToProps = dispatch => ({
   setColor: (color, event, index) => dispatch(setAttributeColor(color, event, index)),
   toggleColorVisible: (index) => dispatch(toggleColorVisible(index)),
+  setAlias: (event, attribute) => dispatch(setAlias(event, attribute)),
 });
 
 export default connect(mapStateToProps, mapDispatchToProps)(SortableItem);

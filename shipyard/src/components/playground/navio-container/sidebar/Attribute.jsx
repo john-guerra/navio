@@ -5,14 +5,22 @@ import { toggleSettingsVisible, changeTypeStatus, changeCheckStatus, updateAttri
 
 const { Option, OptGroup } = Select;
 class Attribute extends Component {
-
+  componentDidMount(){
+    console.log('ATTRIBUTE', 'componentDidMount', this.props);
+  }
+  componentDidUpdate(){
+    console.log('ATTRIBUTE', 'componentDidUpdate', this.props)
+  }
   state = {
     checked: this.props.checked,
     settings: this.props.settings,
   }
   render () {
+    console.log('RENDER',this.props)
     const { index, attribute, toggleVisible, changeCheckStatus, changeTypeStatus, addComponentClass, deleteLastComponentClass } = this.props;
+    
     const ico = attribute.settings ? 'up' : 'setting';
+    console.log(attribute, ico)
     return (
       <Row type="flex" align="middle" justify="center" className="attribute">
         <Col span={2} offset={1}>
@@ -32,20 +40,21 @@ class Attribute extends Component {
         </Col>
         <Col span={8}  offset={1}>{attribute.name}</Col>
         <Col span={8}>
+          {console.log(attribute.name, attribute.type)}
           <Select
             size="small"
             style={{ width: '100%' }}
             dropdownMatchSelectWidth={false}
-            defaultValue={attribute.type}
+            value={attribute.type}
             onChange={value => changeTypeStatus(attribute, value)}
           >
             <OptGroup label="unordered">
-              <Option key="categorical" value="categorical">categorical</Option>
+              <Option value="categorical">categorical</Option>
             </OptGroup>
             <OptGroup label="ordered">
               <Option value="ordinal">ordinal</Option>
-              <Option key="sequential" value="sequential">quantitative</Option>
-              <Option key="date" value="date">date</Option>
+              <Option value="sequential">sequential</Option>
+              <Option value="date">date</Option>
             </OptGroup>
           </Select>
         </Col>

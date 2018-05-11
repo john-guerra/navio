@@ -16,7 +16,7 @@
 
 .box {
   visibility: visible;
-  height: 60vh;
+  height: 10vh;
   width: 100%;
   opacity: 1.0;
   box-sizing: border-box;
@@ -28,5 +28,4 @@
   opacity: 0.0;
   visibility: hidden;
   height: 0px;
-  /*display: none;*/
 }

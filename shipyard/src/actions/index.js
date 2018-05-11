@@ -22,6 +22,7 @@ export const DELETE_COMPONENT_CLASS = 'DELETE_COMPONENT_CLASS';
 export const ADD_COMPONENT_CLASS = 'ADD_COMPONENT_CLASS';
 export const SET_COMPONENT_CLASSES = 'SET_COMPONENT_CLASSES';
 export const SWAP_COMPONENT_CLASSES = 'SWAP_COMPONENT_CLASSES';
+export const SET_ALIAS = 'SET_ALIAS';
 
 /*
  * complementary functions
@@ -86,6 +87,7 @@ export const setData = data => {
   for (let prop in data[0]) {
     const attribute = {};
     attribute.name = prop;
+    attribute.alias = prop;
     attribute.checked = true;
     attribute.type = '';
     attribute.id = false;
@@ -207,3 +209,9 @@ export const swapComponentClasses = (i, j) => ({
   i,
   j,
 })
+
+export const setAlias = (event, attribute) => ({
+  type: SET_ALIAS,
+  event,
+  attribute,
+});

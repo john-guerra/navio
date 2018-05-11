@@ -9,6 +9,7 @@ import {
   SET_ATTRIBUTES,
   SET_ATTRIBUTE_COLOR,
   TOGGLE_COLOR_VISIBLE,
+  SET_ALIAS,
 } from './../actions/index';
 
 const initialState = {
@@ -94,8 +95,11 @@ const shipyard = (state = initialState, action) => {
       return Object.assign({}, state, {
         attributes: itemsColors,
       });
-      case TOGGLE_COLOR_VISIBLE:
-        return state;
+    case SET_ALIAS:
+      console.log('SET_ALIAS:\n',action)
+      return state;
+    case TOGGLE_COLOR_VISIBLE:
+      return state;
     default:
       return state;
   }
