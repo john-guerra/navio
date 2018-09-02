@@ -48,11 +48,10 @@ const initialState = {
 const shipyard = (state = initialState, action) => {
   switch (action.type) {
     case SET_DATA:
-      console.log('source', action.source, 'data', action.data);
       return Object.assign({}, state, {
         source: action.source,
         data: action.data,
-        attributes: action.atts,
+        attributes: action.attributes,
         exportData: action.source,
       });
     case RESET_DATA:

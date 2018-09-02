@@ -31,10 +31,10 @@ const getAttributesType = (data, atts, ids) => {
   const seq = 'sequential';
   const cat = 'categorical';
   let count = 0;
-  console.log(data,'DATA GET ATRTIBUTES TYPE');
-  for (const prop in data[1]) {
-    const attr =data[1][prop];
-    if (atts[count].name.includes('id') || atts[count].name.includes('key')) {
+  const keys = Object.keys(data[1]);
+  for (let key = 0; key < keys.length; key += 1) {
+    const attr = data[1][keys[key]];
+    if (atts[count].name.includes('id') || atts[count].name.includes('key')) {
       atts[count].id = true;
       ids.push(atts[count].name);
     }
@@ -44,13 +44,13 @@ const getAttributesType = (data, atts, ids) => {
       atts[count].type = seq;
       atts[count].data = 'number';
 
-      let min = data[0][prop];
-      let max = data[0][prop];
-      for (var i = data.length - 1; i >= 0; i--) {
-        if (data[i][prop] > max) {
-          max = data[i][prop];
-        } if ( data[i][prop] < min) {
-          min = data[i][prop];
+      let min = data[0][keys[key]];
+      let max = data[0][keys[key]];
+      for (let i = 0; i < data.length; i += 1) {
+        if (data[i][keys[key]] > max) {
+          max = data[i][keys[key]];
+        } if ( data[i][keys[key]] < min) {
+          min = data[i][keys[key]];
         }
       }
       atts[count].min = min;
@@ -59,13 +59,13 @@ const getAttributesType = (data, atts, ids) => {
       atts[count].type = seq;
       atts[count].data = 'date';
 
-      let min = data[0][prop];
-      let max = data[0][prop];
-      for (var j = data.length - 1; j >= 0; j--) {
-        if (data[j][prop] > max) {
-          max = data[j][prop];
-        } if ( data[j][prop] < min) {
-          min = data[j][prop];
+      let min = data[0][keys[key]];
+      let max = data[0][keys[key]];
+      for (var j =  0; j < data.length; j += 1) {
+        if (data[j][keys[key]] > max) {
+          max = data[j][keys[key]];
+        } if ( data[j][keys[key]] < min) {
+          min = data[j][keys[key]];
         }
       }
 
@@ -73,7 +73,7 @@ const getAttributesType = (data, atts, ids) => {
        atts[count].type = cat;
        atts[count].data = 'string';
     }
-    count++;
+    count += 1;
   }
 };
 
@@ -83,34 +83,33 @@ const getAttributesType = (data, atts, ids) => {
 export const setData = (data) => {
   const source = data.slice(0);
   /* Creates an empty array that will contain the metadata of the attributes */
-  const atts = [];
+  const attributes = [];
   const ids = [];
   const keys = Object.keys(data[0]);
-  for (let i = 0; i < keys.length; i ++) {
+  for (let i = 0; i < keys.length; i++) {
     const attribute = {
       name: keys[i],
       alias: keys[i],
       checked: true,
       type: '',
       id: false,
-      settings: false
+      settings: false,
     };
-    attrs.push(attribute);
-  } 
+    attributes.push(attribute);
   }
-  getAttributesType(data, atts, ids);
+  getAttributesType(data, attributes, ids);
   data.forEach((row) => {
-    atts.forEach((att)=> {
-      if (att.data === "date") {
-        let mydate = new Date(row[att.name]);
+    attributes.forEach((att)=> {
+      if (att.data === 'date') {
+        const mydate = new Date(row[att.name]);
         if (isNaN(mydate.getDate())) {
           // row[att.name] = null;
         } else {
           row[att.name] = mydate;
         }
       }
-      else if (att.data=== "number") {
-        let mynumber = +row[att.name];
+      else if (att.data === 'number') {
+        const mynumber = +row[att.name];
         if (isNaN(mynumber)) {
           // row[att.name] = null;
         } else {
@@ -119,11 +118,12 @@ export const setData = (data) => {
       }
     });
   });
+  console.log(attributes,'attributes before returning')
   return {
     type: SET_DATA,
     source,
     data,
-    atts,
+    attributes,
   };
 };
 export const setComponentClasses = attributes => ({
@@ -137,9 +137,8 @@ export const setColor = (color, attributeName) => ({
   attributeName,
 })
 
-const setUI = atts => {
+const setUI = (atts) => {
   return function (dispatch) {
-    console.log(atts, 'atts setui')
     dispatch(setComponentClasses(atts))
   }
 }
