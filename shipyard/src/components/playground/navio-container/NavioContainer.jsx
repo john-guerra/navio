@@ -29,6 +29,63 @@ class NavioContainer extends Component {
         myNode.removeChild(myNode.firstChild);
     }
   }
+  getScaleOrdinalScheme = (scheme) => {
+    switch(scheme) {
+      case 'scheme10':
+        return d3.scaleOrdinal(d3_chromatic.schemeCategory10);
+      case 'scheme20':
+        return d3.scaleOrdinal(d3_chromatic.schemeCategory20);
+      case 'scheme20b':
+        return d3.scaleOrdinal(d3_chromatic.schemeCategory20b);
+      case 'scheme20c':
+        return d3.scaleOrdinal(d3_chromatic.schemeCategory20c);
+      default:
+        //scheme 10 default
+        return d3.scaleOrdinal(d3_chromatic.schemeCategory10);
+    }
+  }
+  getScaleOrdinalColor = (color) => {
+    switch (color) {
+      case 'blue':
+        return d3.scaleOrdinal(d3_chromatic.schemeBlues);
+      case 'purple':
+        return d3.scaleOrdinal(d3_chromatic.schemePurples);
+      case 'red':
+        return d3.scaleOrdinal(d3_chromatic.schemeReds);
+      case 'green':
+        return d3.scaleOrdinal(d3_chromatic.schemeGreens);
+      case 'gray':
+        return d3.scaleOrdinal(d3_chromatic.schemeGreys);
+      case 'orange':
+        return d3.scaleOrdinal(d3_chromatic.schemeOranges);
+      default:
+        // purple
+        console.log('default', color);
+        return d3.scaleLinear(d3_chromatic.schemeOranges);
+        
+    }
+  }
+  getScaleTimeColor = (color) => {
+    switch (color) {
+      case 'blue':
+        return d3.scaleTime(d3_chromatic.schemeBlues);
+      case 'purple':
+        return d3.scaleTime(d3_chromatic.schemePurples);
+      case 'red':
+        return d3.scaleTime(d3_chromatic.schemeReds);
+      case 'green':
+        return d3.scaleTime(d3_chromatic.schemeGreens);
+      case 'gray':
+        return d3.scaleTime(d3_chromatic.schemeGreys);
+      case 'orange':
+        return d3.scaleTime(d3_chromatic.schemeOranges);
+      default:
+        // purple
+        console.log('default!!!!!!!!!!!!!!!!!')
+        // color = null;
+        return d3.scaleTime(d3_chromatic.schemeGreys);
+    }
+  }
   setupNavio = () => {
     this.nn = new Navio(this.target, 600).updateCallback(this.props.updateFilteredData);
     for (var i = 0; i < this.props.attributes.length; i++) {
@@ -38,85 +95,32 @@ class NavioContainer extends Component {
           let color;
           switch (d.type) {
             case cat:
-              switch (d.color) {
-                case 'scheme10':
-                  color = d3.scaleOrdinal(d3_chromatic.schemeCategory10);
-                  break;
-                case 'scheme20':
-                  color = d3.scaleOrdinal(d3_chromatic.schemeCategory20);
-                  break;
-                case 'scheme20b':
-                  color = d3.scaleOrdinal(d3_chromatic.schemeCategory20b);
-                  break;
-                case 'scheme20c':
-                  color = d3.scaleOrdinal(d3_chromatic.schemeCategory20c);
-                  break;
-                default:
-                  //scheme 10 default
-                  color = d3.scaleOrdinal(d3_chromatic.schemeCategory10);
-                  break;
-              }
+              color = this.getScaleOrdinalScheme(d.color);
               console.log(d.name, color)
-              this.nn.addCategoricalAttrib(d.name, color);
+              this.nn.addCategoricalAttrib(d.name);
               break;
             default:
-              if (d.data == 'date') {
-                 switch (d.color) {
-                  case 'blue':
-                    color = d3.scaleTime(d3_chromatic.schemeBlues);
-                    break;
-                  case 'purple':
-                    color = d3.scaleTime(d3_chromatic.schemePurples);
-                    break;
-                  case 'red':
-                    color = d3.scaleTime(d3_chromatic.schemeReds);
-                    break;
-                  case 'green':
-                    color = d3.scaleTime(d3_chromatic.schemeGreens);
-                    break;
-                  case 'gray':
-                    color = d3.scaleTime(d3_chromatic.schemeGrays);
-                    break;
-                  case 'orange':
-                    color = d3.scaleTime(d3_chromatic.schemeOranges);
-                    break;
-                  default:
-                    // purple
-                    color = d3.scaleLinear(d3_chromatic.schemePurples);
-                    break;
-                }
+              if (d.data === 'date') {
+                console.log('is date',d.color);
+                color = this.getScaleTimeColor(d.color);
+
                 console.log(d.name, color)
-                this.nn.addSequentialAttrib(d.name, color);
+                // this.nn.addSequentialAttrib(d.name);
+                this.nn.addSequentialAttrib(d.name,
+                        d3.scalePow()
+                          // .exponent(0)
+                          .range([d3_chromatic.interpolatePurples(0), d3_chromatic.interpolatePurples(1)]))
                 break;
               }
               else {
-                  switch (d.color) {
-                    case 'blue':
-                      color = d3.scaleOrdinal(d3_chromatic.schemeBlues);
-                      break;
-                    case 'purple':
-                      color = d3.scaleOrdinal(d3_chromatic.schemePurples);
-                      break;
-                    case 'red':
-                      color = d3.scaleOrdinal(d3_chromatic.schemeReds);
-                      break;
-                    case 'green':
-                      color = d3.scaleOrdinal(d3_chromatic.schemeGreens);
-                      break;
-                    case 'gray':
-                      color = d3.scaleOrdinal(d3_chromatic.schemeGrays);
-                      break;
-                    case 'orange':
-                      color = d3.scaleOrdinal(d3_chromatic.schemeOranges);
-                      break;
-                    default:
-                      // purple
-                      color = d3.scaleLinear(d3_chromatic.schemeOranges);
-                      console.log('default', color);
-                      break;
-                  }
+                  color = this.getScaleOrdinalColor(d.color);
                   console.log(d.name, color)
-                  this.nn.addSequentialAttrib(d.name, color);
+                  this.nn.addSequentialAttrib(d.name);
+                   // this.nn.addSequentialAttrib(d.name,
+                   //      d3.scalePow()
+                   //        .exponent(0.25)
+                   //        .range([d3_chromatic.interpolatePurples(0), d3_chromatic.interpolatePurples(1)]))
+                
                   break;
               }
 

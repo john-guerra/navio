@@ -9,7 +9,7 @@ const Playground = ({ dataLoaded, showSidebar }) => {
   return (
     <div style={{ minHeight: '80vh', padding: '1em' }}>
       <div>
-        { dataLoaded ? <div> <NavioContainer /> <Sample /> </div> : <Loader /> }
+        { dataLoaded ? <div> <NavioContainer />  </div> : <Loader /> }
       </div>
     </div>
   );

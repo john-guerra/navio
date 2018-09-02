@@ -71,7 +71,7 @@ hr {
 	grid-template-columns: repeat(6, 1fr);
 
 }
-.sequential-picker > div {
+.sequential-picker > * {
 	width: 20px;
 	height: 20px;
 	border-radius: 50%;

@@ -1,8 +1,9 @@
 import React, { Component } from 'react';
-import { Select } from 'antd';
+import { Select, Button } from 'antd';
 import { connect } from 'react-redux';
 import * as d3 from 'd3';
 import './sortableItem.css';
+import { setColor, updateAttribute } from './../../../../actions';
 
 const Option = Select.Option;
 
@@ -11,14 +12,17 @@ class ColorPicker extends Component {
     console.log('COLOR componentDidUpdate')
   }
   componentWillUpdate(){
+
     console.log('COLOR componentWillUpdate')
   }
   render(){
+    let { setColor, name } = this.props;
     if (this.props.type == 'categorical') {
       return Categorical();
     }
     else {
-      return SequentialPicker();
+      console.log('this.props',this.props)
+      return SequentialPicker(setColor, name);
     }
   }
 }
@@ -131,21 +135,30 @@ class CategoricalPicker extends Component {
   }
 
 }
+
+const colors = ["blue", "green", "gray", "orange","purple", "red"];
   
 
-const SequentialPicker = () => (
-  <div className="sequential-picker">
-    <div style={{ backgroundColor: 'blue' }}></div>
-    <div style={{ backgroundColor: 'green' }}></div>
-    <div style={{ backgroundColor: 'gray' }}></div>
-    <div style={{ backgroundColor: 'orange' }}></div>
-    <div style={{ backgroundColor: 'purple' }}></div>
-    <div style={{ backgroundColor: 'red' }}></div>
-  </div>
-)
+const SequentialPicker = (setColor, name) => {
+  console.log(setColor)
+  return (
+    <div className="sequential-picker">
+      { colors.map(d=> (
+        <Button key={d} onClick={(click) => setColor(d, name)} shape="circle" style={{ backgroundColor: d }}></Button> 
+        ))
+      }
+    </div>
+    
+  );
+}
 
 const mapStateToProps = (state, ownProps) => ({
   type: ownProps.type,
+  name: ownProps.name,
+});
+
+const mapDispatchToProps = dispatch => ({
+  setColor: (d, click) => {dispatch(setColor(d, click)); dispatch(updateAttribute());},
 })
 
-export default connect(mapStateToProps)(ColorPicker);
+export default connect(mapStateToProps, mapDispatchToProps)(ColorPicker);

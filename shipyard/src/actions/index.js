@@ -31,6 +31,7 @@ const getAttributesType = (data, atts, ids) => {
   const seq = 'sequential';
   const cat = 'categorical';
   let count = 0;
+  console.log(data,'DATA GET ATRTIBUTES TYPE');
   for (const prop in data[1]) {
     const attr =data[1][prop];
     if (atts[count].name.includes('id') || atts[count].name.includes('key')) {
@@ -79,28 +80,31 @@ const getAttributesType = (data, atts, ids) => {
 /*
  * action creators
  */
-export const setData = data => {
+export const setData = (data) => {
   const source = data.slice(0);
   /* Creates an empty array that will contain the metadata of the attributes */
   const atts = [];
   const ids = [];
-  for (let prop in data[0]) {
-    const attribute = {};
-    attribute.name = prop;
-    attribute.alias = prop;
-    attribute.checked = true;
-    attribute.type = '';
-    attribute.id = false;
-    attribute.settings = false;
-    atts.push(attribute);
+  const keys = Object.keys(data[0]);
+  for (let i = 0; i < keys.length; i ++) {
+    const attribute = {
+      name: keys[i],
+      alias: keys[i],
+      checked: true,
+      type: '',
+      id: false,
+      settings: false
+    };
+    attrs.push(attribute);
+  } 
   }
   getAttributesType(data, atts, ids);
-  data.forEach(row => {
-    atts.forEach(att=> {
+  data.forEach((row) => {
+    atts.forEach((att)=> {
       if (att.data === "date") {
         let mydate = new Date(row[att.name]);
         if (isNaN(mydate.getDate())) {
-          row[att.name] = null;
+          // row[att.name] = null;
         } else {
           row[att.name] = mydate;
         }
@@ -108,7 +112,7 @@ export const setData = data => {
       else if (att.data=== "number") {
         let mynumber = +row[att.name];
         if (isNaN(mynumber)) {
-          row[att.name] = null;
+          // row[att.name] = null;
         } else {
           row[att.name] = mynumber;
         }
@@ -126,6 +130,13 @@ export const setComponentClasses = attributes => ({
   type: SET_COMPONENT_CLASSES,
   attributes,
 });
+
+export const setColor = (color, attributeName) => ({
+  type: SET_ATTRIBUTE_COLOR,
+  color,
+  attributeName,
+})
+
 const setUI = atts => {
   return function (dispatch) {
     console.log(atts, 'atts setui')
@@ -160,7 +171,7 @@ export const changeCheckStatus = (attribute, status) => ({
   status,
 });
 
-export const changeTypeStatus = (attribute, status, callback) => ({
+export const changeTypeStatus = (attribute, status) => ({
   type: CHANGE_TYPE_STATUS,
   attribute,
   status,

@@ -27,7 +27,7 @@ const SortableItem = SortableElement(({attribute, number, componentClasses, setC
               </div>
             </div>
             <div>
-              <ColorPicker type={attribute.type} />
+              <ColorPicker type={attribute.type} name={attribute.name} />
             </div>
           </div>
           <hr />

@@ -48,6 +48,7 @@ const initialState = {
 const shipyard = (state = initialState, action) => {
   switch (action.type) {
     case SET_DATA:
+      console.log('source', action.source, 'data', action.data);
       return Object.assign({}, state, {
         source: action.source,
         data: action.data,
@@ -67,8 +68,39 @@ const shipyard = (state = initialState, action) => {
       let attrs2 = state.attributes;
       const pos2 = attrs2.map(e => e.name).indexOf(action.attribute.name);
       attrs2[pos2].type = action.status;
+
+      //reemplazar la columna del valor cambiado
+      let original = [...state.source];
+      let sourceData = state.source.slice();
+      console.log('source',sourceData);
+      console.log('action.status',action.status);
+      //verificar que no se modifique source!!!
+      switch(action.status) {
+        case 'date':
+          sourceData.forEach(datum=> {
+            datum[action.attribute.name] = new Date(datum[action.attribute.name]);
+          });
+          break;
+        case 'sequential':
+          sourceData.forEach(datum=> {
+            datum[action.attribute.name] = +datum[action.attribute.name];
+          });
+          break;
+        default:
+          console.log('default case')
+          sourceData.forEach(datum=> {
+            datum[action.attribute.name] = datum[action.attribute.name];
+          });
+          break;
+      }
+      let actualData = state.data.slice();
+      actualData.forEach((d,i)=> {
+        d[action.attribute.name] = sourceData[i][action.attribute.name];
+      })
       return Object.assign({}, state, {
         attributes: attrs2,
+        //checkar si funciona cambiar data -> state.source
+        data: actualData,
       })
     case UPDATE_ATTRIBUTE:
       return Object.assign({}, state, {
@@ -90,10 +122,14 @@ const shipyard = (state = initialState, action) => {
         attributes: action.attributes,
       });
     case SET_ATTRIBUTE_COLOR:
-      let itemsColors = state.attributes.slice(0);
-      itemsColors[action.index]["color"] = action.color;
+      let attributesColor = [...state.attributes];
+      let att = attributesColor.forEach(d=> {
+        if(d.name == action.attributeName) {
+          d["color"] = action.color;
+        }
+      });
       return Object.assign({}, state, {
-        attributes: itemsColors,
+        attributes: attributesColor,
       });
     case SET_ALIAS:
       console.log('SET_ALIAS:\n',action)
