@@ -24,57 +24,70 @@ export const SET_COMPONENT_CLASSES = 'SET_COMPONENT_CLASSES';
 export const SWAP_COMPONENT_CLASSES = 'SWAP_COMPONENT_CLASSES';
 export const SET_ALIAS = 'SET_ALIAS';
 
+/**
+ * Method that return true if a string is a date
+ * @param {*} attr
+ */
+const checkDate = (attr) => {
+  const mydate = new Date(attr);
+  if (Number.isNaN(mydate.getDate())) {
+    return false;
+  }
+  return true;
+};
+
 /*
  * complementary functions
  */
-const getAttributesType = (data, atts, ids) => {
+const getAttributesType = (keys, atts, data) => {
+  let attributes = JSON.parse(JSON.stringify(atts));
+  let ids = [];
+  // regular expression used to match strings starting with id or key
+  const reg = /^id|key/gmi;
   const seq = 'sequential';
   const cat = 'categorical';
-  let count = 0;
-  const keys = Object.keys(data[1]);
   for (let key = 0; key < keys.length; key += 1) {
     const attr = data[1][keys[key]];
-    if (atts[count].name.includes('id') || atts[count].name.includes('key')) {
-      atts[count].id = true;
-      ids.push(atts[count].name);
+    if (reg.test(attributes[key].name)) {
+      attributes[key].id = true;
+      ids.push(atts[key].name);
     }
-    const notNumber = isNaN(attr);
+    const notNumber = Number.isNaN(attr);
     const isDate = checkDate(attr);
     if (!notNumber) {
-      atts[count].type = seq;
-      atts[count].data = 'number';
+      attributes[key].type = seq;
+      attributes[key].data = 'number';
 
       let min = data[0][keys[key]];
       let max = data[0][keys[key]];
       for (let i = 0; i < data.length; i += 1) {
         if (data[i][keys[key]] > max) {
           max = data[i][keys[key]];
-        } if ( data[i][keys[key]] < min) {
+        } if (data[i][keys[key]] < min) {
           min = data[i][keys[key]];
         }
       }
-      atts[count].min = min;
-      atts[count].max = max;
+      attributes[key].min = min;
+      attributes[key].max = max;
     } else if (isDate) {
-      atts[count].type = seq;
-      atts[count].data = 'date';
+      attributes[key].type = seq;
+      attributes[key].data = 'date';
 
       let min = data[0][keys[key]];
       let max = data[0][keys[key]];
-      for (var j =  0; j < data.length; j += 1) {
+      for (let j = 0; j < data.length; j += 1) {
         if (data[j][keys[key]] > max) {
           max = data[j][keys[key]];
-        } if ( data[j][keys[key]] < min) {
+        } if (data[j][keys[key]] < min) {
           min = data[j][keys[key]];
         }
       }
-
     } else {
-       atts[count].type = cat;
-       atts[count].data = 'string';
+      attributes[key].type = cat;
+      attributes[key].data = 'string';
     }
-    count += 1;
   }
+  return [attributes, ids];
 };
 
 /*
@@ -83,10 +96,10 @@ const getAttributesType = (data, atts, ids) => {
 export const setData = (data) => {
   const source = data.slice(0);
   /* Creates an empty array that will contain the metadata of the attributes */
-  const attributes = [];
-  const ids = [];
+  let attributes = [];
+  let ids = [];
   const keys = Object.keys(data[0]);
-  for (let i = 0; i < keys.length; i++) {
+  for (let i = 0; i < keys.length; i += 1) {
     const attribute = {
       name: keys[i],
       alias: keys[i],
@@ -97,32 +110,32 @@ export const setData = (data) => {
     };
     attributes.push(attribute);
   }
-  getAttributesType(data, attributes, ids);
-  data.forEach((row) => {
+  [attributes, ids] = getAttributesType(keys, attributes, data);
+  const parsedData = data.map((d) => {
+    let row = JSON.parse(JSON.stringify(d));
     attributes.forEach((att)=> {
       if (att.data === 'date') {
         const mydate = new Date(row[att.name]);
-        if (isNaN(mydate.getDate())) {
+        if (Number.isNaN(mydate.getDate())) {
           // row[att.name] = null;
         } else {
           row[att.name] = mydate;
         }
-      }
-      else if (att.data === 'number') {
+      } else if (att.data === 'number') {
         const mynumber = +row[att.name];
-        if (isNaN(mynumber)) {
+        if (Number.isNaN(mynumber)) {
           // row[att.name] = null;
         } else {
           row[att.name] = mynumber;
         }
       }
     });
+    return row;
   });
-  console.log(attributes,'attributes before returning')
   return {
     type: SET_DATA,
     source,
-    data,
+    data: parsedData,
     attributes,
   };
 };
@@ -135,20 +148,7 @@ export const setColor = (color, attributeName) => ({
   type: SET_ATTRIBUTE_COLOR,
   color,
   attributeName,
-})
-
-const setUI = (atts) => {
-  return function (dispatch) {
-    dispatch(setComponentClasses(atts))
-  }
-}
-const checkDate = (attr) => {
-  const mydate = new Date(attr);
-  if (isNaN(mydate.getDate())) {
-    return false;
-  }
-  return true;
-}
+});
 
 export const showModal = () => ({ type: SHOW_MODAL });
 

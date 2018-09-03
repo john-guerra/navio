@@ -4,7 +4,7 @@ import ModalDefault from './ModalDefault';
 import { connect } from 'react-redux';
 import { toggleLoading, setData, toggleDataLoaded, setComponentClasses } from './../../../actions';
 import * as vega from 'vega';
-import * as d3 from 'd3';
+// import * as d3 from 'd3';
 
 const Dragger = Upload.Dragger;
 const Loader = ({ attributes, toggleLoading, setData, toggleDataLoaded, setComponentClasses }) => {
@@ -13,12 +13,11 @@ const Loader = ({ attributes, toggleLoading, setData, toggleDataLoaded, setCompo
     handleFile(e);
   };
   const handleFile = (file) => {
-    const reader = new FileReader();
-    if(file == null){
-      alert('No file selected.');
+    const reader = new window.FileReader();
+    if (file == null) {
       return;
     }
-    reader.onload = (lEvent: any) => {
+    reader.onload = (lEvent) => {
       const format = file.name.split('.').pop();
       let values;
       try {
@@ -28,14 +27,10 @@ const Loader = ({ attributes, toggleLoading, setData, toggleDataLoaded, setCompo
         values = vega.read(lEvent.target.result, {type: format});
         // let csvFormat = d3.dsvFormat(",");
         // values = csvFormat.parse(lEvent.target.result);
-        console.log('values', values)
         setData(values);
-        console.log('before setComponentClasses')
         setComponentClasses(Object.keys(values[0]));
-        console.log('after setComponentClasses')
         toggleLoading();
         toggleDataLoaded();
-
       } catch (err) {
         // let ssv = d3.dsvFormat(";");
         // values = ssv.parse(lEvent.target.result);

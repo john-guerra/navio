@@ -1,6 +1,12 @@
 {
   "extends": "airbnb",
   "rules": {
-    "func-names": ["error", "never"]
+    "func-names": ["error", "never"],
+    "valid": [
+      {
+        "code": "window.alert()",
+        "globals": [ "window" ]
+      }
+    ]
   }
 }
