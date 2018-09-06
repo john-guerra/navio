@@ -49,12 +49,12 @@ class Attribute extends Component {
             onChange={value => changeTypeStatus(attribute, value)}
           >
             <OptGroup label="unordered">
-              <Option value="categorical">categorical</Option>
+              <Option value="CATEGORICAL">CATEGORICAL</Option>
             </OptGroup>
             <OptGroup label="ordered">
-              <Option value="ordinal">ordinal</Option>
-              <Option value="sequential">sequential</Option>
-              <Option value="date">date</Option>
+              <Option value="ORDINAL">ORDINAL</Option>
+              <Option value="SEQUENTIAL">SEQUENTIAL</Option>
+              <Option value="DATE">DATE</Option>
             </OptGroup>
           </Select>
         </Col>
