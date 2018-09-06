@@ -25,7 +25,7 @@ const Loader = ({ attributes, toggleLoading, setData, toggleDataLoaded, setCompo
           throw Error();
         }
         values = vega.read(lEvent.target.result, {type: format});
-        // let csvFormat = d3.dsvFormat(",");
+        // let csvFormat = d3.dsvFormat(","); should be csvFormat??
         // values = csvFormat.parse(lEvent.target.result);
         setData(values);
         setComponentClasses(Object.keys(values[0]));

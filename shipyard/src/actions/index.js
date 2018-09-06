@@ -30,7 +30,7 @@ export const SET_ALIAS = 'SET_ALIAS';
  */
 const checkDate = (attr) => {
   const mydate = new Date(attr);
-  if (Number.isNaN(mydate.getDate())) {
+  if (isNaN(mydate.getDate())) {
     return false;
   }
   return true;
@@ -41,18 +41,23 @@ const checkDate = (attr) => {
  */
 const getAttributesType = (keys, atts, data) => {
   let attributes = JSON.parse(JSON.stringify(atts));
+  console.log('COPY ATTRIBUTES', attributes);
   let ids = [];
-  // regular expression used to match strings starting with id or key
-  const reg = /^id|key/gmi;
-  const seq = 'sequential';
-  const cat = 'categorical';
+  // regular expression used to match strings starting and finishing with id or key or in a word within non-word characters
+  const reg = /^(id|key)|(id|key)$|\W+\_*(key|id)+\_*\W+|\W+\_*(key|id)+\_*\W*/gmi;
+  // categorical, ordinal, sequential, date
+  const seq = 'SEQUENTIAL';
+  const cat = 'CATEGORICAL';
+  const ord = 'ORDINAL';
+  const dat = 'DATE';
+
   for (let key = 0; key < keys.length; key += 1) {
     const attr = data[1][keys[key]];
     if (reg.test(attributes[key].name)) {
       attributes[key].id = true;
       ids.push(atts[key].name);
     }
-    const notNumber = Number.isNaN(attr);
+    const notNumber = isNaN(attr);
     const isDate = checkDate(attr);
     if (!notNumber) {
       attributes[key].type = seq;
@@ -116,14 +121,14 @@ export const setData = (data) => {
     attributes.forEach((att)=> {
       if (att.data === 'date') {
         const mydate = new Date(row[att.name]);
-        if (Number.isNaN(mydate.getDate())) {
+        if (isNaN(mydate.getDate())) {
           // row[att.name] = null;
         } else {
           row[att.name] = mydate;
         }
       } else if (att.data === 'number') {
         const mynumber = +row[att.name];
-        if (Number.isNaN(mynumber)) {
+        if (isNaN(mynumber)) {
           // row[att.name] = null;
         } else {
           row[att.name] = mynumber;
@@ -137,6 +142,7 @@ export const setData = (data) => {
     source,
     data: parsedData,
     attributes,
+    ids,
   };
 };
 export const setComponentClasses = attributes => ({
