@@ -61,35 +61,35 @@ const getAttributesType = (keys, atts, data) => {
     const isDate = checkDate(attr);
     if (!notNumber) {
       attributes[key].type = seq;
-      attributes[key].data = 'number';
+      attributes[key].data = 'NUMBER';
 
-      let min = data[0][keys[key]];
-      let max = data[0][keys[key]];
-      for (let i = 0; i < data.length; i += 1) {
-        if (data[i][keys[key]] > max) {
-          max = data[i][keys[key]];
-        } if (data[i][keys[key]] < min) {
-          min = data[i][keys[key]];
-        }
-      }
-      attributes[key].min = min;
-      attributes[key].max = max;
+      // let min = data[0][keys[key]];
+      // let max = data[0][keys[key]];
+      // for (let i = 0; i < data.length; i += 1) {
+      //   if (data[i][keys[key]] > max) {
+      //     max = data[i][keys[key]];
+      //   } if (data[i][keys[key]] < min) {
+      //     min = data[i][keys[key]];
+      //   }
+      // }
+      // attributes[key].min = min;
+      // attributes[key].max = max;
     } else if (isDate) {
-      attributes[key].type = seq;
-      attributes[key].data = 'date';
+      attributes[key].type = dat;
+      attributes[key].data = 'DATE';
 
-      let min = data[0][keys[key]];
-      let max = data[0][keys[key]];
-      for (let j = 0; j < data.length; j += 1) {
-        if (data[j][keys[key]] > max) {
-          max = data[j][keys[key]];
-        } if (data[j][keys[key]] < min) {
-          min = data[j][keys[key]];
-        }
-      }
+      // let min = data[0][keys[key]];
+      // let max = data[0][keys[key]];
+      // for (let j = 0; j < data.length; j += 1) {
+      //   if (data[j][keys[key]] > max) {
+      //     max = data[j][keys[key]];
+      //   } if (data[j][keys[key]] < min) {
+      //     min = data[j][keys[key]];
+      //   }
+      // }
     } else {
       attributes[key].type = cat;
-      attributes[key].data = 'string';
+      attributes[key].data = 'STRING';
     }
   }
   return [attributes, ids];

@@ -9,8 +9,10 @@ import { updateAttribute, updateFilteredData } from './../../../actions';
 import './sidebar.css';
 
 const d3_chromatic = require("d3-scale-chromatic");
-const cat = 'categorical';
-const seq = 'sequential';
+const cat = 'CATEGORICAL';
+const seq = 'SEQUENTIAL';
+const dat = 'DATE';
+const ord = 'ORDINAL';
 class NavioContainer extends Component {
   componentDidMount() {
     this.setupNavio();
@@ -100,7 +102,7 @@ class NavioContainer extends Component {
               this.nn.addCategoricalAttrib(d.name);
               break;
             default:
-              if (d.data === 'date') {
+              if (d.data === dat) {
                 console.log('is date',d.color);
                 color = this.getScaleTimeColor(d.color);
 
