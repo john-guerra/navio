@@ -5,7 +5,7 @@ const Header = () => (
   <div>
     <div style={{fontSize: '1.5em', textAlign: 'center'}}>
       <Icon style={{ marginRight: '0.5em' }} type="compass" />
-      Navio-Shipyard
+      Shipyard
     </div>
   </div>
 );

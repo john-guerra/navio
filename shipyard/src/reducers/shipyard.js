@@ -57,12 +57,12 @@ const shipyard = (state = initialState, action) => {
     case RESET_DATA:
       return initialState;
     case CHANGE_CHECK_STATUS:
-      let attrs = state.attributes.slice(0);
-      const pos = attrs.map(e => e.name).indexOf(action.attribute.name);
-      attrs[pos].checked = action.status;
-      return Object.assign({}, state, {
-        attributes: attrs,
-      });
+    let attrs = state.attributes.slice(0);
+    const pos = attrs.map(e => e.name).indexOf(action.attribute.name);
+    attrs[pos].checked = action.status;
+    return Object.assign({}, state, {
+      attributes: attrs,
+    });
     case CHANGE_TYPE_STATUS:
       let attrs2 = state.attributes;
       const pos2 = attrs2.map(e => e.name).indexOf(action.attribute.name);

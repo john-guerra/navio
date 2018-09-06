@@ -23,7 +23,7 @@ class NavioContainer extends Component {
       this.setupNavio();
     }
   }
-  deleteWidget = () => {
+  deleteWidget() {
     var myNode = document.getElementById("vis");
     while (myNode.firstChild) {
         myNode.removeChild(myNode.firstChild);

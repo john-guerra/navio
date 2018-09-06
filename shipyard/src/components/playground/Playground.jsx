@@ -7,7 +7,7 @@ import Sample from './sample-data/Sample';
 
 const Playground = ({ dataLoaded, showSidebar }) => {
   return (
-    <div style={{ minHeight: '80vh', padding: '1em' }}>
+    <div style={{ height: '100%' }}>
       <div>
         { dataLoaded ? <div> <NavioContainer />  </div> : <Loader /> }
       </div>
