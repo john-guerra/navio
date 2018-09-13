@@ -1,6 +1,6 @@
 # Navio Shipyard
 
-[Live Demo](https://john-guerra.github.io/Navio/shipyard/build/index.html)
+[Live Demo](https://john-guerra.github.io/Navio/shipyard/build/)
 
 [Repository](https://github.com/john-guerra/Navio/shipyard)
 

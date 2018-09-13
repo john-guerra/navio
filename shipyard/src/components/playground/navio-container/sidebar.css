@@ -1,0 +1,17 @@
+.sidebar {
+  margin-top: 0.5em;
+  height: 65vh;
+  overflow-y: scroll;
+  width: 100%;
+  opacity: 1.0;
+  box-sizing: border-box;
+  transition: width 1000ms 0ms, opacity 500ms 500ms;
+}
+
+.sidebar.hide {
+  /*transition: width 500ms 500ms, opacity 500ms 0ms;*/
+  transition: opacity 1000ms 0ms, width 500ms 500ms;
+  opacity: 0.0;
+  width: 0;
+  height: 0;
+}
