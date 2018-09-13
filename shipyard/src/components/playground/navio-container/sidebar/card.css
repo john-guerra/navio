@@ -1,0 +1,31 @@
+.example-component {
+  width: 100px;
+  height: 100px;
+  background-color: red;
+  -webkit-transition: 0.5s;
+  -moz-transition: 0.5s;
+  -o-transition: 0.5s;
+  transition: 0.5s;
+  opacity: 0;
+  visibility: hidden; 
+}
+.example-component.show {
+  opacity: 1;
+  visibility: visible; 
+}
+
+.box {
+  visibility: visible;
+  height: 12vh;
+  width: 100%;
+  opacity: 1.0;
+  box-sizing: border-box;
+  transition: min-height 500ms 0ms, height 500ms 500ms, opacity 500ms 500ms, visibility 500ms 500ms;
+}
+
+.box.hide {
+  transition: min-height 500ms 500ms, height 500ms 500ms, opacity 500ms 0ms, visibility 500ms 500ms;
+  opacity: 0.0;
+  visibility: hidden;
+  height: 0px;
+}

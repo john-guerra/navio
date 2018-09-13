@@ -1,0 +1,79 @@
+.sortableItem {
+	box-shadow: 0 2px 2px rgba(0,0,0,0.15), 0 2px 2px rgba(0,0,0,0.12);
+	margin-top: 5px;
+	padding: 1em;
+}
+
+.attribute {
+	padding: 0.5em 0.5em 0.5em 0em;
+}
+
+.settings {
+	padding: 0 0.8em;
+
+}
+
+.settings .color {
+	display: grid;
+	grid-template-columns: 1fr 3fr;
+	align-items: center;
+	padding: 0.5em 0;
+	/*border: 1px solid black;*/
+}
+
+/*.settings .color > div:nth-child(2) {
+	display: grid;
+	grid-template-columns: auto auto;
+	justify-content: space-around;
+}*/
+
+.settings .alias {
+	display: grid;
+	grid-template-columns: 1fr 3fr;
+	align-items: center;
+	padding: 0.5em 0;
+	/*border: 1px solid black;*/
+}
+.settings .alias > div:nth-child(1) {
+	/*border: 1px solid black;*/
+}
+.settings .alias > div:nth-child(2) {
+	width: 100%;
+	margin-left: 0%;
+	/*border: 1px solid black;*/
+}
+
+hr {
+	border: 0;
+	margin: 0;
+	padding: 0;
+    height: 0;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.3);    
+}
+
+.scheme10 {
+	display: grid;
+	grid-template-columns: repeat(10, 2fr);
+}
+
+.scheme20 {
+	display: grid;
+	grid-template-columns: repeat(20, 2fr);
+}
+.color-selector {
+	/*border: 1px solid black;*/
+}
+
+.sequential-picker {
+	/*border: 1px solid black;*/
+	display: grid;
+	grid-template-columns: repeat(6, 1fr);
+
+}
+.sequential-picker > * {
+	width: 20px;
+	height: 20px;
+	border-radius: 50%;
+	justify-self: center;
+}
