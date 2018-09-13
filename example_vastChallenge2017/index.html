@@ -6,15 +6,15 @@
   <div id="navio"></div>
 
 
-  <!-- NAVIO Step 0: Load the libraries -->
+  <!-- navio Step 0: Load the libraries -->
   <script src="https://d3js.org/d3.v4.min.js"></script>
-  <script src="../Navio.js"></script>
+  <script src="../dist/navio.js"></script>
 
 <script>
-  // NAVIO  Step 1.  Create a Navio passing the selector to place it and the height
-  var nn = new Navio("#navio", 600);
+  // navio  Step 1.  Create a navio passing the selector to place it and the height
+  var nn = new navio("#navio", 600);
 
-  // NAVIO Step 2. Add the Categorical and Sequential attributes you want to use
+  // navio Step 2. Add the Categorical and Sequential attributes you want to use
   var catColumns = ["car-type", "gate-name", "dayOfTheWeek", "car-id", "year"];
   var seqColumns = ["minutes", "hours", "day", "month", "seconds", "carIdPart1", "carIdPart2", "Timestamp"];
   catColumns.forEach((c) => nn.addCategoricalAttrib(c));
@@ -22,7 +22,7 @@
 
   d3.csv("./Lekagul Sensor Data.csv", type, function (err, data) {
     if (err) throw err;
-    // NAVIO Step 3. Load your data!
+    // navio Step 3. Load your data!
     nn.data(data);
   });
 

@@ -1,22 +1,40 @@
 {
   "name": "navio",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "A visualization widget for summarizing and exploring data",
-  "main": "Navio.js",
-  "directories": {
-    "example": "example"
+  "main": "dist/navio.min.js",
+  "module": "dist/navio.min.js",
+  "browser": "dist/navio.min.js",
+  "unpkg": "dist/navio.min.js",
+  "jsdelivr": "dist/navio.min.js",
+  "dependencies": {
+    "d3": "^4.13.0"
+  },
+  "devDependencies": {
+    "rollup": "^0.65.0",
+    "rollup-plugin-ascii": "0.0.3",
+    "rollup-plugin-commonjs": "^9.1.0",
+    "rollup-plugin-node-resolve": "^3.4.0",
+    "rollup-plugin-terser": "^2.0.2"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "rollup -c",
+    "dev": "rollup -c -w",
+    "test": "node test/test.js",
+    "pretest": "npm run build"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/john-guerra/Navio.git"
   },
   "keywords": [
-    "DataViz"
+    "DataViz",
+    "Data exploration"
   ],
-  "author": "John Alexis Guerra Gómez",
+  "author": {
+    "name": "John Alexis Guerra Gómez",
+    "url": "https://johnguerra.co"
+  },
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/john-guerra/Navio/issues"

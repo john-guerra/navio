@@ -17,27 +17,27 @@
 <svg width="400" height="600"></svg>
 
 <script src="https://d3js.org/d3.v4.js"></script>
-<script src="../Navio.js"></script>
+<script src="../dist/navio.js"></script>
 <script>
 /* global d3, Navio */
 
 var svg = d3.select("svg"),
-    width = +svg.attr("width"),
-    height = +svg.attr("height");
+  width = +svg.attr("width"),
+  height = +svg.attr("height");
 var linksG = svg.append("g")
-      .attr("class", "links");
+  .attr("class", "links");
 
 var nodesG = svg.append("g")
-      .attr("class", "nodes");
+  .attr("class", "nodes");
 
 var color = d3.scaleOrdinal(d3.schemeCategory20);
 
 var simulation = d3.forceSimulation()
-    .force("link", d3.forceLink().id(function(d) { return d.id; }))
-    .force("charge", d3.forceManyBody())
-    .force("center", d3.forceCenter(width / 2, height / 2));
+  .force("link", d3.forceLink().id(function(d) { return d.id; }))
+  .force("charge", d3.forceManyBody())
+  .force("center", d3.forceCenter(width / 2, height / 2));
 
-var nn = new Navio("#nn", height);
+var nn = new navio("#nn", height);
 nn.id("id");
 nn.addCategoricalAttrib("group", color);
 
