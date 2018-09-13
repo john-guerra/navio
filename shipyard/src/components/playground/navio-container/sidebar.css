@@ -1,5 +1,7 @@
 .sidebar {
-  height: 100%;
+  margin-top: 0.5em;
+  height: 65vh;
+  overflow-y: scroll;
   width: 100%;
   opacity: 1.0;
   box-sizing: border-box;

@@ -37,10 +37,9 @@ const Loader = ({ attributes, toggleLoading, setData, toggleDataLoaded, setCompo
         const separator = prompt('Write a delimiter for your dataset (e.g: ;)');
         let ssv = d3.dsvFormat(separator);
         values = ssv.parse(lEvent.target.result);
-        console.log(values);
         delete values.columns;
-        console.log(values)
         setData(values);
+        setComponentClasses(Object.keys(values[0]));
         toggleLoading();
         toggleDataLoaded();
       }
