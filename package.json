@@ -1,0 +1,25 @@
+{
+  "name": "navio",
+  "version": "1.0.0",
+  "description": "A visualization widget for summarizing and exploring data",
+  "main": "Navio.js",
+  "directories": {
+    "example": "example"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/john-guerra/Navio.git"
+  },
+  "keywords": [
+    "DataViz"
+  ],
+  "author": "John Alexis Guerra Gómez",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/john-guerra/Navio/issues"
+  },
+  "homepage": "https://github.com/john-guerra/Navio#readme"
+}

@@ -1,5 +1,5 @@
-/* global d3, Navio, crossfilter */
-// var d3 = require("d3");
+import * as d3 from "d3";
+
 //eleId must be the ID of a context element where everything is going to be drawn
 function Navio(eleId, h) {
   "use strict";
@@ -8,6 +8,7 @@ function Navio(eleId, h) {
     dataIs = [], //Contains only the indices to the data, is an array of arrays, one for each level
     dData = d3.map(), // A hash for the data
     dDimensions = d3.map(),
+    dimensionsOrder = [],
     dSortBy = d3.map(), //contains which attribute to sort by on each column
     dBrushes = d3.map(),
     yScales =[],
@@ -185,8 +186,8 @@ function Navio(eleId, h) {
   function drawItem(item, level) {
     var attrib, i, y ;
 
-    for (i = 0; i < dDimensions.keys().length; i++) {
-      attrib = dDimensions.keys()[i];
+    for (i = 0; i < dimensionsOrder.length; i++) {
+      attrib = dimensionsOrder[i];
       y = Math.round(yScales[level](item[id]) + yScales[level].bandwidth()/2);
       // y = yScales[level](item[id]) + yScales[level].bandwidth()/2;
 
@@ -198,8 +199,9 @@ function Navio(eleId, h) {
       context.strokeStyle = item[attrib] === undefined ||
                 item[attrib] === null ||
                 item[attrib] === "none" ?
-                 "white" :
-                colScales.get(attrib)(item[attrib]);
+                  "white" :
+                  colScales.get(attrib)(item[attrib]);
+
       context.stroke();
 
 
@@ -284,7 +286,7 @@ function Navio(eleId, h) {
         // d3.event.preventDefault();
         // onSelectByValueFromCoords(d3.event.sourceEvent.clientX, d3.event.sourceEvent.clientY);
         return; // Ignore empty selections.
-      } 
+      }
 
       removeAllBrushesBut(i);
       var before = performance.now();
@@ -351,7 +353,7 @@ function Navio(eleId, h) {
 
       onSelectByValueFromCoords(clientX, clientY);
     }
-    
+
 
     function onSelectByValueFromCoords(clientX, clientY) {
       console.log("onSelectByValueFromCoords", clientX, clientY);
@@ -364,7 +366,7 @@ function Navio(eleId, h) {
       var itemAttr = invertOrdinalScale(xScale, clientX - levelScale(i));
 
       if (itemAttr === undefined) return;
-      
+
       var sel = dData.get(itemId);
       before = performance.now();
       var filteredData = dataIs[i].filter(function (i) {
@@ -494,6 +496,11 @@ function Navio(eleId, h) {
     attribOverlayEnter
       .append("text")
       .merge(attribOverlay.select("text"))
+      .style("cursor", "grab")
+      .style("-webkit-user-select", "none")
+      .style("-moz-user-select", "none")
+      .style("-ms-user-select", "none")
+      .style("user-select", "none")
       .text(function (d) {
         return d.attrib === "__seqId" ?
           "sequential Index" :
@@ -504,15 +511,30 @@ function Navio(eleId, h) {
       .style("font-weight", function (d) {
         return dSortBy.has(d.level) &&
           dSortBy.get(d.level) === d.attrib ?
-            "bolder" :
-            "normal";
+          "bolder" :
+          "normal";
       })
       .style("font-family", "sans-serif")
       .style("font-size", nn.attribFontSize+"px")
-      .on("mousemove", function (d) { d3.select(this).transition().duration(150).style("font-size", nn.attribFontSizeSelected+"px"); })
-      .on("mouseout", function (d) { d3.select(this).transition().duration(150).style("font-size", nn.attribFontSize+"px"); })
+      .call(d3.drag()
+          .container(svg)
+          .on("start", attribDragstarted)
+          .on("drag", attribDragged)
+          .on("end", attribDragended))
+      // .on("mousemove", function () {
+      //   var sel = d3.select(d3.event.target);
+      //   sel = sel.transition!==undefined? sel.transition().duration(150) : sel;
+      //   sel
+      //     .style("font-size", nn.attribFontSizeSelected+"px");
+      // })
+      // .on("mouseout", function () {
+      //   var sel = d3.select(d3.event.target);
+      //   sel = sel.transition!==undefined ? sel.transition().duration(150) : sel;
+      //   sel
+      //     .style("font-size", nn.attribFontSize+"px");
+      // })
       .attr("transform", "rotate(-45)")
-      .on("click", nnOnClickLevel);
+      // .on("click", nnOnClickLevel);
 
     attribOverlay.exit().remove();
     levelOverlay.exit().remove();
@@ -535,6 +557,26 @@ function Navio(eleId, h) {
         });
 
     levelOverlay.exit().remove();
+  }
+
+  function attribDragstarted(d) {
+    console.log("start", d);
+    // if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+    // d.fx = d.x;
+    // d.fy = d.y;
+  }
+
+  function attribDragged(d) {
+    console.log(d3.event.x, d3.event.y);
+    // d.fx = d3.event.x;
+    // d.fy = d3.event.y;
+  }
+
+  function attribDragended(d) {
+    console.log("end", d);
+    // if (!d3.event.active) simulation.alphaTarget(0);
+    // d.fx = null;
+    // d.fy = null;
   }
 
   function drawCloseButton() {
@@ -689,21 +731,22 @@ function Navio(eleId, h) {
     );
 
     xScale
-      .domain(dDimensions.keys().sort(function (a,b) {
-        if (a === "visible") {
-          return -1;
-        }
-        else if (b === "visible") {
-          return 1;
-        } else if (a === "__seqId") {
-          return -1;
-        } else if (b === "__seqId") {
-          return 1;
-        } else {
-          return 0;
-        }
+      .domain(dimensionsOrder)
+      // .domain(dDimensions.keys().sort(function (a,b) {
+      //   if (a === "visible") {
+      //     return -1;
+      //   }
+      //   else if (b === "visible") {
+      //     return 1;
+      //   } else if (a === "__seqId") {
+      //     return -1;
+      //   } else if (b === "__seqId") {
+      //     return 1;
+      //   } else {
+      //     return 0;
+      //   }
 
-      }))
+      // }))
       .range([0, nn.attribWidth * (dDimensions.keys().length)])
       .paddingInner(0.1)
       .paddingOuter(0);
@@ -761,6 +804,14 @@ function Navio(eleId, h) {
     updateCallback(nn.getVisible());
   }
 
+  function moveAttrToPos(attr, pos) {
+    var i = dimensionsOrder.indexOf(attr);
+    if ( i === -1)  { console.err("moveAttrToPos attr not found", attr); return; }
+    if ( pos > dimensionsOrder.length || pos < 0) { console.err("moveAttrToPos pos out of bounds", pos, dimensionsOrder.length); return; }
+    dimensionsOrder.splice(i, 1);
+    dimensionsOrder.splice(pos, 0, attr);
+  }
+
 
 
   nn.update = function() {
@@ -794,6 +845,7 @@ function Navio(eleId, h) {
   };
 
   nn.addAttrib = function (attr, scale) {
+    dimensionsOrder.push(attr);
     colScales.set(attr,scale);
     return nn;
   };
@@ -822,11 +874,13 @@ function Navio(eleId, h) {
           .range(visibleColorRange)
           //, "#cddca3", "#8c6d31", "#bd9e39"]
       );
+      moveAttrToPos("visible", 0);
     }
     if (!colScales.has("__seqId")) {
       nn.addSequentialAttrib(
         "__seqId"
       );
+      moveAttrToPos("__seqId", 1);
     }
 
 
@@ -880,4 +934,4 @@ function Navio(eleId, h) {
   return nn;
 }
 
-// export default Navio;
+export default Navio;
