@@ -75,7 +75,8 @@ function Navio(eleId, h) {
       .attr("y", 0)
       .style("pointer-events", "none")
       .style("font-family", "sans-serif")
-      .style("font-size", "16pt");
+      .style("font-size", "16pt")
+      .style("text-anchor", "middle");
 
   svg.select(".tooltip > text")
     .append("tspan")
@@ -85,7 +86,14 @@ function Navio(eleId, h) {
 
   svg.select(".tooltip > text")
     .append("tspan")
-      .attr("class", "tool_value")
+      .attr("class", "tool_value_name")
+      .style("font-weight", "bold")
+      .attr("x", 0)
+      .attr("dy", "1.2em");
+
+  svg.select(".tooltip > text")
+    .append("tspan")
+      .attr("class", "tool_value_val")
       .style("font-weight", "bold")
       .attr("x", 0)
       .attr("dy", "1.2em");
@@ -133,8 +141,9 @@ function Navio(eleId, h) {
   canvas.style.height = h + "px";
 
   context = canvas.getContext("2d");
+  context.scale(2,2);
 
-  context.globalCompositeOperation = 'source-over';
+  // context.globalCompositeOperation = "source-over";
   // context.strokeStyle = "rgba(0,100,160,1)";
   // context.strokeStyle = "rgba(0,0,0,0.02)";
 
@@ -267,8 +276,15 @@ function Navio(eleId, h) {
     _brush.exit().remove();
 
     function brushended() {
+      console.log("brushended", d3.event);
       if (!d3.event.sourceEvent) return; // Only transition after input.
-      if (!d3.event.selection) return; // Ignore empty selections.
+      if (!d3.event.selection){
+        console.log("Empty selection",d3.event.selection,d3.event.type, d3.event.sourceEvent);
+        // return;
+        // d3.event.preventDefault();
+        // onSelectByValueFromCoords(d3.event.sourceEvent.clientX, d3.event.sourceEvent.clientY);
+        return; // Ignore empty selections.
+      } 
 
       removeAllBrushesBut(i);
       var before = performance.now();
@@ -323,22 +339,32 @@ function Navio(eleId, h) {
       console.log("Selected " + filteredData.length + " calling updateCallback");
       updateCallback(nn.getVisible());
 
-      // nn.update(false); //don't update brushes
+      // nn.update(false); //don"t update brushes
 
       // d3.select(this).transition().call(d3.event.target.move, d1.map(x));
     }// brushend
 
     function onSelectByValue() {
       console.log("click");
+      var clientY = d3.mouse(d3.event.target)[1],
+        clientX = d3.mouse(d3.event.target)[0];
+
+      onSelectByValueFromCoords(clientX, clientY);
+    }
+    
+
+    function onSelectByValueFromCoords(clientX, clientY) {
+      console.log("onSelectByValueFromCoords", clientX, clientY);
       removeAllBrushesBut(-1); // Remove all brushes
-      var screenY = d3.mouse(d3.event.target)[1],
-        screenX = d3.mouse(d3.event.target)[0];
       var before = performance.now();
-      var itemId = invertOrdinalScale(yScales[i], screenY);
+      var itemId = invertOrdinalScale(yScales[i], clientY);
       var after = performance.now();
       console.log("invertOrdinalScale " + (after-before) + "ms");
 
-      var itemAttr = invertOrdinalScale(xScale, screenX - levelScale(i));
+      var itemAttr = invertOrdinalScale(xScale, clientX - levelScale(i));
+
+      if (itemAttr === undefined) return;
+      
       var sel = dData.get(itemId);
       before = performance.now();
       var filteredData = dataIs[i].filter(function (i) {
@@ -360,7 +386,6 @@ function Navio(eleId, h) {
       console.log("Selected " + nn.getVisible().length + " calling updateCallback");
       updateCallback(nn.getVisible());
     }
-    // Update the brush
   }
 
 
@@ -382,8 +407,11 @@ function Navio(eleId, h) {
       .call(function (tool) {
         tool.select(".tool_id")
           .text(itemId);
-        tool.select(".tool_value")
-          .text(itemAttr + " : " + d[itemAttr]);
+        tool.select(".tool_value_name")
+          .text(itemAttr + " : " );
+        tool.select(".tool_value_val")
+          .text(d[itemAttr]);
+
       });
   }
 
@@ -393,8 +421,11 @@ function Navio(eleId, h) {
       .call(function (tool) {
         tool.select(".tool_id")
           .text("");
-        tool.select(".tool_value")
+        tool.select(".tool_value_name")
           .text("");
+        tool.select(".tool_value_val")
+          .text("");
+
       });
 
   }
@@ -772,7 +803,7 @@ function Navio(eleId, h) {
       d3.scaleLinear()
         .domain(data!==undefined && data.length>0 ?
             d3.extent(data[0], function (d) { return d[attr]; }) :
-            [0, 1]) //if we don't have data, set the default domain
+            [0, 1]) //if we don"t have data, set the default domain
         .range(defaultColorRange));
     return nn;
   };
