@@ -4,7 +4,7 @@ import ModalDefault from './ModalDefault';
 import { connect } from 'react-redux';
 import { toggleLoading, setData, toggleDataLoaded, setComponentClasses } from './../../../actions';
 import * as vega from 'vega';
-// import * as d3 from 'd3';
+import * as d3 from 'd3';
 
 const Dragger = Upload.Dragger;
 const Loader = ({ attributes, toggleLoading, setData, toggleDataLoaded, setComponentClasses }) => {
@@ -18,12 +18,13 @@ const Loader = ({ attributes, toggleLoading, setData, toggleDataLoaded, setCompo
       return;
     }
     reader.onload = (lEvent) => {
-      const format = file.name.split('.').pop();
-      let values;
+      const format = file.name.split('.').pop().toLowerCase();
+      var values;
       try {
-        if (format === 'txt') {
-          throw Error();
-        }
+        console.log('TRY')
+        // if (format === 'txt' || (format !== "csv" && format !== "tsv")) {
+        //   throw Error();
+        // }
         values = vega.read(lEvent.target.result, {type: format});
         // let csvFormat = d3.dsvFormat(","); should be csvFormat??
         // values = csvFormat.parse(lEvent.target.result);
@@ -32,11 +33,16 @@ const Loader = ({ attributes, toggleLoading, setData, toggleDataLoaded, setCompo
         toggleLoading();
         toggleDataLoaded();
       } catch (err) {
-        // let ssv = d3.dsvFormat(";");
-        // values = ssv.parse(lEvent.target.result);
-        // setData(values);
-        // toggleLoading();
-        // toggleDataLoaded();
+        console.log('CATCH', err)
+        const separator = prompt('Write a delimiter for your dataset (e.g: ;)');
+        let ssv = d3.dsvFormat(separator);
+        values = ssv.parse(lEvent.target.result);
+        console.log(values);
+        delete values.columns;
+        console.log(values)
+        setData(values);
+        toggleLoading();
+        toggleDataLoaded();
       }
     };
 

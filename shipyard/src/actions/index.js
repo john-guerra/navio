@@ -24,6 +24,16 @@ export const SET_COMPONENT_CLASSES = 'SET_COMPONENT_CLASSES';
 export const SWAP_COMPONENT_CLASSES = 'SWAP_COMPONENT_CLASSES';
 export const SET_ALIAS = 'SET_ALIAS';
 
+// categorical, ordinal, sequential, date
+const seq = 'SEQUENTIAL';
+const cat = 'CATEGORICAL';
+const ord = 'ORDINAL';
+const dat = 'DATE';
+const types = [
+  [seq, 'NUMBER'],
+  [dat, dat],
+  [cat, 'STRING']
+]
 /**
  * Method that return true if a string is a date
  * @param {*} attr
@@ -36,61 +46,67 @@ const checkDate = (attr) => {
   return true;
 };
 
-/*
- * complementary functions
+/**
+ * Returns the type of attribute casting each case.
+ * @param {*} attribute 
  */
+const getType = (attribute) => {
+  const notNumber = isNaN(attribute);
+  const isDate = checkDate(attribute);
+  if (!notNumber) {
+    // return [seq, 'NUMBER'];
+    return 0;
+  } else if (isDate) {
+    // return [dat, 'DATE'];
+    return 1;
+  } else {
+    // return [cat, 'STRING'];
+    return 2;
+  }
+}
+/**
+ * Function that returns n samples from array
+ * @param {Integer} n - Number of samples
+ * @param {Array<Object>} data - Array with data objects
+ */
+const getSample = (n, data) => {
+  let ss = [];
+  for (let i = 1; i < n + 1; i++) {
+    ss.push(i);
+  }
+  const indexes = ss.map(d => Math.floor(data.length*(d/n))-1);
+  const sample = indexes.map(d => data[d]);
+  return sample;
+  
+}
 const getAttributesType = (keys, atts, data) => {
   let attributes = JSON.parse(JSON.stringify(atts));
-  console.log('COPY ATTRIBUTES', attributes);
   let ids = [];
   // regular expression used to match strings starting and finishing with id or key or in a word within non-word characters
   const reg = /^(id|key)|(id|key)$|\W+\_*(key|id)+\_*\W+|\W+\_*(key|id)+\_*\W*/gmi;
-  // categorical, ordinal, sequential, date
-  const seq = 'SEQUENTIAL';
-  const cat = 'CATEGORICAL';
-  const ord = 'ORDINAL';
-  const dat = 'DATE';
-
+  // returns 6 uniformly distributed rows
+  const sample = getSample(6, data);
   for (let key = 0; key < keys.length; key += 1) {
-    const attr = data[1][keys[key]];
+    // checks for ID
     if (reg.test(attributes[key].name)) {
       attributes[key].id = true;
       ids.push(atts[key].name);
     }
-    const notNumber = isNaN(attr);
-    const isDate = checkDate(attr);
-    if (!notNumber) {
-      attributes[key].type = seq;
-      attributes[key].data = 'NUMBER';
-
-      // let min = data[0][keys[key]];
-      // let max = data[0][keys[key]];
-      // for (let i = 0; i < data.length; i += 1) {
-      //   if (data[i][keys[key]] > max) {
-      //     max = data[i][keys[key]];
-      //   } if (data[i][keys[key]] < min) {
-      //     min = data[i][keys[key]];
-      //   }
-      // }
-      // attributes[key].min = min;
-      // attributes[key].max = max;
-    } else if (isDate) {
-      attributes[key].type = dat;
-      attributes[key].data = 'DATE';
-
-      // let min = data[0][keys[key]];
-      // let max = data[0][keys[key]];
-      // for (let j = 0; j < data.length; j += 1) {
-      //   if (data[j][keys[key]] > max) {
-      //     max = data[j][keys[key]];
-      //   } if (data[j][keys[key]] < min) {
-      //     min = data[j][keys[key]];
-      //   }
-      // }
-    } else {
-      attributes[key].type = cat;
-      attributes[key].data = 'STRING';
+    const sampleAttributes = sample.map(d => d[keys[key]]);
+    const res = sampleAttributes.map(getType);
+    let accumulative = [0,0,0];
+    res.forEach(d => accumulative[d] += 1);
+    let max = 0;
+    let i = 0;
+    for(let typei = 0; typei < accumulative.length; typei++) {
+      if(accumulative[typei] > max) {
+        max = accumulative[typei];
+        i = typei;
+      }
     }
+    const [type, data] = types[i];
+    attributes[key].type = type;
+    attributes[key].data = data;
   }
   return [attributes, ids];
 };
@@ -119,14 +135,14 @@ export const setData = (data) => {
   const parsedData = data.map((d) => {
     let row = JSON.parse(JSON.stringify(d));
     attributes.forEach((att)=> {
-      if (att.data === 'date') {
+      if (att.data === 'DATE') {
         const mydate = new Date(row[att.name]);
         if (isNaN(mydate.getDate())) {
           // row[att.name] = null;
         } else {
           row[att.name] = mydate;
         }
-      } else if (att.data === 'number') {
+      } else if (att.data === 'NUMBER') {
         const mynumber = +row[att.name];
         if (isNaN(mynumber)) {
           // row[att.name] = null;
