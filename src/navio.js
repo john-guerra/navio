@@ -1,7 +1,7 @@
 import * as d3 from "d3";
 
 //eleId must be the ID of a context element where everything is going to be drawn
-function navio(eleId, h) {
+function navio(selection, _h) {
   "use strict";
   var nn = this,
     data = [], //Contains the original data attributes
@@ -14,6 +14,7 @@ function navio(eleId, h) {
     yScales =[],
     xScale,
     x,
+    height = _h!==undefined ? _h : 600,
     colScales = d3.map(),
     levelScale,
     canvas,
@@ -48,21 +49,21 @@ function navio(eleId, h) {
     d3.event.preventDefault();
   }
 
-  d3.select(eleId)
+  selection
     .on("touchstart", nozoom)
     .on("touchmove", nozoom)
     // .attr("width", 150)
-    .style("height", h + "px")
+    .style("height", height + "px")
     .style("float", "left")
     .attr("class", "Navio")
     .append("div")
       .style("float", "left")
       .attr("id", "Navio")
       .style("position", "relative");
-  d3.select(eleId)
+  selection
     .select("#Navio")
     .append("canvas");
-  var svg = d3.select(eleId)
+  var svg = selection
     .select("#Navio")
     .append("svg")
       .style("overflow", "visible")
@@ -140,12 +141,12 @@ function navio(eleId, h) {
     return levelScale(level) + xScale(val);
   };
 
-  canvas = d3.select(eleId).select("canvas").node();
+  canvas = selection.select("canvas").node();
   // canvas.style.position = "absolute";
   canvas.style.top = canvas.offsetTop + "px";
   canvas.style.left = canvas.offsetLeft + "px";
   // canvas.style.width =  "150px";
-  canvas.style.height = h + "px";
+  canvas.style.height = height + "px";
 
   context = canvas.getContext("2d");
   context.scale(2,2);
@@ -180,15 +181,15 @@ function navio(eleId, h) {
     nn.updateData(dataIs, colScales, d.level);
   }
 
-  function getAttribs(obj) {
-    var attr;
-    dDimensions = d3.map();
-    for (attr in obj) {
-      if (obj.hasOwnProperty(attr)) {
-        dDimensions.set(attr, true);
-      }
-    }
-  }
+  // function getAttribs(obj) {
+  //   var attr;
+  //   dDimensions = d3.map();
+  //   for (attr in obj) {
+  //     if (obj.hasOwnProperty(attr)) {
+  //       dDimensions.set(attr, true);
+  //     }
+  //   }
+  // }
 
   function drawItem(item, level) {
     var attrib, i, y ;
@@ -714,12 +715,12 @@ function navio(eleId, h) {
     // yScales=[];
     var lastLevel = dataIs.length-1;
 
-    console.log("Delete unnecessary scales")
+    console.log("Delete unnecessary scales");
     // Delete unnecessary scales
     yScales.splice(lastLevel+1, yScales.length);
     levelToUpdate = levelToUpdate!==undefined ? levelToUpdate : lastLevel;
     yScales[levelToUpdate] = d3.scaleBand()
-      .range([y0, h-nn.margin - 30])
+      .range([y0, height-nn.margin - 30])
       .paddingInner(0.0)
       .paddingOuter(0);
 
@@ -727,8 +728,8 @@ function navio(eleId, h) {
 
     console.log("Compute representatives")
     var representatives = [];
-    if (dataIs[levelToUpdate].length>h) {
-      var itemsPerpixel = Math.max(Math.floor(dataIs[levelToUpdate].length / (h*2)), 1);
+    if (dataIs[levelToUpdate].length>height) {
+      var itemsPerpixel = Math.max(Math.floor(dataIs[levelToUpdate].length / (height*2)), 1);
       console.log("itemsPerpixel", itemsPerpixel);
       dataIs[levelToUpdate].itemsPerpixel = itemsPerpixel;
       for (var i = 0; i< dataIs[levelToUpdate].length; i+=itemsPerpixel ) {
@@ -746,7 +747,7 @@ function navio(eleId, h) {
 
     // data.forEach(function (levelData, i) {
     //   yScales[i] = d3.scaleBand()
-    //     .range([y0, h-nn.margin - 30])
+    //     .range([y0, height-nn.margin - 30])
     //     .paddingInner(0.0)
     //     .paddingOuter(0);
     //   yScales[i].domain(levelData.map(function (d) {
@@ -819,15 +820,15 @@ function navio(eleId, h) {
     ctxWidth = levelScale.range()[1] + nn.margin + x0;
     d3.select(canvas)
       .attr("width", ctxWidth)
-      .attr("height", h)
+      .attr("height", height)
       .style("width", ctxWidth)
-      .style("height", h+"px");
+      .style("height", height+"px");
     canvas.style.width = ctxWidth+"px";
-    canvas.style.height = h+"px";
+    canvas.style.height = height+"px";
 
     svg
       .attr("width", ctxWidth)
-      .attr("height", h);
+      .attr("height", height);
     nn.update();
     var after = performance.now();
     console.log("Updating data " + (after-before) + "ms");
@@ -859,9 +860,9 @@ function navio(eleId, h) {
     var before = performance.now();
 
     var w = levelScale.range()[1] + nn.margin + x0;
-    context.clearRect(0,0,w+1,h+1);
+    context.clearRect(0,0,w+1,height+1);
     dataIs.forEach(function (levelData, i) {
-      // var itemsPerpixel = Math.floor(levelData.length/h);
+      // var itemsPerpixel = Math.floor(levelData.length/height);
       // if (itemsPerpixel>1) { //draw one per pixel
       //   for (var j = 0; j< levelData.length; j+=(itemsPerpixel-1)) {
       //     drawItem(levelData[j], i);
