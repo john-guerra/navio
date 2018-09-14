@@ -1,5 +1,4 @@
-// import * as d3 from "d3";
-/* global d3 */
+import * as d3 from "d3";
 
 //eleId must be the ID of a context element where everything is going to be drawn
 function navio(selection, _h) {

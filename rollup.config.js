@@ -16,7 +16,7 @@ export default [
       }),
       ascii()
     ],
-
+    external: ["d3"],
     output: {
       extend: true,
       banner: copyright,
@@ -40,12 +40,16 @@ export default [
       ascii(),
       terser({output: {preamble: copyright}})
     ],
+    external: ["d3"],
     output: {
       extend: true,
       file: "dist/navio.min.js",
       format: "umd",
       indent: false,
-      name: "navio"
+      name: "navio",
+      globals: {
+        d3:"d3"
+      }
     }
   }
 ];
