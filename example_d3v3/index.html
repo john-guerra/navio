@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+	#chart rect {
+		fill: white;
+	}
+	path.link {
+		fill: none;
+		stroke: #666;
+		stroke-width: 2px;
+	}
+
+	marker#licensing {
+		fill: lightgreen;
+	}
+
+	path.link.licensing {
+		stroke: lightgreen;
+	}
+
+	path.link.resolved {
+		stroke-dasharray: 0,2 1;
+	}
+
+	circle {
+		fill: #ccc;
+		stroke: #333;
+		stroke-width: 3px;
+	}
+
+	text {
+		font: 14px sans-serif;
+		pointer-events: none;
+	}
+
+	text.shadow {
+		stroke: #fff;
+		stroke-width: 4px;
+	}
+	#nn {
+	  float:left;
+	}
+	#chart {
+	  float:left;
+	}
+	.clearer {
+		clear:both;
+	}
+
+</style>
+<body>
+
+<h1>IEEE Vis Papers citation/co-authorship networks </h1>
+
+<label for="checkboxGroup">Group?</label> <input id="checkboxGroup" type="checkbox" checked="true" />
+<select name="type" id="selectType">
+	<option value="Citations">Citations</option>
+	<option value="Coauthorship">Coauthorship</option>
+</select>
+<input id="sliderMinLink" type="range" min="2" max="20" value="5"/>
+            <label id="sliderLabelMinLink" for="sliderMinLink">
+              Min link value: 5
+</label>
+<input id="sliderMinNode" type="range" min="2" max="700" value="400"/>
+            <label id="sliderLabelMinNode" for="sliderMinNode">
+              Min node value (labels): 400
+</label>
+<button id="downloadButton">Download Graph as JSON</button>
+<div id="nn"></div>
+<div id="chart"></div>
+<div class="clearer"></div>
+
+
+<p>Created by <a href="http://johnguerra.co">John Alexis Guerra Gómez</a> from the <a href="http://www.vispubdata.org/site/vispubdata/">IEEE Vis Publication Data Collection</a></p>
+<p><a href="https://github.com/john-guerra/visPubNetwork">Source code</a></p>
+<script src="d3.js" language="javascript" type="text/javascript"></script>
+<script type="text/javascript" src="forceInABox.js"></script>
+<script type="text/javascript" src="getVisNetworks.js"></script>
+<!-- <script type="text/javascript" src="http://dutovis.com/netAnalysisJs/netClustering.js">   </script> -->
+<script type="text/javascript" src="netClustering.js"></script>
+<script type="text/javascript" src="../Navio_d3v3.js"></script>
+<script src="main_nn.js" language="javascript" type="text/javascript"></script>
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-72531610-1', 'auto');
+  ga('send', 'pageview');
+
+</script>

@@ -534,13 +534,13 @@ function navio(selection, _h) {
         .on("drag", attribDragged)
         .on("end", attribDragended))
       .on("mousemove", function () {
-        var sel = d3.select(d3.event.target);
+        var sel = d3.select(this);
         sel = sel.transition!==undefined? sel.transition().duration(150) : sel;
         sel
           .style("font-size", nn.attribFontSizeSelected+"px");
       })
       .on("mouseout", function () {
-        var sel = d3.select(d3.event.target);
+        var sel = d3.select(this);
         sel = sel.transition!==undefined ? sel.transition().duration(150) : sel;
         sel
           .style("font-size", nn.attribFontSize+"px");
