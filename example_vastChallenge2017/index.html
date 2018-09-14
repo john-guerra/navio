@@ -3,7 +3,7 @@
   <h1>Vast Challenge 2017 <small>Mini challenge 1</small></h1>
 
   <!-- Placeholder for the widget -->
-  <div id="navio"></div>
+  <div id="target"></div>
 
 
   <!-- navio Step 0: Load the libraries -->
@@ -12,7 +12,7 @@
 
 <script>
   // navio  Step 1.  Create a navio passing the selector to place it and the height
-  var nn = new navio(d3.select("#navio"), 600);
+  var nn = navio(d3.select("#target"), 600);
 
   // navio Step 2. Add the Categorical and Sequential attributes you want to use
   var catColumns = ["car-type", "gate-name", "dayOfTheWeek", "car-id", "year"];

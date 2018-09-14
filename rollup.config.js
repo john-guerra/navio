@@ -9,22 +9,34 @@ export default [
   {
     input: "src/navio.js",
     plugins: [
-      node(),
+      node({
+        jsxnext: true,
+        main: true,
+        browser: true
+      }),
       ascii()
     ],
+
     output: {
       extend: true,
       banner: copyright,
       file: "dist/navio.js",
       format: "umd",
       indent: false,
-      name: "navio"
+      name: "navio",
+      globals: {
+        d3:"d3"
+      }
     }
   },
   {
     input: "src/navio",
     plugins: [
-      node(),
+      node({
+        jsxnext: true,
+        main: true,
+        browser: true
+      }),
       ascii(),
       terser({output: {preamble: copyright}})
     ],
