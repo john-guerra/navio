@@ -54,23 +54,24 @@ function navio(selection, _h) {
     .on("touchmove", nozoom)
     // .attr("width", 150)
     .style("height", height + "px")
-    .style("float", "left")
-    .attr("class", "Navio")
+    .attr("class", "navio")
     .append("div")
-      .style("float", "left")
-      .attr("id", "Navio")
+      // .style("float", "left")
+      .attr("id", "navio")
       .style("position", "relative");
   selection
-    .select("#Navio")
+    .select("#navio")
     .append("canvas");
   var svg = selection
-    .select("#Navio")
+    .select("#navio")
     .append("svg")
       .style("overflow", "visible")
       .style("position", "absolute")
       .style("z-index", 99)
       .style("top", 0)
       .style("left", 0);
+
+
   svg.append("g")
     .attr("class", "attribs");
 
@@ -806,7 +807,7 @@ function navio(selection, _h) {
     var before = performance.now();
     var ctxWidth;
     if (typeof mDataIs !== typeof []) {
-      console.error("Navio updateData didn't receive an array");
+      console.error("navio updateData didn't receive an array");
       return;
     }
     // if (!dSortBy.has(mDataIs.length-1)) {
