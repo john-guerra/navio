@@ -1,9 +1,10 @@
-import * as d3 from "d3";
+import * as d3 from "d3,d3-scale-chromatic";
+
 
 //eleId must be the ID of a context element where everything is going to be drawn
 function navio(selection, _h) {
   "use strict";
-  var nn = {},
+  var nv = this || {},
     data = [], //Contains the original data attributes
     dataIs = [], //Contains only the indices to the data, is an array of arrays, one for each level
     dData = d3.map(), // A hash for the data
@@ -20,7 +21,9 @@ function navio(selection, _h) {
     canvas,
     context,
     // Taken from d3.chromatic https://github.com/d3/d3-scale-chromatic/blob/master/src/sequential-single/Blues.js
-    defaultColorRange = ["#deebf7", "#2171b5"],
+    defaultColorInterpolator = d3.interpolateBlues,
+    defaultColorInterpolatorDate = d3.interpolatePurples,
+    defaultColorInterpolatorDiverging = d3.interpolateBrBG,
     visibleColorRange = ["white", "#b5cf6b"],
     fmt = d3.format(",.0d"),
     x0=0,
@@ -28,20 +31,20 @@ function navio(selection, _h) {
     id = "__seqId",
     updateCallback = function () {};
 
-  nn.margin = 10;
-  nn.attribWidth = 15;
-  nn.levelsSeparation = 40;
-  nn.divisionsColor = "white";
-  nn.levelConnectionsColor = "rgba(205, 220, 163, 0.5)";
-  nn.divisionsThreshold = 3;
-  nn.attribFontSize = 13;
-  nn.attribFontSizeSelected = 32;
+  nv.margin = 10;
+  nv.attribWidth = 15;
+  nv.levelsSeparation = 40;
+  nv.divisionsColor = "white";
+  nv.levelConvectionsColor = "rgba(205, 220, 163, 0.5)";
+  nv.divisionsThreshold = 3;
+  nv.attribFontSize = 13;
+  nv.attribFontSizeSelected = 32;
 
-  nn.startColor = "white";
-  nn.endColor = "red";
-  nn.legendFont = "14px Arial";
-  nn.linkColor = "#2171b5";
-  // nn.linkColor = "rgba(0,0,70,0.9)";
+  nv.startColor = "white";
+  nv.endColor = "red";
+  nv.legendFont = "14px Arial";
+  nv.linkColor = "#2171b5";
+  // nv.linkColor = "rgba(0,0,70,0.9)";
 
 
   function nozoom() {
@@ -129,8 +132,8 @@ function navio(selection, _h) {
     });
 
   xScale = d3.scaleBand()
-    // .rangeBands([0, nn.attribWidth], 0.1, 0);
-    .range([0, nn.attribWidth])
+    // .rangeBands([0, nv.attribWidth], 0.1, 0);
+    .range([0, nv.attribWidth])
     .round(true)
     .paddingInner(0.1)
     .paddingOuter(0);
@@ -168,7 +171,7 @@ function navio(selection, _h) {
     return qScale(x);
   }
 
-  function nnOnClickLevel(d) {
+  function nvOnClickLevel(d) {
     if (d3.event.defaultPrevented) return; // dragged
     console.log("click " + d);
     var before = performance.now();
@@ -179,18 +182,18 @@ function navio(selection, _h) {
     var after = performance.now();
     console.log("Click sorting " + (after-before) + "ms");
     dSortBy.set(d.level, d.attrib);
-    nn.updateData(dataIs, colScales, d.level);
+    nv.updateData(dataIs, colScales, d.level);
   }
 
-  // function getAttribs(obj) {
-  //   var attr;
-  //   dDimensions = d3.map();
-  //   for (attr in obj) {
-  //     if (obj.hasOwnProperty(attr)) {
-  //       dDimensions.set(attr, true);
-  //     }
-  //   }
-  // }
+  function getAttribs(obj) {
+    var attr, res = [];
+    for (attr in obj) {
+      if (obj.hasOwnProperty(attr)) {
+        res.push(attr);
+      }
+    }
+    return res;
+  }
 
   function drawItem(item, level) {
     var attrib, i, y ;
@@ -215,7 +218,7 @@ function navio(selection, _h) {
 
 
       //If the range bands are tick enough draw divisions
-      if (yScales[level].bandwidth() > nn.divisionsThreshold) {
+      if (yScales[level].bandwidth() > nv.divisionsThreshold) {
         var yLine = Math.round(yScales[level](item[id])) ;
         // y = yScales[level](item[id])+yScales[level].bandwidth()/2;
         context.beginPath();
@@ -223,7 +226,7 @@ function navio(selection, _h) {
         context.lineTo(x(attrib, level) + xScale.bandwidth(), yLine);
         context.lineWidth = 1;
         // context.lineWidth = 1;
-        context.strokeStyle = nn.divisionsColor;
+        context.strokeStyle = nv.divisionsColor;
         context.stroke();
       }
 
@@ -342,15 +345,15 @@ function navio(selection, _h) {
       }
 
 
-      nn.updateData(
+      nv.updateData(
         newData,
         colScales
       );
       console.log("out of updateData");
       console.log("Selected " + filteredData.length + " calling updateCallback");
-      updateCallback(nn.getVisible());
+      updateCallback(nv.getVisible());
 
-      // nn.update(false); //don"t update brushes
+      // nv.update(false); //don"t update brushes
 
       // d3.select(this).transition().call(d3.event.target.move, d1.map(x));
     }// brushend
@@ -389,13 +392,13 @@ function navio(selection, _h) {
       var newData = dataIs.slice(0,i+1);
       newData.push(filteredData);
 
-      nn.updateData(
+      nv.updateData(
         newData,
         colScales
       );
 
-      console.log("Selected " + nn.getVisible().length + " calling updateCallback");
-      updateCallback(nn.getVisible());
+      console.log("Selected " + nv.getVisible().length + " calling updateCallback");
+      updateCallback(nv.getVisible());
     }
   }
 
@@ -454,7 +457,7 @@ function navio(selection, _h) {
     //   []
     // );
 
-    // Send visible and seqId to the beginning
+    // Send visible and seqId to the beginving
     var attribs = xScale.domain();
 
     var levelOverlay = svg.select(".attribs")
@@ -527,8 +530,8 @@ function navio(selection, _h) {
           "normal";
       })
       .style("font-family", "sans-serif")
-      .style("font-size", nn.attribFontSize+"px")
-      .on("click", nnOnClickLevel)
+      .style("font-size", nv.attribFontSize+"px")
+      .on("click", nvOnClickLevel)
       .call(d3.drag()
         .container(attribOverlayEnter.merge(attribOverlay).node())
         .on("start", attribDragstarted)
@@ -538,13 +541,13 @@ function navio(selection, _h) {
         var sel = d3.select(this);
         sel = sel.transition!==undefined? sel.transition().duration(150) : sel;
         sel
-          .style("font-size", nn.attribFontSizeSelected+"px");
+          .style("font-size", nv.attribFontSizeSelected+"px");
       })
       .on("mouseout", function () {
         var sel = d3.select(this);
         sel = sel.transition!==undefined ? sel.transition().duration(150) : sel;
         sel
-          .style("font-size", nn.attribFontSize+"px");
+          .style("font-size", nv.attribFontSize+"px");
       })
       .attr("transform", "rotate(-45)");
 
@@ -578,7 +581,7 @@ function navio(selection, _h) {
     d3.select(this.parentNode)
       .attr("transform", function (d) {
         return "translate(" +
-          (d3.event.x + nn.attribFontSize/2) +
+          (d3.event.x + nv.attribFontSize/2) +
           "," +
           yScales[d.level].range()[0] +
           ")";
@@ -587,13 +590,13 @@ function navio(selection, _h) {
   }
 
   function attribDragged(d) {
-    var attribInto = invertOrdinalScale(xScale, d3.event.x + nn.attribFontSize/2 - levelScale(d.level));
+    var attribInto = invertOrdinalScale(xScale, d3.event.x + nv.attribFontSize/2 - levelScale(d.level));
 
     console.log(d3.event.x, d3.event.y, attribInto);
     d3.select(this.parentNode)
       .attr("transform", function (d) {
         return "translate(" +
-          (d3.event.x + nn.attribFontSize/2) +
+          (d3.event.x + nv.attribFontSize/2) +
           "," +
           yScales[d.level].range()[0] +
           ")";
@@ -602,7 +605,7 @@ function navio(selection, _h) {
 
   function attribDragended(d) {
     console.log("end", d);
-    var attrDraggedInto = invertOrdinalScale(xScale, d3.event.x + nn.attribFontSize/2 - levelScale(d.level));
+    var attrDraggedInto = invertOrdinalScale(xScale, d3.event.x + nv.attribFontSize/2 - levelScale(d.level));
     var pos;
     d3.select(this.parentNode)
       .attr("transform", function (d) {
@@ -616,7 +619,7 @@ function navio(selection, _h) {
     if (attrDraggedInto!== d.attrib) {
       pos = dimensionsOrder.indexOf(attrDraggedInto);
       moveAttrToPos(d.attrib, pos);
-      nn.updateData(dataIs);
+      nv.updateData(dataIs);
     }
 
 
@@ -626,7 +629,7 @@ function navio(selection, _h) {
     var maxLevel = dataIs.length-1;
     svg.select("#closeButton")
       .style("display", dataIs.length === 1 ? "none":"block")
-      .attr("transform", "translate(" + (levelScale(maxLevel) + levelScale.bandwidth() - nn.levelsSeparation +15)  + "," + yScales[maxLevel].range()[0] + ")")
+      .attr("transform", "translate(" + (levelScale(maxLevel) + levelScale.bandwidth() - nv.levelsSeparation +15)  + "," + yScales[maxLevel].range()[0] + ")")
   }
 
 
@@ -650,7 +653,7 @@ function navio(selection, _h) {
     }
   }
 
-  function drawLevelConnections(level) {
+  function drawLevelConvections(level) {
     if (level <= 0) {
       return;
     }
@@ -670,24 +673,24 @@ function navio(selection, _h) {
         y: yScales[level](data[item][id]) };
 
       var points = [ locPrevLevel,
-        {x: locPrevLevel.x + nn.levelsSeparation * 0.3, y: locPrevLevel.y},
-        {x: locLevel.x - nn.levelsSeparation * 0.3, y: locLevel.y},
+        {x: locPrevLevel.x + nv.levelsSeparation * 0.3, y: locPrevLevel.y},
+        {x: locLevel.x - nv.levelsSeparation * 0.3, y: locLevel.y},
         locLevel,
         {x: locLevel.x, y: locLevel.y + yScales[level].bandwidth()},
-        {x: locLevel.x - nn.levelsSeparation * 0.3, y: locLevel.y + yScales[level].bandwidth()},
-        {x: locPrevLevel.x + nn.levelsSeparation * 0.3, y: locPrevLevel.y + yScales[level - 1].bandwidth()},
+        {x: locLevel.x - nv.levelsSeparation * 0.3, y: locLevel.y + yScales[level].bandwidth()},
+        {x: locPrevLevel.x + nv.levelsSeparation * 0.3, y: locPrevLevel.y + yScales[level - 1].bandwidth()},
         {x: locPrevLevel.x, y: locPrevLevel.y + yScales[level -1 ].bandwidth()},
         locPrevLevel
 
       ];
-      drawLine(points, 1, nn.levelConnectionsColor);
-      drawLine(points, 1, nn.levelConnectionsColor, true);
+      drawLine(points, 1, nv.levelConvectionsColor);
+      drawLine(points, 1, nv.levelConvectionsColor, true);
     });
   }
 
 
 
-  nn.initData = function (mData,  mColScales) {
+  nv.initData = function (mData,  mColScales) {
     var before = performance.now();
     // getAttribs(mData[0][0]);
     colScales  = mColScales;
@@ -703,7 +706,7 @@ function navio(selection, _h) {
       d.__i[0] = i;
 
     }
-    // nn.updateData(mData, mColScales, mSortByAttr);
+    // nv.updateData(mData, mColScales, mSortByAttr);
 
     var after = performance.now();
     console.log("Init data " + (after-before) + "ms");
@@ -716,12 +719,12 @@ function navio(selection, _h) {
     // yScales=[];
     var lastLevel = dataIs.length-1;
 
-    console.log("Delete unnecessary scales");
-    // Delete unnecessary scales
+    console.log("Delete unvecessary scales");
+    // Delete unvecessary scales
     yScales.splice(lastLevel+1, yScales.length);
     levelToUpdate = levelToUpdate!==undefined ? levelToUpdate : lastLevel;
     yScales[levelToUpdate] = d3.scaleBand()
-      .range([y0, height-nn.margin - 30])
+      .range([y0, height-nv.margin - 30])
       .paddingInner(0.0)
       .paddingOuter(0);
 
@@ -748,7 +751,7 @@ function navio(selection, _h) {
 
     // data.forEach(function (levelData, i) {
     //   yScales[i] = d3.scaleBand()
-    //     .range([y0, height-nn.margin - 30])
+    //     .range([y0, height-nv.margin - 30])
     //     .paddingInner(0.0)
     //     .paddingOuter(0);
     //   yScales[i].domain(levelData.map(function (d) {
@@ -790,11 +793,11 @@ function navio(selection, _h) {
       //   }
 
       // }))
-      .range([0, nn.attribWidth * (dDimensions.keys().length)])
+      .range([0, nv.attribWidth * (dDimensions.keys().length)])
       .paddingInner(0.1)
       .paddingOuter(0);
     levelScale.domain(dataIs.map(function (d,i) { return i; }))
-      .range([x0+nn.margin, ((xScale.range()[1] + nn.levelsSeparation) * dataIs.length) + x0])
+      .range([x0+nv.margin, ((xScale.range()[1] + nv.levelsSeparation) * dataIs.length) + x0])
       .paddingInner(0)
       .paddingOuter(0);
 
@@ -802,7 +805,7 @@ function navio(selection, _h) {
     console.log("Updating Scales " + (after-before) + "ms");
   }
 
-  nn.updateData = function (mDataIs, mColScales, levelToUpdate) {
+  nv.updateData = function (mDataIs, mColScales, levelToUpdate) {
     console.log("updateData");
     var before = performance.now();
     var ctxWidth;
@@ -818,7 +821,7 @@ function navio(selection, _h) {
 
     updateScales(levelToUpdate);
 
-    ctxWidth = levelScale.range()[1] + nn.margin + x0;
+    ctxWidth = levelScale.range()[1] + nv.margin + x0;
     d3.select(canvas)
       .attr("width", ctxWidth)
       .attr("height", height)
@@ -830,7 +833,7 @@ function navio(selection, _h) {
     svg
       .attr("width", ctxWidth)
       .attr("height", height);
-    nn.update();
+    nv.update();
     var after = performance.now();
     console.log("Updating data " + (after-before) + "ms");
 
@@ -843,8 +846,8 @@ function navio(selection, _h) {
     dataIs[dataIs.length-2].forEach(function (d) { data[d].visible=true; });
 
     dataIs = dataIs.slice(0, dataIs.length-1);
-    nn.updateData(dataIs, colScales);
-    updateCallback(nn.getVisible());
+    nv.updateData(dataIs, colScales);
+    updateCallback(nv.getVisible());
   }
 
   function moveAttrToPos(attr, pos) {
@@ -857,10 +860,10 @@ function navio(selection, _h) {
 
 
 
-  nn.update = function() {
+  nv.update = function() {
     var before = performance.now();
 
-    var w = levelScale.range()[1] + nn.margin + x0;
+    var w = levelScale.range()[1] + nv.margin + x0;
     context.clearRect(0,0,w+1,height+1);
     dataIs.forEach(function (levelData, i) {
       // var itemsPerpixel = Math.floor(levelData.length/height);
@@ -875,7 +878,7 @@ function navio(selection, _h) {
       // }
 
       drawLevelBorder(i);
-      drawLevelConnections(i);
+      drawLevelConvections(i);
 
     });
 
@@ -887,31 +890,79 @@ function navio(selection, _h) {
 
   };
 
-  nn.addAttrib = function (attr, scale) {
+  nv.addAttrib = function (attr, scale) {
     dimensionsOrder.push(attr);
     colScales.set(attr,scale);
-    return nn;
+    return nv;
   };
 
-  nn.addSequentialAttrib = function (attr, scale ) {
-    nn.addAttrib(attr,scale ||
-      d3.scaleLinear()
+  nv.addSequentialAttrib = function (attr, scale ) {
+    nv.addAttrib(attr,scale ||
+      d3.scaleSequential(defaultColorInterpolator)
         .domain(data!==undefined && data.length>0 ?
-          d3.extent(data[0], function (d) { return d[attr]; }) :
+          d3.extent(data, function (d) { return d[attr]; }) :
           [0, 1]) //if we don"t have data, set the default domain
-        .range(defaultColorRange));
-    return nn;
+    );
+    return nv;
   };
 
-  nn.addCategoricalAttrib = function (attr, scale ) {
-    nn.addAttrib(attr,scale ||
+  nv.addDivergingAttrib = function (attr, scale ) {
+    var domain = data!==undefined && data.length>0 ?
+      d3.extent(data, function (d) { return d[attr]; }) :
+      [-1,  1];
+    nv.addAttrib(attr,scale ||
+      d3.scaleDiverging(defaultColorInterpolator)
+        .domain([domain[0], 0, domain[1]]) //if we don"t have data, set the default domain
+    );
+    return nv;
+  };
+
+  nv.addCategoricalAttrib = function (attr, scale ) {
+    nv.addAttrib(attr,scale ||
       d3.scaleOrdinal(d3.schemeCategory10));
-    return nn;
+    return nv;
   };
 
-  nn.data = function(_) {
+  // nv.addAllAttribs = function (_attribs, scale) {
+  //   if (!data || !data.length) throw Error("no data defined yet!");
+
+  //   var attribs = _attribs!==undefined ? _attribs : getAttribs(data[0]);
+  //   var guessedScale, domain;
+  //   attribs.forEach(function (attr) {
+  //     if (typeof(data[attr]) === typeof("")) {
+  //       guessedScale = d3.scaleOrdinal(d3.schemeCategory10);
+  //     // } else if (typeof(data[attr]) === typeof(new Date())) {
+  //     //   guessedScale = d3.scaleSequential(defaultColorInterpolatorDate)
+  //     //     .domain(data!==undefined && data.length>0 ?
+  //     //       d3.extent(data, function (d) { return d[attr]; }) :
+  //     //       [0, 1]); //if we don"t have data, set the default domain
+  //     } else {
+  //       domain = data!==undefined && data.length>0 ?
+  //         d3.extent(data, function (d) { return d[attr]; }) :
+  //         [0, 1];
+
+  //       // if (domain[0] < 0) {
+  //       //   d3.scaleSequential(defaultColorInterpolatorDiverging)
+  //       //     .domain([domain[0], 0, domain[1]]); //if we don"t have data, set the default domain
+  //       // } else {
+  //         d3.scaleSequential(defaultColorInterpolator)
+  //           .domain(domain); //if we don"t have data, set the default domain
+  //       // }
+  //     }
+  //     console.log("attr", attr, guessedScale);
+
+  //     nv.addAttrib(attr,scale ||
+  //       guessedScale);
+  //   });
+
+  //   nv.updateData(dataIs);
+  //   return nv;
+  // };
+
+
+  nv.data = function(_) {
     if (!colScales.has("visible")) {
-      nn.addAttrib("visible",
+      nv.addAttrib("visible",
         d3.scaleOrdinal()
           .domain([false,true])
           .range(visibleColorRange)
@@ -920,14 +971,14 @@ function navio(selection, _h) {
       moveAttrToPos("visible", 0);
     }
     if (!colScales.has("__seqId")) {
-      nn.addSequentialAttrib(
+      nv.addSequentialAttrib(
         "__seqId"
       );
       moveAttrToPos("__seqId", 1);
     }
 
 
-    // nn.addCategoricalAttrib("group");
+    // nv.addCategoricalAttrib("group");
 
 
     if (arguments.length) {
@@ -939,42 +990,42 @@ function navio(selection, _h) {
       dataIs = [data.map(function (_, i) { return i; })];
 
 
-      nn.initData(
+      nv.initData(
         dataIs,
         colScales
       );
-      nn.updateData(
+      nv.updateData(
         dataIs,
         colScales
       );
-      return nn;
+      return nv;
     } else {
       return data[0];
     }
   };
 
-  nn.getVisible = function() {
+  nv.getVisible = function() {
     return dataIs[dataIs.length-1].filter(function (d) { return data[d].visible; }).map(function (d) { return data[d]; });
   };
 
 
-  nn.updateCallback = function(_) {
-    return arguments.length ? (updateCallback = _, nn) : updateCallback;
+  nv.updateCallback = function(_) {
+    return arguments.length ? (updateCallback = _, nv) : updateCallback;
   };
 
-  nn.visibleColorRange = function(_) {
-    return arguments.length ? (visibleColorRange = _, nn) : visibleColorRange;
+  nv.visibleColorRange = function(_) {
+    return arguments.length ? (visibleColorRange = _, nv) : visibleColorRange;
   };
 
-  nn.defaultColorRange = function(_) {
-    return arguments.length ? (defaultColorRange = _, nn) : defaultColorRange;
+  nv.defaultColorInterpolator = function(_) {
+    return arguments.length ? (defaultColorInterpolator = _, nv) : defaultColorInterpolator;
   };
 
-  nn.id = function(_) {
-    return arguments.length ? (id = _, nn) : id;
+  nv.id = function(_) {
+    return arguments.length ? (id = _, nv) : id;
   };
 
-  return nn;
+  return nv;
 }
 
 export default navio;
