@@ -37,7 +37,7 @@ var simulation = d3.forceSimulation()
   .force("charge", d3.forceManyBody())
   .force("center", d3.forceCenter(width / 2, height / 2));
 
-var nn = new navio("#nn", height);
+var nn = new navio(d3.select("#nn"), height);
 nn.id("id");
 nn.addCategoricalAttrib("group", color);
 
