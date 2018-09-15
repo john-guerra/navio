@@ -16,7 +16,10 @@ export default [
       }),
       ascii()
     ],
-    external: ["d3", "d3-scale-chromatic"],
+    external: [
+      "d3",
+      // "d3-scale-chromatic"
+    ],
     output: {
       extend: true,
       banner: copyright,
@@ -26,7 +29,7 @@ export default [
       name: "navio",
       globals: {
         d3:"d3",
-        "d3-scale-chromatic":"d3"
+        // "d3-scale-chromatic":"d3ScaleChromatic"
       }
     }
   },
@@ -41,7 +44,9 @@ export default [
       ascii(),
       terser({output: {preamble: copyright}})
     ],
-    external: ["d3", "d3-scale-chromatic"],
+    external: ["d3",
+      // "d3-scale-chromatic"
+    ],
     output: {
       extend: true,
       file: "dist/navio.min.js",
@@ -50,7 +55,7 @@ export default [
       name: "navio",
       globals: {
         d3:"d3",
-        "d3-scale-chromatic":"d3"
+        // "d3-scale-chromatic":"d3ScaleChromatic"
       }
     }
   }
