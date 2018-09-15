@@ -577,7 +577,6 @@ function navio(selection, _h) {
 
     attribOverlay.exit().remove();
     levelOverlay.exit().remove();
-    levelOverlay.exit().remove();
   }
 
   function attribDragstarted(d) {
