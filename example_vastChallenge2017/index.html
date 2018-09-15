@@ -10,57 +10,55 @@
 
   <!-- navio Step 0: Load the libraries -->
 
-  <script src="https://d3js.org/d3.v4.min.js"></script>
-  <!-- <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script> -->
+  <script src="https://d3js.org/d3.v5.min.js"></script>
+  <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
   <script src="../dist/navio.js"></script>
 
 <script>
-  // navio  Step 1.  Create a navio passing the selector to place it and the height
-  var nn = navio(d3.select("#target"), 600);
+/* global d3, navio */
 
-  // navio Step 2. Add the Categorical and Sequential attributes you want to use
-  var catColumns = ["car-type", "gate-name", "dayOfTheWeek", "car-id", "year"];
-  var seqColumns = ["minutes", "hours", "day", "month", "seconds", "carIdPart1", "carIdPart2", "Timestamp"];
-  catColumns.forEach((c) => nn.addCategoricalAttrib(c));
-  seqColumns.forEach((c) => nn.addSequentialAttrib(c));
+// navio  Step 1.  Create a navio passing the selector to place it and the height
+var nn = navio(d3.select("#target"), 600);
+
+// navio Step 2. Add the Categorical and Sequential attributes you want to use
+var catColumns = ["car-type", "gate-name", "dayOfTheWeek", "car-id", "year"];
+var seqColumns = ["minutes", "hours", "day", "month", "seconds", "carIdPart1", "carIdPart2", "Timestamp"];
+catColumns.forEach((c) => nn.addCategoricalAttrib(c));
+seqColumns.forEach((c) => nn.addSequentialAttrib(c));
 
 
+d3.csv("./Lekagul Sensor Data.csv")
+  .then(function (data) {
+    data.forEach(type);
+// d3.csv("./Lekagul Sensor Data.csv", type, function (err, data) {
+    // if (err) throw err;
 
-  d3.csv("./Lekagul Sensor Data.csv", type, function (err, data) {
-    if (err) throw err;
+
     // navio Step 3. Load your data!
     nn.data(data);
     // nn.addAllAttribs();
-
-  // nn = navio(d3.select("#target"), 600);
-
-  // navio Step 2. Add the Categorical and Sequential attributes you want to use
-  var catColumns2 = ["car-type"];
-  catColumns2.forEach((c) => nn.addCategoricalAttrib(c));
-  // seqColumns.forEach((c) => nn.addSequentialAttrib(c));
-  nn.data(data);
 
   });
 
 
 
 
-  var fmt = d3.timeParse("%Y-%m-%d %H:%M:%S");
-  function type(row) {
-    var split = row["car-id"].split("-");
-    row.Timestamp = fmt(row.Timestamp);
-    row.hours = row.Timestamp.getHours();
-    row.dayNight = row.hour < 6 || row.hour>18 ? "night": "day";
-    row.dayOfTheWeek = row.Timestamp.getDay();
-    row.minutes = row.Timestamp.getMinutes();
-    row.seconds = row.Timestamp.getSeconds();
-    row.year = row.Timestamp.getFullYear();
-    row.month = row.Timestamp.getMonth();
-    row.day = row.Timestamp.getDate();
-    row.carIdPart1 = +split[0];
-    row.carIdPart2 = +split[1];
-    return row;
-  }
+var fmt = d3.timeParse("%Y-%m-%d %H:%M:%S");
+function type(row) {
+  var split = row["car-id"].split("-");
+  row.Timestamp = fmt(row.Timestamp);
+  row.hours = row.Timestamp.getHours();
+  row.dayNight = row.hour < 6 || row.hour>18 ? "night": "day";
+  row.dayOfTheWeek = row.Timestamp.getDay();
+  row.minutes = row.Timestamp.getMinutes();
+  row.seconds = row.Timestamp.getSeconds();
+  row.year = row.Timestamp.getFullYear();
+  row.month = row.Timestamp.getMonth();
+  row.day = row.Timestamp.getDate();
+  row.carIdPart1 = +split[0];
+  row.carIdPart2 = +split[1];
+  return row;
+}
 </script>
 </body>
 </html>

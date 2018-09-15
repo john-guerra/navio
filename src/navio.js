@@ -23,9 +23,9 @@ function navio(selection, _h) {
     canvas,
     context,
     // Taken from d3.chromatic https://github.com/d3/d3-scale-chromatic/blob/master/src/sequential-single/Blues.js
-    defaultColorInterpolator = d3ScaleChromatic.interpolateBlues,
-    defaultColorInterpolatorDate = d3ScaleChromatic.interpolatePurples,
-    defaultColorInterpolatorDiverging = d3ScaleChromatic.interpolateBrBG,
+    defaultColorInterpolator =  d3.interpolateBlues || d3ScaleChromatic ? d3ScaleChromatic.interpolateBlues : null,
+    defaultColorInterpolatorDate =  d3.interpolatePurples || d3ScaleChromatic ? d3ScaleChromatic.interpolatePurples : null,
+    defaultColorInterpolatorDiverging =  d3.interpolateBrBG || d3ScaleChromatic ? d3ScaleChromatic.interpolateBrBG : null,
     visibleColorRange = ["white", "#b5cf6b"],
     fmt = d3.format(",.0d"),
     x0=0,
