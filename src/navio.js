@@ -54,6 +54,8 @@ function navio(selection, _h) {
     d3.event.preventDefault();
   }
 
+  selection.selectAll("*").remove();
+
   selection
     .on("touchstart", nozoom)
     .on("touchmove", nozoom)
@@ -554,26 +556,27 @@ function navio(selection, _h) {
       .attr("transform", "rotate(-45)");
 
 
-    attribOverlay.exit().remove();
-    levelOverlay.exit().remove();
 
 
     levelOverlayEnter
       .append("text")
-        .attr("class", "numNodesLabel")
-        .style("font-family", "sans-serif")
-        .style("pointer-events", "none")
+      .attr("class", "numNodesLabel")
+      .style("font-family", "sans-serif")
+      .style("pointer-events", "none")
       .merge(levelOverlay.select(".numNodesLabel"))
-        .attr("y", function (_, i) {
-          return yScales[i].range()[1] + 15;
-        })
-        .attr("x", function (_, i) {
-          return  levelScale(i);
-        })
-        .text(function (d) {
-          return fmt(d.length);
-        });
+      .attr("y", function (_, i) {
+        return yScales[i].range()[1] + 15;
+      })
+      .attr("x", function (_, i) {
+        return  levelScale(i);
+      })
+      .text(function (d) {
+        return fmt(d.length);
+      });
 
+
+    attribOverlay.exit().remove();
+    levelOverlay.exit().remove();
     levelOverlay.exit().remove();
   }
 
@@ -893,6 +896,7 @@ function navio(selection, _h) {
   };
 
   nv.addAttrib = function (attr, scale) {
+    if (dimensionsOrder.indexOf(attr)!== -1) return;
     dimensionsOrder.push(attr);
     colScales.set(attr,scale);
     return nv;

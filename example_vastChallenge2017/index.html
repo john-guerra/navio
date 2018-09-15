@@ -11,7 +11,7 @@
   <!-- navio Step 0: Load the libraries -->
 
   <script src="https://d3js.org/d3.v4.min.js"></script>
-  <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+  <!-- <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script> -->
   <script src="../dist/navio.js"></script>
 
 <script>
@@ -31,6 +31,15 @@
     // navio Step 3. Load your data!
     nn.data(data);
     // nn.addAllAttribs();
+
+  // nn = navio(d3.select("#target"), 600);
+
+  // navio Step 2. Add the Categorical and Sequential attributes you want to use
+  var catColumns2 = ["car-type"];
+  catColumns2.forEach((c) => nn.addCategoricalAttrib(c));
+  // seqColumns.forEach((c) => nn.addSequentialAttrib(c));
+  nn.data(data);
+
   });
 
 

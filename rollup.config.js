@@ -17,7 +17,7 @@ export default [
       ascii()
     ],
     external: [
-      "d3",
+      "d3"
       // "d3-scale-chromatic"
     ],
     output: {
@@ -44,7 +44,7 @@ export default [
       ascii(),
       terser({output: {preamble: copyright}})
     ],
-    external: ["d3",
+    external: ["d3"
       // "d3-scale-chromatic"
     ],
     output: {
