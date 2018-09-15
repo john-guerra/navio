@@ -1,4 +1,6 @@
-import * as d3 from "d3,d3-scale-chromatic";
+import * as d3 from "d3";
+import * as d3ScaleChromatic from "d3-scale-chromatic";
+
 
 
 //eleId must be the ID of a context element where everything is going to be drawn
