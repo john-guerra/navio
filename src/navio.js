@@ -23,9 +23,9 @@ function navio(selection, _h) {
     canvas,
     context,
     // Taken from d3.chromatic https://github.com/d3/d3-scale-chromatic/blob/master/src/sequential-single/Blues.js
-    defaultColorInterpolator =  d3.interpolateBlues || d3ScaleChromatic ? d3ScaleChromatic.interpolateBlues : null,
-    defaultColorInterpolatorDate =  d3.interpolatePurples || d3ScaleChromatic ? d3ScaleChromatic.interpolatePurples : null,
-    defaultColorInterpolatorDiverging =  d3.interpolateBrBG || d3ScaleChromatic ? d3ScaleChromatic.interpolateBrBG : null,
+    defaultColorInterpolator =  d3.interpolateBlues ? d3.interpolateBlues : d3ScaleChromatic.interpolateBlues,
+    defaultColorInterpolatorDate =  d3.interpolatePurples ? d3.interpolatePurples :  d3ScaleChromatic.interpolatePurples,
+    defaultColorInterpolatorDiverging =  d3.interpolateBrBG ? d3.interpolateBrBG :  d3ScaleChromatic.interpolateBrBG,
     visibleColorRange = ["white", "#b5cf6b"],
     fmt = d3.format(",.0d"),
     x0=0,
@@ -156,8 +156,14 @@ function navio(selection, _h) {
   // canvas.style.width =  "150px";
   canvas.style.height = height + "px";
 
+  const scale = window.devicePixelRatio;
+  // canvas.width = width * scale;
+  canvas.height = height * scale;
+
   context = canvas.getContext("2d");
-  context.scale(2,2);
+
+  context.scale(scale,scale);
+
 
   // context.globalCompositeOperation = "source-over";
   // context.strokeStyle = "rgba(0,100,160,1)";
