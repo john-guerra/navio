@@ -34,6 +34,33 @@ export default [
     }
   },
   {
+    input: "src/navio.js",
+    // plugins: [
+    //   node({
+    //     jsxnext: true,
+    //     main: true,
+    //     browser: true
+    //   }),
+    //   ascii()
+    // ],
+    external: [
+      "d3",
+      "d3-scale-chromatic"
+    ],
+    output: {
+      extend: true,
+      banner: copyright,
+      file: meta.module,
+      format: "esm",
+      indent: false,
+      name: "navio",
+      globals: {
+        d3:"d3",
+        "d3-scale-chromatic":"d3ScaleChromatic"
+      }
+    }
+  },
+  {
     input: "src/navio",
     plugins: [
       node({

@@ -3,7 +3,7 @@
   "version": "0.0.12",
   "description": "A visualization widget for summarizing and exploring data",
   "main": "dist/navio.min.js",
-  "module": "dist/navio.min.js",
+  "module": "dist/navio.esm.js",
   "browser": "dist/navio.min.js",
   "unpkg": "dist/navio.min.js",
   "jsdelivr": "dist/navio.min.js",
