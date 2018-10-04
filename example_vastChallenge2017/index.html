@@ -4,14 +4,12 @@
 
   <!-- Placeholder for the widget -->
   <div id="target"></div>
-  <div>After</div>
-  <div>After</div>
-
 
   <!-- navio Step 0: Load the libraries -->
 
-  <script src="https://d3js.org/d3.v5.min.js"></script>
+  <script src="https://d3js.org/d3.v4.min.js"></script>
   <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+  <!-- <script src="https://unpkg.com/navio/dist/navio.min.js"></script> -->
   <script src="../dist/navio.js"></script>
 
 <script>
@@ -27,18 +25,18 @@ catColumns.forEach((c) => nn.addCategoricalAttrib(c));
 seqColumns.forEach((c) => nn.addSequentialAttrib(c));
 
 
-d3.csv("./Lekagul Sensor Data.csv")
-  .then(function (data) {
-    data.forEach(type);
-// d3.csv("./Lekagul Sensor Data.csv", type, function (err, data) {
-    // if (err) throw err;
+// d3.csv("./Lekagul Sensor Data.csv")
+//   .then(function (data) {
+//     data.forEach(type);
+d3.csv("./Lekagul Sensor Data.csv", type, function (err, data) {
+  if (err) throw err;
 
 
-    // navio Step 3. Load your data!
-    nn.data(data);
-    // nn.addAllAttribs();
+  // navio Step 3. Load your data!
+  nn.data(data);
+  // nn.addAllAttribs();
 
-  });
+});
 
 
 

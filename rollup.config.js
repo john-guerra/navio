@@ -1,5 +1,6 @@
 import ascii from "rollup-plugin-ascii";
 import node from "rollup-plugin-node-resolve";
+import commonjs from "rollup-plugin-commonjs";
 import {terser} from "rollup-plugin-terser";
 import * as meta from "./package.json";
 
@@ -35,14 +36,13 @@ export default [
   },
   {
     input: "src/navio.js",
-    // plugins: [
-    //   node({
-    //     jsxnext: true,
-    //     main: true,
-    //     browser: true
-    //   }),
-    //   ascii()
-    // ],
+    plugins: [
+      node({
+        jsxnext: true
+      }),
+      ascii(),
+      commonjs()
+    ],
     external: [
       "d3",
       "d3-scale-chromatic"
