@@ -12,7 +12,7 @@ You can explore your own data very easily on ObervableHQ. Just fork [this base N
 If you have data and just want a quick way of summarize it, explore it or filter it, you can try Shipyard, our stand-alone application for Navio. (You can also export template code to use it)
 
 [Try Shipyard](https://john-guerra.github.io/shipyard/build/index.html)
-![Shipyard demo](https://john-guerra.github.io/shipyard/demo.png)
+![Shipyard demo](https://github.com/john-guerra/shipyard/raw/master/demo.png)
 
 ### Demos:
 
