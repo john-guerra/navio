@@ -16,7 +16,7 @@
 <div id="nn"></div>
 <svg width="400" height="600"></svg>
 
-<script src="https://d3js.org/d3.v4.js"></script>
+<script src="https://d3js.org/d3.v5.js"></script>
 <script src="../dist/navio.js"></script>
 <script>
 /* global d3, Navio */
@@ -108,8 +108,12 @@ function update(graph) {
 
 
 }
-d3.json("miserables.json", function(error, graph) {
-  if (error) throw error;
+
+// d3 v4
+// d3.json("miserables.json", function(error, graph) {
+d3.json("miserables.json").
+  then(function(graph) {
+  // if (error) throw error;
   var dNodes = {};
   graph.nodes.forEach(function (d) { dNodes[d.id] = d;});
   graph.links.forEach(function (d) {
