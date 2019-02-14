@@ -217,6 +217,7 @@ function navio(selection, _h) {
       // context.lineWidth = 1;
       context.strokeStyle = item[attrib] === undefined ||
                 item[attrib] === null ||
+                item[attrib] === "" ||
                 item[attrib] === "none" ?
                   "white" :
                   colScales.get(attrib)(item[attrib]);
