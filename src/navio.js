@@ -86,7 +86,7 @@ function navio(selection, _h) {
     .attr("class", "attribs");
 
   svg.append("g")
-    .attr("class", "tooltip")
+    .attr("class", "nvTooltip")
     .style("text-shadow", "0 1px 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, -1px 0 0 #fff")
     .attr("transform", "translate(-100,-10)")
     .append("text")
@@ -97,20 +97,20 @@ function navio(selection, _h) {
       .style("font-size", "16pt")
       .style("text-anchor", "middle");
 
-  svg.select(".tooltip > text")
+  svg.select(".nvTooltip > text")
     .append("tspan")
       .attr("class", "tool_id")
       .attr("x", 0)
       .attr("dy", "1.2em");
 
-  svg.select(".tooltip > text")
+  svg.select(".nvTooltip > text")
     .append("tspan")
       .attr("class", "tool_value_name")
       .style("font-weight", "bold")
       .attr("x", 0)
       .attr("dy", "1.2em");
 
-  svg.select(".tooltip > text")
+  svg.select(".nvTooltip > text")
     .append("tspan")
       .attr("class", "tool_value_val")
       .style("font-weight", "bold")
@@ -429,7 +429,7 @@ function navio(selection, _h) {
     //   return e.visible;
     // });
 
-    svg.select(".tooltip")
+    svg.select(".nvTooltip")
       .attr("transform", "translate(" + (screenX) + "," + (screenY+20) + ")")
       .call(function (tool) {
         tool.select(".tool_id")
@@ -443,7 +443,7 @@ function navio(selection, _h) {
   }
 
   function onMouseOut() {
-    svg.select(".tooltip")
+    svg.select(".nvTooltip")
       .attr("transform", "translate(" + (-200) + "," + (-200) + ")")
       .call(function (tool) {
         tool.select(".tool_id")
