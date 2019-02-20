@@ -281,6 +281,25 @@ function navio(selection, _h) {
           [x(xScale.domain()[0], i),yScales[i].range()[0]],
           [x(xScale.domain()[xScale.domain().length-1], i) + xScale.bandwidth()*1.1, yScales[i].range()[1]]
         ])
+        .on("brush", function(params) {
+          if(d3.event.selection) {
+            var screenY = d3.event.sourceEvent.clientY;
+            var screenX = d3.event.sourceEvent.clientX;
+            var itemId = invertOrdinalScale(yScales[params.level], screenY);
+            var itemAttr = invertOrdinalScale(xScale, screenX - levelScale(params.level));
+            var d = dData.get(itemId);
+            svg.select(".nvTooltip")
+              .attr("transform", "translate(" + (screenX) + "," + (screenY+20) + ")")
+              .call(function (tool) {
+                tool.select(".tool_id")
+                  .text(itemId);
+                tool.select(".tool_value_name")
+                  .text(itemAttr + " : " )
+                tool.select(".tool_value_val")
+                  .text(d[itemAttr]);
+              });
+          }
+        })
         .on("end", brushended));
     var _brush = d3.select(this)
       .selectAll(".brush")
