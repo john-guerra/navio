@@ -168,6 +168,9 @@ function navio(selection, _h) {
 
   context.scale(scale,scale);
 
+  context.imageSmoothingEnabled = context.mozImageSmoothingEnabled = context.webkitImageSmoothingEnabled = false;
+
+
 
   // context.globalCompositeOperation = "source-over";
   // context.strokeStyle = "rgba(0,100,160,1)";
@@ -242,9 +245,9 @@ function navio(selection, _h) {
   function drawLevelBorder(i) {
     context.beginPath();
     context.rect(levelScale(i),
-      yScales[i].range()[0],
-      xScale.range()[1],
-      yScales[i].range()[1]-100);
+      yScales[i].range()[0]-1,
+      xScale.range()[1]+2,
+      yScales[i].range()[1]+2-100);
     context.strokeStyle = "black";
     context.lineWidth = 1;
     context.stroke();
@@ -458,9 +461,9 @@ function navio(selection, _h) {
 
     var levelOverlayEnter = levelOverlay.enter()
       .append("g")
-        .attr("class", "levelOverlay")
-        .attr("id", function (d,i) { return "level" +i; })
-        .each(addBrush);
+      .attr("class", "levelOverlay")
+      .attr("id", function (d,i) { return "level" +i; })
+      .each(addBrush);
 
     var attribOverlay = levelOverlayEnter.merge(levelOverlay)
       .selectAll(".attribOverlay")
@@ -472,9 +475,9 @@ function navio(selection, _h) {
 
     var attribOverlayEnter = attribOverlay
       .enter()
-        .append("g")
-        .attr("class", "attribOverlay")
-        .style("cursor", "pointer");
+      .append("g")
+      .attr("class", "attribOverlay")
+      .style("cursor", "pointer");
 
     attribOverlayEnter
       .merge(attribOverlay)
@@ -502,7 +505,7 @@ function navio(selection, _h) {
     attribOverlayEnter
       .append("text")
       .merge(attribOverlay.select("text"))
-      .style("cursor", "grab")
+      .style("cursor", "point")
       .style("-webkit-user-select", "none")
       .style("-moz-user-select", "none")
       .style("-ms-user-select", "none")
@@ -851,12 +854,14 @@ function navio(selection, _h) {
       //     drawItem(levelData[j], i);
       //   }
       // } else { // draw all
+
+      drawLevelBorder(i);
       levelData.representatives.forEach(function (rep) {
         drawItem(data[rep], i);
       });
       // }
 
-      drawLevelBorder(i);
+
       drawLevelConvections(i);
 
     });
