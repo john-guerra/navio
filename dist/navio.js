@@ -7,7 +7,6 @@ typeof define === 'function' && define.amd ? define(['d3', 'd3-scale-chromatic']
 
 // import * as d3 from "../node_modules/d3/build/d3.js"; // Force react to use the es6 module
 
-
 //eleId must be the ID of a context element where everything is going to be drawn
 function navio(selection, _h) {
   var nv = this || {},
@@ -70,20 +69,20 @@ function navio(selection, _h) {
     .style("height", height + "px")
     .attr("class", "navio")
     .append("div")
-      // .style("float", "left")
-      .attr("id", "navio")
-      .style("position", "relative");
+    // .style("float", "left")
+    .attr("id", "navio")
+    .style("position", "relative");
   selection
     .select("#navio")
     .append("canvas");
   var svg = selection
     .select("#navio")
     .append("svg")
-      .style("overflow", "visible")
-      .style("position", "absolute")
-      .style("z-index", 99)
-      .style("top", 0)
-      .style("left", 0);
+    .style("overflow", "visible")
+    .style("position", "absolute")
+    .style("z-index", 99)
+    .style("top", 0)
+    .style("left", 0);
 
 
   svg.append("g")
@@ -94,32 +93,32 @@ function navio(selection, _h) {
     .style("text-shadow", "0 1px 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, -1px 0 0 #fff")
     .attr("transform", "translate(-100,-10)")
     .append("text")
-      .attr("x", 0)
-      .attr("y", 0)
-      .style("pointer-events", "none")
-      .style("font-family", "sans-serif")
-      .style("font-size", "16pt")
-      .style("text-anchor", "middle");
+    .attr("x", 0)
+    .attr("y", 0)
+    .style("pointer-events", "none")
+    .style("font-family", "sans-serif")
+    .style("font-size", "16pt")
+    .style("text-anchor", "middle");
 
   svg.select(".nvTooltip > text")
     .append("tspan")
-      .attr("class", "tool_id")
-      .attr("x", 0)
-      .attr("dy", "1.2em");
+    .attr("class", "tool_id")
+    .attr("x", 0)
+    .attr("dy", "1.2em");
 
   svg.select(".nvTooltip > text")
     .append("tspan")
-      .attr("class", "tool_value_name")
-      .style("font-weight", "bold")
-      .attr("x", 0)
-      .attr("dy", "1.2em");
+    .attr("class", "tool_value_name")
+    .style("font-weight", "bold")
+    .attr("x", 0)
+    .attr("dy", "1.2em");
 
   svg.select(".nvTooltip > text")
     .append("tspan")
-      .attr("class", "tool_value_val")
-      .style("font-weight", "bold")
-      .attr("x", 0)
-      .attr("dy", "1.2em");
+    .attr("class", "tool_value_val")
+    .style("font-weight", "bold")
+    .attr("x", 0)
+    .attr("dy", "1.2em");
 
   svg.append("g")
     .attr("id", "closeButton")
@@ -298,7 +297,7 @@ function navio(selection, _h) {
     _brush.exit().remove();
 
     function brushended() {
-      // console.log("brushended", d3.event);
+      // if (DEBUG) console.log("brushended", d3.event);
       if (!d3.event.sourceEvent) return; // Only transition after input.
       if (!d3.event.selection){
         console.log("Empty selection",d3.event.selection,d3.event.type, d3.event.sourceEvent);
@@ -317,10 +316,10 @@ function navio(selection, _h) {
         first = dData.get(invertOrdinalScale(yScales[i], brushed[0])),
         // last = dData.get(invertOrdinalScale(yScales[i], brushed[1] -yScales[i].bandwidth()))
         last = dData.get(invertOrdinalScale(yScales[i], brushed[1]));
-      // console.log("first and last");
-      // console.log(first);
-      // console.log(last);
-      // console.log("first id "+ first.__i[i]+ " last id " + last.__i[i] );
+      // if (DEBUG) console.log("first and last");
+      // if (DEBUG) console.log(first);
+      // if (DEBUG) console.log(last);
+      // if (DEBUG) console.log("first id "+ first.__i[i]+ " last id " + last.__i[i] );
       // var brush0_minus_bandwidth = brushed[0] - yScales[i].bandwidth();
       // var filteredData = data[i].filter(function (d) {
       //   var y = yScales[i](d[id]);
@@ -568,8 +567,10 @@ function navio(selection, _h) {
   } // drawBrushes
 
   function attribDragstarted(d) {
-    console.log("start", d);
+    if (!d3.event.sourceEvent.shiftKey)
+      return;
 
+    console.log("start", d);
     d3.select(this.parentNode)
       .attr("transform", function (d) {
         return "translate(" +
@@ -583,7 +584,9 @@ function navio(selection, _h) {
 
   function attribDragged(d) {
     // var attribInto = invertOrdinalScale(xScale, d3.everythingnt.x + nv.attribFontSize/2 - levelScale(d.level));
-    // console.log(d3.event.x, d3.event.y, attribInto);
+    // if (DEBUG) console.log(d3.event.x, d3.event.y, attribInto);
+    if (!d3.event.sourceEvent.shiftKey)
+      return;
 
     d3.select(this.parentNode)
       .attr("transform", function (d) {
@@ -596,7 +599,10 @@ function navio(selection, _h) {
   }
 
   function attribDragended(d) {
+    if (!d3.event.sourceEvent.shiftKey)
+      return;
     console.log("end", d);
+
 
     var attrDraggedInto = invertOrdinalScale(xScale, d3.event.x + nv.attribFontSize/2 - levelScale(d.level));
     var pos;
@@ -653,9 +659,9 @@ function navio(selection, _h) {
       // Compute the yPrev by calculating the index of the corresponding representative
       var iOnPrev = dData.get(data[item][id]).__i[level-1];
       var iRep = Math.floor(iOnPrev - iOnPrev%dataIs[level-1].itemsPerpixel);
-      // console.log("i rep = "+ iRep);
-      // console.log(data[level-1][iRep]);
-      // console.log(yScales[level-1](data[level-1][iRep][id]));
+      // if (DEBUG) console.log("i rep = "+ iRep);
+      // if (DEBUG) console.log(data[level-1][iRep]);
+      // if (DEBUG) console.log(yScales[level-1](data[level-1][iRep][id]));
       var locPrevLevel = {
         x: levelScale(level-1) + xScale.range()[1],
         y: yScales[level-1]( data[dataIs[level-1][iRep]] [id])
@@ -925,7 +931,7 @@ function navio(selection, _h) {
   //           .domain(domain); //if we don"t have data, set the default domain
   //       // }
   //     }
-  //     console.log("attr", attr, guessedScale);
+  //     if (DEBUG) console.log("attr", attr, guessedScale);
 
   //     nv.addAttrib(attr,scale ||
   //       guessedScale);
