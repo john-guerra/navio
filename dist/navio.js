@@ -314,7 +314,6 @@ function navio(selection, _h) {
         ])
         .on("end", onSelectByRange);
 
-
     var _brush = d3.select(this)
       .selectAll(".brush")
       .data([{
@@ -432,9 +431,6 @@ function navio(selection, _h) {
       console.log("Selected " + filteredData.length + " calling updateCallback");
       updateCallback(nv.getVisible());
 
-      // nv.update(false); //don"t update brushes
-
-      // d3.select(this).transition().call(d3.event.target.move, d1.map(x));
     }// onSelectByRange
 
     function onSelectByValue() {
@@ -493,7 +489,7 @@ function navio(selection, _h) {
       console.log("Selected " + nv.getVisible().length + " calling updateCallback");
       updateCallback(nv.getVisible());
     }
-  }
+  } // addBrush
 
 
   function onMouseOver(overData) {
@@ -537,7 +533,7 @@ function navio(selection, _h) {
 
   }
 
-  function drawBrushes() {
+  function drawBrushes(updateBrushes) {
     var attribs = xScale.domain();
 
     var levelOverlay = svg.select(".attribs")
@@ -547,11 +543,20 @@ function navio(selection, _h) {
     var levelOverlayEnter = levelOverlay.enter()
       .append("g");
 
+
     levelOverlayEnter
-      .merge(levelOverlay)
       .attr("class", "levelOverlay")
-      .attr("id", function (d,i) { return "level" +i; })
-      .each(addBrush);
+      .attr("id", function (d,i) { return "level" +i; });
+
+    // Bugfix: when adding all attribs we need to update the brush
+    if (updateBrushes) {
+      levelOverlayEnter
+        .merge(levelOverlay)
+        .each(addBrush);
+    } else {
+      levelOverlayEnter
+        .each(addBrush);
+    }
 
     var attribOverlay = levelOverlayEnter.merge(levelOverlay)
       .selectAll(".attribOverlay")
@@ -963,7 +968,9 @@ function navio(selection, _h) {
 
 
 
-  nv.update = function() {
+  nv.update = function(_updateBrushes) {
+    var updateBrushes = _updateBrushes !== undefined ? _updateBrushes : false;
+
     var before = performance.now();
 
     var w = levelScale.range()[1] + nv.margin + x0;
@@ -988,8 +995,9 @@ function navio(selection, _h) {
     });
 
 
-    drawBrushes();
+    drawBrushes(updateBrushes);
     drawCloseButton();
+
     var after = performance.now();
     console.log("Redrawing " + (after-before) + "ms");
 
@@ -1057,7 +1065,7 @@ function navio(selection, _h) {
     });
 
     nv.data(data);
-    nv.update();
+    drawBrushes(true); // updates brushes width
     return nv;
   };
 
