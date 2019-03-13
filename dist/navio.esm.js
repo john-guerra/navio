@@ -219,7 +219,6 @@ function navio(selection, _h) {
     dSortBy[d.level] = d.attrib;
 
     updateSorting(d.level);
-
     removeBrushOnLevel(d.level);
 
     nv.updateData(dataIs, colScales, d.level);
@@ -882,9 +881,17 @@ function navio(selection, _h) {
       function (attrib) {
         if (attrib === "visible") return;
         var scale = colScales.get(attrib);
-        scale.domain(extent(dataIs[0].map(function (i) {
-          return data[i][attrib];
-        }))); //TODO: make it compute it based on the local range
+        if (scale.__type==="seq" || scale.__type==="date") {
+          scale.domain(extent(dataIs[0].map(function (i) {
+            return data[i][attrib];
+          }))); //TODO: make it compute it based on the local range
+        } else if (scale.__type==="div") {
+          const [min$$1, max] = extent(dataIs[0].map(function (i) {
+            return data[i][attrib];
+          }));
+          const absMax = Math.max(-min$$1, max); // Assumes diverging point on 0
+          scale.domain([-absMax, absMax]);
+        }
         colScales.set(attrib, scale);
       }
     );
@@ -1010,43 +1017,52 @@ function navio(selection, _h) {
     return nv;
   };
 
-  nv.addSequentialAttrib = function (attr, scale ) {
-    nv.addAttrib(attr,scale ||
+  nv.addSequentialAttrib = function (attr, _scale ) {
+    const domain = data!==undefined && data.length>0 ?
+      extent(data, function (d) { return d[attr]; }) :
+      [0, 1];   //if we don"t have data, set the default domain
+    const scale = _scale ||
       scaleSequential(defaultColorInterpolator)
-        .domain(data!==undefined && data.length>0 ?
-          extent(data, function (d) { return d[attr]; }) :
-          [0, 1]) //if we don"t have data, set the default domain
-    );
+        .domain(domain);
+    scale.__type = "seq";
+    nv.addAttrib(attr, scale);
     return nv;
   };
 
   // Same as addSequentialAttrib but with a different color
-  nv.addDateAttrib = function (attr, scale ) {
-    nv.addAttrib(attr,scale ||
+  nv.addDateAttrib = function (attr, _scale ) {
+    const domain = data!==undefined && data.length>0 ?
+      extent(data, function (d) { return d[attr]; }) :
+      [0, 1];
+
+    const scale = _scale ||
       scaleSequential(defaultColorInterpolatorDate)
-        .domain(data!==undefined && data.length>0 ?
-          extent(data, function (d) { return d[attr]; }) :
-          [0, 1]) //if we don"t have data, set the default domain
-    );
+        .domain(domain); //if we don"t have data, set the default domain
+    nv.addAttrib(attr,scale);
+
+    scale.__type = "date";
     return nv;
   };
 
   // Adds a diverging scale
-  nv.addDivergingAttrib = function (attr, scale ) {
-    var domain = data!==undefined && data.length>0 ?
+  nv.addDivergingAttrib = function (attr, _scale ) {
+    const domain = data!==undefined && data.length>0 ?
       extent(data, function (d) { return d[attr]; }) :
       [-1,  1];
-
-    nv.addAttrib(attr,scale ||
+    const scale = _scale ||
       scaleSequential(defaultColorInterpolatorDiverging)
-        .domain([domain[0], domain[1]]) //if we don"t have data, set the default domain
-    );
+        .domain([domain[0], domain[1]]); //if we don"t have data, set the default domain
+    scale.__type = "div";
+    nv.addAttrib(attr, scale);
     return nv;
   };
 
-  nv.addCategoricalAttrib = function (attr, scale ) {
-    nv.addAttrib(attr,scale ||
-      scaleOrdinal(schemeCategory10));
+  nv.addCategoricalAttrib = function (attr, _scale ) {
+    const scale = _scale ||
+      scaleOrdinal(schemeCategory10);
+    scale.__type = "cat";
+    nv.addAttrib(attr, scale);
+
     return nv;
   };
 
@@ -1063,7 +1079,7 @@ function navio(selection, _h) {
         nv.addCategoricalAttrib(attr);
       } else if (typeof(data[0][attr]) === typeof(new Date())) {
         nv.addDateAttrib(attr);
-      } else if (typeof(data[0][attr]) === typeof(0) && min(data[0], d=> d[attr]) < 0) {
+      } else if (typeof(data[0][attr]) === typeof(0) && min(data, d=> d[attr]) < 0) {
         nv.addDivergingAttrib(attr);
       } else {
         nv.addSequentialAttrib(attr);

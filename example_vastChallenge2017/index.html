@@ -30,6 +30,7 @@ var nn = navio(d3.select("#target"), 600);
 d3.csv("./Lekagul Sensor Data.csv", type, function (err, data) {
   if (err) throw err;
 
+  data.forEach( d=> d["Random number"]=Math.random()*10-8);
 
   // navio Step 3. Load your data!
   nn.data(data);
