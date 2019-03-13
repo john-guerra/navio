@@ -2,7 +2,7 @@
 import * as d3 from "d3";
 import {interpolateBlues, interpolatePurples, interpolateBrBG} from "d3-scale-chromatic";
 
-let DEBUG = true;
+let DEBUG = false;
 
 //eleId must be the ID of a context element where everything is going to be drawn
 function navio(selection, _h) {
@@ -38,7 +38,7 @@ function navio(selection, _h) {
   nv.levelsSeparation = 40;
   nv.divisionsColor = "white";
   nv.levelConvectionsColor = "rgba(205, 220, 163, 0.5)";
-  nv.divisionsThreshold = 3;
+  nv.divisionsThreshold = 4; // What's the minimum row width needed to draw divisions
   nv.attribFontSize = 13;
   nv.attribFontSizeSelected = 32;
 
@@ -172,7 +172,7 @@ function navio(selection, _h) {
 
 
 
-  // context.globalCompositeOperation = "source-over";
+  context.globalCompositeOperation = "source-over";
   // context.strokeStyle = "rgba(0,100,160,1)";
   // context.strokeStyle = "rgba(0,0,0,0.02)";
 
@@ -215,6 +215,10 @@ function navio(selection, _h) {
   function drawItem(item, level) {
     var attrib, i, y ;
 
+    if (yScales[level].bandwidth() > nv.divisionsThreshold) {
+      if (DEBUG) { console.log("Add borders"); }
+    }
+
     for (i = 0; i < dimensionsOrder.length; i++) {
       attrib = dimensionsOrder[i];
       y = Math.round(yScales[level](item[id]) + yScales[level].bandwidth()/2);
@@ -223,20 +227,20 @@ function navio(selection, _h) {
       context.beginPath();
       context.moveTo(Math.round(x(attrib, level)), y);
       context.lineTo(Math.round(x(attrib, level) + xScale.bandwidth()), y);
-      context.lineWidth = Math.round(yScales[level].bandwidth());
+      context.lineWidth = Math.ceil(yScales[level].bandwidth())+1;
       // context.lineWidth = 1;
       context.strokeStyle = item[attrib] === undefined ||
                 item[attrib] === null ||
                 item[attrib] === "" ||
                 item[attrib] === "none" ?
-                  "white" :
-                  colScales.get(attrib)(item[attrib]);
+        "white" :
+        colScales.get(attrib)(item[attrib]);
 
       context.stroke();
 
 
       //If the range bands are tick enough draw divisions
-      if (yScales[level].bandwidth() > nv.divisionsThreshold) {
+      if (yScales[level].bandwidth() > nv.divisionsThreshold*2) {
         var yLine = Math.round(yScales[level](item[id])) ;
         // y = yScales[level](item[id])+yScales[level].bandwidth()/2;
         context.beginPath();
@@ -256,7 +260,7 @@ function navio(selection, _h) {
     context.beginPath();
     context.rect(levelScale(i),
       yScales[i].range()[0]-1,
-      xScale.range()[1]+2,
+      xScale.range()[1]+1,
       yScales[i].range()[1]+2-100);
     context.strokeStyle = "black";
     context.lineWidth = 1;
