@@ -197,7 +197,6 @@ function navio(selection, _h) {
     dSortBy[d.level] = d.attrib;
 
     updateSorting(d.level);
-
     removeBrushOnLevel(d.level);
 
     nv.updateData(dataIs, colScales, d.level);

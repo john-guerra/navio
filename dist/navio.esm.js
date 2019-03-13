@@ -1,6 +1,6 @@
 // https://github.com/john-guerra/Navio#readme v0.0.16 Copyright 2019 John Alexis Guerra Gómez
 import * as d3 from 'd3';
-import { map, interpolateBlues, interpolatePurples, interpolateBrBG, format, event, select, path, scaleBand, scaleQuantize, brushY, mouse, drag, ascending, extent, scaleSequential, scaleOrdinal, schemeCategory10 } from 'd3';
+import { map, interpolateBlues, interpolatePurples, interpolateBrBG, format, event, select, path, scaleBand, scaleQuantize, brushY, mouse, drag, ascending, extent, scaleSequential, scaleOrdinal, schemeCategory10, min } from 'd3';
 import { interpolateBlues as interpolateBlues$1, interpolatePurples as interpolatePurples$1, interpolateBrBG as interpolateBrBG$1 } from 'd3-scale-chromatic';
 
 class FilterByRange {
@@ -212,13 +212,15 @@ function navio(selection, _h) {
     return qScale(x);
   }
 
-  function nvOnClickLevel(d) {
+  function onSortLevel(d) {
     if (event && event.defaultPrevented) return; // dragged
     console.log("click " + d);
 
     dSortBy[d.level] = d.attrib;
 
     updateSorting(d.level);
+
+    removeBrushOnLevel(d.level);
 
     nv.updateData(dataIs, colScales, d.level);
   }
@@ -616,7 +618,7 @@ function navio(selection, _h) {
       })
       .style("font-family", "sans-serif")
       .style("font-size", nv.attribFontSize+"px")
-      .on("click", nvOnClickLevel)
+      .on("click", onSortLevel)
       .call(drag()
         .container(attribOverlayEnter.merge(attribOverlay).node())
         .on("start", attribDragstarted)
@@ -1004,7 +1006,7 @@ function navio(selection, _h) {
   nv.addAttrib = function (attr, scale) {
     if (dimensionsOrder.indexOf(attr)!== -1) return;
     dimensionsOrder.push(attr);
-    colScales.set(attr,scale);
+    colScales.set(attr, scale);
     return nv;
   };
 
@@ -1029,10 +1031,12 @@ function navio(selection, _h) {
     return nv;
   };
 
+  // Adds a diverging scale
   nv.addDivergingAttrib = function (attr, scale ) {
     var domain = data!==undefined && data.length>0 ?
       extent(data, function (d) { return d[attr]; }) :
       [-1,  1];
+
     nv.addAttrib(attr,scale ||
       scaleSequential(defaultColorInterpolatorDiverging)
         .domain([domain[0], domain[1]]) //if we don"t have data, set the default domain
@@ -1057,6 +1061,10 @@ function navio(selection, _h) {
         return;
       if (typeof(data[0][attr]) === typeof("")) {
         nv.addCategoricalAttrib(attr);
+      } else if (typeof(data[0][attr]) === typeof(new Date())) {
+        nv.addDateAttrib(attr);
+      } else if (typeof(data[0][attr]) === typeof(0) && min(data[0], d=> d[attr]) < 0) {
+        nv.addDivergingAttrib(attr);
       } else {
         nv.addSequentialAttrib(attr);
       }

@@ -214,13 +214,15 @@ function navio(selection, _h) {
     return qScale(x);
   }
 
-  function nvOnClickLevel(d) {
+  function onSortLevel(d) {
     if (d3.event && d3.event.defaultPrevented) return; // dragged
     console.log("click " + d);
 
     dSortBy[d.level] = d.attrib;
 
     updateSorting(d.level);
+
+    removeBrushOnLevel(d.level);
 
     nv.updateData(dataIs, colScales, d.level);
   }
@@ -618,7 +620,7 @@ function navio(selection, _h) {
       })
       .style("font-family", "sans-serif")
       .style("font-size", nv.attribFontSize+"px")
-      .on("click", nvOnClickLevel)
+      .on("click", onSortLevel)
       .call(d3.drag()
         .container(attribOverlayEnter.merge(attribOverlay).node())
         .on("start", attribDragstarted)
@@ -1006,7 +1008,7 @@ function navio(selection, _h) {
   nv.addAttrib = function (attr, scale) {
     if (dimensionsOrder.indexOf(attr)!== -1) return;
     dimensionsOrder.push(attr);
-    colScales.set(attr,scale);
+    colScales.set(attr, scale);
     return nv;
   };
 
@@ -1031,10 +1033,12 @@ function navio(selection, _h) {
     return nv;
   };
 
+  // Adds a diverging scale
   nv.addDivergingAttrib = function (attr, scale ) {
     var domain = data!==undefined && data.length>0 ?
       d3.extent(data, function (d) { return d[attr]; }) :
       [-1,  1];
+
     nv.addAttrib(attr,scale ||
       d3.scaleSequential(defaultColorInterpolatorDiverging)
         .domain([domain[0], domain[1]]) //if we don"t have data, set the default domain
@@ -1059,6 +1063,10 @@ function navio(selection, _h) {
         return;
       if (typeof(data[0][attr]) === typeof("")) {
         nv.addCategoricalAttrib(attr);
+      } else if (typeof(data[0][attr]) === typeof(new Date())) {
+        nv.addDateAttrib(attr);
+      } else if (typeof(data[0][attr]) === typeof(0) && d3.min(data[0], d=> d[attr]) < 0) {
+        nv.addDivergingAttrib(attr);
       } else {
         nv.addSequentialAttrib(attr);
       }
