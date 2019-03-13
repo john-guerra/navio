@@ -3,7 +3,7 @@ import * as d3 from "d3";
 import {interpolateBlues, interpolatePurples, interpolateBrBG} from "d3-scale-chromatic";
 import {FilterByRange, FilterByValue} from "./filters.js";
 
-let DEBUG = true;
+let DEBUG = false;
 
 //eleId must be the ID of a context element where everything is going to be drawn
 function navio(selection, _h) {
