@@ -1053,14 +1053,19 @@ function navio(selection, _h) {
       if (attr === "__seqId" ||
         attr === "__i")
         return;
-      if (typeof(data[0][attr]) === typeof("")) {
-        nv.addCategoricalAttrib(attr);
-      } else if (typeof(data[0][attr]) === typeof(new Date())) {
+      if (typeof(data[0][attr]) === typeof(new Date())) {
         nv.addDateAttrib(attr);
-      } else if (typeof(data[0][attr]) === typeof(0) && d3.min(data, d=> d[attr]) < 0) {
-        nv.addDivergingAttrib(attr);
+      } else if (typeof(data[0][attr]) === typeof(0)) {
+        // Numbers
+        if (d3.min(data, d=> d[attr]) < 0) {
+          nv.addDivergingAttrib(attr);
+        } else {
+          nv.addSequentialAttrib(attr);
+        }
       } else {
-        nv.addSequentialAttrib(attr);
+        // Default categories
+        nv.addCategoricalAttrib(attr);
+
       }
     });
 
