@@ -1,51 +1,84 @@
 <!DOCTYPE html>
+<html>
+<head>
+  <title>Navio example: IEEEVIS Publications</title>
+  <style>
+    body {
+      font-family: sans-serif;
+    }
+  </style>
+</head>
 <body>
   <h1>IEEEVIS Publications 1990-2018</h1>
 
   <!-- Placeholder for the widget -->
-  <div id="target"></div>
+  <div id="target" style="width:55%; float:left; overflow-x: scroll;"></div>
+  <div style="width:45%; float:left">
+    <h2>Papers</h2>
+    <span id="paperCount"></span>
+    <table cellpadding="10">
+      <tr>
+        <th>Title</th>
+        <th>Conference</th>
+        <th>Year</th>
+        <th>XPloreCitationCount_02-2019</th>
+      </tr>
+      <tbody id="papers">
+      </tbody>
+    </table>
+  </div>
 
-  <!-- navio Step 0: Load the libraries -->
 
+  <!-- Step 0: Load the libraries -->
   <script src="https://d3js.org/d3.v5.min.js"></script>
-  <!-- <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script> -->
-  <script src="https://unpkg.com/navio/dist/navio.min.js"></script>
-  <!-- <script src="../dist/navio.js"></script> -->
+  <!-- <script src="https://unpkg.com/navio/dist/navio.min.js"></script> -->
+  <script src="../dist/navio.js"></script>
 
 <script>
 /* global d3, navio */
 
-// navio  Step 1.  Create a navio passing the selector to place it and the height
+// Step 1.  Create a navio passing the selector to place it and the height
 var nn = navio(d3.select("#target"), 800);
+
+// Step 1.5 (Optional) Set parameters
+nn.attribWidth = 12;
+nn.attribFontSize = 10;
 
 
 d3.csv("./IEEE VIS papers 1990-2018 - Main dataset.csv", d3.autoType)
   .then(function (data) {
-    // navio Step 3. Load your data!
+    // Step 2. Load your data!
     nn.data(data);
+
+    // Step 3 autodetect the attributes
     nn.addAllAttribs();
 
+    // Step 4 (optional) add a callback for when updating
+    nn.updateCallback(populateTable);
+
+    populateTable(data);
   });
 
 
+function populateTable(data) {
+  const NumPaperToShow = 20;
+  d3.select("#paperCount").text(`Showing ${NumPaperToShow} out of ${data.length}`);
+  d3.select("#papers")
+    .selectAll("tr").remove();
+  let trs = d3.select("#papers")
+    .selectAll("tr")
+    .data(data
+      .slice(0,NumPaperToShow))
+    .enter()
+    .append("tr");
 
+  trs.append("td").text(d=> d.Title);
+  trs.append("td").text(d=> d.Conference);
+  trs.append("td").text(d=> d.Year);
+  trs.append("td").text(d=> d["XPloreCitationCount_02-2019"]);
 
-// var fmt = d3.timeParse("%Y-%m-%d %H:%M:%S");
-// function type(row) {
-//   var split = row["car-id"].split("-");
-//   row.Timestamp = fmt(row.Timestamp);
-//   row.hours = row.Timestamp.getHours();
-//   row.dayNight = row.hour < 6 || row.hour>18 ? "night": "day";
-//   row.dayOfTheWeek = row.Timestamp.getDay();
-//   row.minutes = row.Timestamp.getMinutes();
-//   row.seconds = row.Timestamp.getSeconds();
-//   row.year = row.Timestamp.getFullYear();
-//   row.month = row.Timestamp.getMonth();
-//   row.day = row.Timestamp.getDate();
-//   row.carIdPart1 = +split[0];
-//   row.carIdPart2 = +split[1];
-//   return row;
-// }
+}
+
 </script>
 </body>
 </html>
