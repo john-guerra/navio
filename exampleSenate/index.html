@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Example Senate</title>
+  <link rel="stylesheet" href="assets/css/main.css">
+  <style>
+    body {
+      font-family: sans-serif;
+      margin:10px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Node Navigator: Colombian Senate</h1>
+  <button id="recluster">Recluster</button>
+  <div id="nn"></div>
+  <canvas id="graph" width="600" height="600"></canvas>
+<!--   <canvas id="graph" width="800" height="800" style="position: absolute;  z-index: 99;"></canvas>
+  <canvas id="nodesText" width="800" height="800" style="position: absolute; z-index: 2;"></canvas>
+ -->
+
+
+  <script src="https://d3js.org/d3.v4.min.js"></script>
+  <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+  <script src="lib/js/netClustering.js"></script>
+  <script src="lib/js/forceInABox.js"></script>
+  <script src="https://unpkg.com/navio/dist/navio.min.js"></script>
+  <script src="../dist/navio.js"></script>
+  <script src="assets/js/main.js"></script>
+</body>
+</html>

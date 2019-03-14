@@ -224,7 +224,6 @@ function navio(selection, _h) {
     if (d3.event && d3.event.defaultPrevented) return; // dragged
     if (DEBUG) console.log("click " + d);
 
-    showLoading(this);
 
     dSortBy[d.level] = {
       attrib:d.attrib,
@@ -1024,6 +1023,8 @@ function navio(selection, _h) {
 
   function deleteOneLevel() {
     if (dataIs.length<=1) return;
+
+    showLoading(this);
     if (DEBUG) console.log("Delete one level");
     removeBrushOnLevel(dataIs.length-2);
     dataIs[dataIs.length-2].forEach(function (d) { data[d].visible=true; });
@@ -1032,6 +1033,8 @@ function navio(selection, _h) {
 
     nv.updateData(dataIs, colScales);
     updateCallback(nv.getVisible());
+
+    hideLoading(this);
   }
 
   function moveAttrToPos(attr, pos) {
