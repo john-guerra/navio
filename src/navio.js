@@ -381,6 +381,7 @@ function navio(selection, _h) {
           yScales[level].range()[1]
         ]
       ])
+      .on("brush", brushed)
       .on("end", onSelectByRange);
     var _brush = d3.select(this)
       .selectAll(".brush")
@@ -432,6 +433,15 @@ function navio(selection, _h) {
       return filteredData;
 
     }
+
+
+    function brushed() {
+      const screenX = d3.event.sourceEvent.offsetX,
+        screenY = d3.event.sourceEvent.offsetY;
+
+      showTooptip(screenX, screenY, level);
+    }
+
 
     function onSelectByRange() {
       showLoading(this);
@@ -552,13 +562,9 @@ function navio(selection, _h) {
     }
   } // addBrush
 
-
-  function onMouseOver(overData) {
-    var screenY = d3.mouse(d3.event.target)[1],
-      screenX = d3.mouse(d3.event.target)[0];
-
-    var itemId = invertOrdinalScale(yScales[overData.level], screenY);
-    var itemAttr = invertOrdinalScale(xScale, screenX - levelScale(overData.level));
+  function showTooptip(screenX, screenY, level) {
+    var itemId = invertOrdinalScale(yScales[level], screenY);
+    var itemAttr = invertOrdinalScale(xScale, screenX - levelScale(level));
     var d = dData.get(itemId);
 
     svg.select(".nvTooltip")
@@ -574,6 +580,13 @@ function navio(selection, _h) {
       });
 
     if ( DEBUG ) console.log("Mouse over", d);
+  }
+
+  function onMouseOver(overData) {
+    var screenY = d3.mouse(d3.event.target)[1],
+      screenX = d3.mouse(d3.event.target)[0];
+
+    showTooptip(screenX, screenY, overData.level);
   }
 
   function onMouseOut() {
