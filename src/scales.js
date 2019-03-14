@@ -19,13 +19,10 @@ export function scaleText(digits = 1) {
     );
     if (ci === undefined) {
       console.log(
-        `scaleText Couldn't find index for ${d
-          .slice(0, digits)
-          } did you call domain? Using ascii of first letter`
+        `scaleText Couldn't find index for ${d.slice(0, digits)} did you call domain? Using ascii of first letter`
       );
       ci = d
         .slice(0, digits)
-
         .charCodeAt(0);
     }
     return scale(ci) || "white";
