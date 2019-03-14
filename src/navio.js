@@ -77,12 +77,9 @@ function navio(selection, _h) {
     // .style("float", "left")
     .attr("id", "navio")
     .style("position", "relative");
-
   selection
     .select("#navio")
     .append("canvas");
-
-
   var svg = selection
     .select("#navio")
     .append("svg")

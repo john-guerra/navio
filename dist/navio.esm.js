@@ -1,4 +1,4 @@
-// https://github.com/john-guerra/Navio#readme v0.0.22 Copyright 2019 John Alexis Guerra Gómez
+// https://github.com/john-guerra/Navio#readme v0.0.23 Copyright 2019 John Alexis Guerra Gómez
 import * as d3 from 'd3';
 import { map, interpolateBlues, interpolatePurples, interpolateBrBG, format, event, select, path, scaleBand, scaleQuantize, brushY, mouse, drag, extent, scaleSequential, scaleOrdinal, schemeCategory10, min, interpolateGreys } from 'd3';
 import { _interpolateGreys, interpolateBlues as interpolateBlues$1, interpolatePurples as interpolatePurples$1, interpolateBrBG as interpolateBrBG$1 } from 'd3-scale-chromatic';
@@ -39,17 +39,17 @@ function scaleText(digits = 1) {
   // Computes the actual value, based on the index of the first digits in the domain
   function compute(d) {
     let ci = dRepresentativesIndexes.get(
-      d.slice(0, digits).toLocaleUpperCase()
+      d.slice(0, digits)
     );
     if (ci === undefined) {
       console.log(
         `scaleText Couldn't find index for ${d
           .slice(0, digits)
-          .toLocaleUpperCase()} did you call domain? Using ascii of first letter`
+          } did you call domain? Using ascii of first letter`
       );
       ci = d
         .slice(0, digits)
-        .toLocaleUpperCase()
+
         .charCodeAt(0);
     }
     return scale(ci) || "white";
@@ -96,7 +96,7 @@ function scaleText(digits = 1) {
       computeRepresentatives(
         data
           .filter(d => d !== undefined && d !== null)
-          .map(d => d.slice(0, digits).toLocaleUpperCase())
+          .map(d => d.slice(0, digits))
       );
       scale.domain([0, dRepresentativesCounts.keys().length]);
       return compute;
@@ -140,7 +140,7 @@ function navio(selection, _h) {
     visibleColorRange = ["white", "#b5cf6b"],
     fmt = format(",.0d"),
     x0=0,
-    y0=200,
+    y0=100,
     id = "__seqId",
     updateCallback = function () {};
 
