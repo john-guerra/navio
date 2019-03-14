@@ -1,14 +1,13 @@
 import * as d3 from "d3";
-import { _interpolateGreys } from "d3-scale-chromatic";
+import { interpolateGreys  } from "d3-scale-chromatic";
 
 // A fake scale that uses only the first digits of a text to compute the color.
 // Creates a list of all the possible first digits and uses a sequential scale to color based on such index
 export function scaleText(digits = 1) {
   const DEBUG = false;
 
-  const interpolateGreys =
-    "interpolateGreys" in d3 ? d3.interpolateGreys : _interpolateGreys; // Hack to keep it working with d3.v4
-  let scale = d3.scaleSequential(interpolateGreys).domain([32, 90]), // initialize with ascii
+  const defaultColorInterpolator = "interpolateGreys" in d3 ? d3.interpolateGreys : interpolateGreys; // Hack to keep it working with d3.v4
+  let scale = d3.scaleSequential(defaultColorInterpolator).domain([32, 90]), // initialize with ascii
     dRepresentativesCounts = d3.map(), // Contains the counts for each letter/substrg
     dRepresentativesIndexes = d3.map();
 
