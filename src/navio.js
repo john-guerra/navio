@@ -769,9 +769,8 @@ function navio(selection, _h) {
   }
 
   function drawLinks() {
-    if (DEBUG) console.log("Draw links ", links[links.length-1].length , links);
     if (!links.length) return;
-
+    if (DEBUG) console.log("Draw links ", links[links.length-1].length , links);
     context.save();
     context.beginPath();
     context.strokeStyle = nv.linkColor;
