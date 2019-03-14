@@ -1,4 +1,4 @@
-// https://github.com/john-guerra/Navio#readme v0.0.18 Copyright 2019 John Alexis Guerra Gómez
+// https://github.com/john-guerra/Navio#readme v0.0.20 Copyright 2019 John Alexis Guerra Gómez
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('d3'), require('d3-scale-chromatic')) :
 typeof define === 'function' && define.amd ? define(['d3', 'd3-scale-chromatic'], factory) :
@@ -35,6 +35,8 @@ function navio(selection, _h) {
   var nv = this || {},
     data = [], //Contains the original data attributes
     dataIs = [], //Contains only the indices to the data, is an array of arrays, one for each level
+    links = [],
+    visibleLinks = [],
     dData = d3.map(), // A hash for the data
     dDimensions = d3.map(),
     dimensionsOrder = [],
@@ -77,6 +79,7 @@ function navio(selection, _h) {
 
 
   function nozoom() {
+    console.log("nozoom");
     d3.event.preventDefault();
   }
 
@@ -243,6 +246,7 @@ function navio(selection, _h) {
 
   function onSortLevel(d) {
     if (d3.event && d3.event.defaultPrevented) return; // dragged
+    console.log("click " + d);
 
     showLoading(this);
 
@@ -272,7 +276,9 @@ function navio(selection, _h) {
   function drawItem(item, level) {
     var attrib, i, y ;
 
-    if (yScales[level].bandwidth() > nv.divisionsThreshold) ;
+    if (yScales[level].bandwidth() > nv.divisionsThreshold) {
+      { console.log("Add borders"); }
+    }
 
     for (i = 0; i < dimensionsOrder.length; i++) {
       attrib = dimensionsOrder[i];
@@ -379,6 +385,8 @@ function navio(selection, _h) {
     function applyFilters() {
       let before, after;
 
+      console.log("applyFilters ", filtersByLevel);
+
       before = performance.now();
       // Check if each item fits on any filter
       var filteredData = dataIs[i].filter(d => {
@@ -395,6 +403,7 @@ function navio(selection, _h) {
 
       // var filteredData = filtersByLevel[i].reduce(reduceFilters, dataIs[i]);
       after = performance.now();
+      console.log("Applying filters " + (after-before) + "ms");
 
 
       return filteredData;
@@ -406,6 +415,7 @@ function navio(selection, _h) {
       showLoading(this);
       if (!d3.event.sourceEvent) return; // Only transition after input.
       if (!d3.event.selection){
+        console.log("Empty selection", d3.event.selection,d3.event.type, d3.event.sourceEvent);
         // return;
         // d3.event.preventDefault();
         // onSelectByValueFromCoords(d3.event.sourceEvent.clientX, d3.event.sourceEvent.clientY);
@@ -438,8 +448,13 @@ function navio(selection, _h) {
       assignIndexes(filteredData);
 
       var after = performance.now();
+      console.log("Brushend filtering " + (after-before) + "ms");
+
+
+      console.log("Computing new data");
       var newData = dataIs;
       if (filteredData.length===0) {
+        console.log("Empty selection!");
         return;
       } else {
         newData = dataIs.slice(0,i+1);
@@ -451,6 +466,8 @@ function navio(selection, _h) {
         newData,
         colScales
       );
+      console.log("out of updateData");
+      console.log("Selected " + filteredData.length + " calling updateCallback");
       updateCallback(nv.getVisible());
 
 
@@ -458,6 +475,7 @@ function navio(selection, _h) {
     }// onSelectByRange
 
     function onSelectByValue() {
+      console.log("click");
       showLoading(this);
       var clientY = d3.mouse(d3.event.target)[1],
         clientX = d3.mouse(d3.event.target)[0];
@@ -470,6 +488,7 @@ function navio(selection, _h) {
 
 
     function onSelectByValueFromCoords(clientX, clientY) {
+      console.log("onSelectByValueFromCoords", clientX, clientY);
 
 
       removeAllBrushesBut(-1); // Remove all brushes
@@ -477,6 +496,7 @@ function navio(selection, _h) {
       var before = performance.now();
       var itemId = invertOrdinalScale(yScales[i], clientY);
       var after = performance.now();
+      console.log("invertOrdinalScale " + (after-before) + "ms");
 
       var itemAttr = invertOrdinalScale(xScale, clientX - levelScale(i));
       if (itemAttr === undefined) return;
@@ -510,6 +530,8 @@ function navio(selection, _h) {
         newData,
         colScales
       );
+
+      console.log("Selected " + nv.getVisible().length + " calling updateCallback");
       updateCallback(nv.getVisible());
     }
   } // addBrush
@@ -693,6 +715,8 @@ function navio(selection, _h) {
   function attribDragstarted(d) {
     if (!d3.event.sourceEvent.shiftKey)
       return;
+
+    console.log("start", d);
     d3.select(this.parentNode)
       .attr("transform", function (d) {
         return "translate(" +
@@ -723,6 +747,7 @@ function navio(selection, _h) {
   function attribDragended(d) {
     if (!d3.event.sourceEvent.shiftKey)
       return;
+    console.log("end", d);
 
 
     var attrDraggedInto = invertOrdinalScale(xScale, d3.event.x + nv.attribFontSize/2 - levelScale(d.level));
@@ -749,6 +774,39 @@ function navio(selection, _h) {
     svg.select("#closeButton")
       .style("display", dataIs.length === 1 ? "none":"block")
       .attr("transform", "translate(" + (levelScale(maxLevel) + levelScale.bandwidth() - nv.levelsSeparation +15)  + "," + yScales[maxLevel].range()[0] + ")");
+  }
+
+  // Links between nodes
+  function drawLink(link) {
+    var
+      lastAttrib = xScale.domain()[xScale.domain().length-1],
+      rightBorder = x(lastAttrib, dataIs.length-1)+ xScale.bandwidth(),
+      ys = yScales[dataIs.length-1](link.source[id]) + yScales[dataIs.length-1].bandwidth()/2,
+      yt = yScales[dataIs.length-1](link.target[id]) + yScales[dataIs.length-1].bandwidth()/2,
+      miny = Math.min(ys, yt),
+      maxy = Math.max(ys, yt),
+      midy = maxy-miny;
+    context.moveTo(rightBorder, miny); //starting point
+    context.quadraticCurveTo(
+      rightBorder + midy/6, miny + midy/2, // mid point
+      rightBorder, maxy // end point
+    );
+  }
+
+  function drawLinks() {
+    console.log("Draw links ", links[links.length-1].length , links);
+    if (!links.length) return;
+
+    context.save();
+    context.beginPath();
+    context.strokeStyle = nv.linkColor;
+    context.globalAlpha = Math.min(1,
+      Math.max(0.1,1000 / links[links.length-1].length )
+    ); // More links more transparency
+    // context.lineWidth = 0.5;
+    visibleLinks.forEach(drawLink);
+    context.stroke();
+    context.restore();
   }
 
 
@@ -831,11 +889,13 @@ function navio(selection, _h) {
     // nv.updateData(mData, mColScales, mSortByAttr);
 
     var after = performance.now();
+    console.log("Init data " + (after-before) + "ms");
 
   };
 
   function updateSorting(levelToUpdate) {
     if (!dSortBy.hasOwnProperty(levelToUpdate)) {
+      console.log("UpdateSorting called without attrib in dSortBy", levelToUpdate, dSortBy);
       return;
     }
 
@@ -851,13 +911,17 @@ function navio(selection, _h) {
     dataIs[levelToUpdate].forEach(function (row,i) { data[row].__i[levelToUpdate] = i; });
 
     var after = performance.now();
+    console.log("Sorting level " + levelToUpdate + " " + (after-before) + "ms");
 
   }
 
   function updateScales(levelToUpdate) {
+    console.log("Update scales");
     var before = performance.now();
     // yScales=[];
     var lastLevel = dataIs.length-1;
+
+    console.log("Delete unvecessary scales");
     // Delete unvecessary scales
     yScales.splice(lastLevel+1, yScales.length);
     levelToUpdate = levelToUpdate!==undefined ? levelToUpdate : lastLevel;
@@ -865,9 +929,13 @@ function navio(selection, _h) {
       .range([y0, height-nv.margin - 30])
       .paddingInner(0.0)
       .paddingOuter(0);
+
+
+    console.log("Compute representatives");
     var representatives = [];
     if (dataIs[levelToUpdate].length>height) {
       var itemsPerpixel = Math.max(Math.floor(dataIs[levelToUpdate].length / (height*2)), 1);
+      console.log("itemsPerpixel", itemsPerpixel);
       dataIs[levelToUpdate].itemsPerpixel = itemsPerpixel;
       for (var i = 0; i< dataIs[levelToUpdate].length; i+=itemsPerpixel ) {
         representatives.push(dataIs[levelToUpdate][i]);
@@ -878,6 +946,21 @@ function navio(selection, _h) {
     }
     dataIs[levelToUpdate].representatives = representatives;
     yScales[levelToUpdate].domain(representatives.map(function (rep) { return data[rep][id];}));
+
+
+    // data.forEach(function (levelData, i) {
+    //   yScales[i] = d3.scaleBand()
+    //     .range([y0, height-nv.margin - 30])
+    //     .paddingInner(0.0)
+    //     .paddingOuter(0);
+    //   yScales[i].domain(levelData.map(function (d) {
+    //     return d[id];
+    //   })
+    //   );
+    // });
+
+
+    console.log("Update color scale domains");
     // Update color scales domains
 
     // colScales = d3.map();
@@ -911,9 +994,11 @@ function navio(selection, _h) {
       .paddingOuter(0);
 
     var after = performance.now();
+    console.log("Updating Scales " + (after-before) + "ms");
   }
 
   nv.updateData = function (mDataIs, mColScales, levelToUpdate) {
+    console.log("updateData");
     var before = performance.now();
     var ctxWidth;
     if (typeof mDataIs !== typeof []) {
@@ -929,6 +1014,12 @@ function navio(selection, _h) {
     filtersByLevel.splice(mDataIs.length);
     // Initialize new filter level
     filtersByLevel[mDataIs.length] = [];
+
+    if (links.length>0) {
+      visibleLinks = links.filter(function (d) {
+        return d.source.visible && d.target.visible;
+      });
+    }
 
     // Delete unnecesary brushes
     dBrushes.splice(mDataIs.length);
@@ -951,11 +1042,13 @@ function navio(selection, _h) {
       .attr("height", height);
     nv.update();
     var after = performance.now();
+    console.log("Updating data " + (after-before) + "ms");
 
   };
 
   function deleteOneLevel() {
     if (dataIs.length<=1) return;
+    console.log("Delete one level");
     removeBrushOnLevel(dataIs.length-2);
     dataIs[dataIs.length-2].forEach(function (d) { data[d].visible=true; });
 
@@ -1002,10 +1095,13 @@ function navio(selection, _h) {
     });
 
 
+    drawLinks();
+
     drawBrushes(updateBrushes);
     drawCloseButton();
 
     var after = performance.now();
+    console.log("Redrawing " + (after-before) + "ms");
 
   };
 
@@ -1174,6 +1270,15 @@ function navio(selection, _h) {
 
   nv.id = function(_) {
     return arguments.length ? (id = _, nv) : id;
+  };
+
+  nv.links = function(_) {
+    if (arguments.length) {
+      links = _;
+      return nv;
+    } else {
+      return links;
+    }
   };
 
   return nv;

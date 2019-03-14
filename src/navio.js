@@ -3,7 +3,7 @@ import * as d3 from "d3";
 import {interpolateBlues, interpolatePurples, interpolateBrBG} from "d3-scale-chromatic";
 import {FilterByRange, FilterByValue} from "./filters.js";
 
-let DEBUG = false;
+let DEBUG = true;
 
 //eleId must be the ID of a context element where everything is going to be drawn
 function navio(selection, _h) {
@@ -11,6 +11,8 @@ function navio(selection, _h) {
   var nv = this || {},
     data = [], //Contains the original data attributes
     dataIs = [], //Contains only the indices to the data, is an array of arrays, one for each level
+    links = [],
+    visibleLinks = [],
     dData = d3.map(), // A hash for the data
     dDimensions = d3.map(),
     dimensionsOrder = [],
@@ -750,6 +752,39 @@ function navio(selection, _h) {
       .attr("transform", "translate(" + (levelScale(maxLevel) + levelScale.bandwidth() - nv.levelsSeparation +15)  + "," + yScales[maxLevel].range()[0] + ")");
   }
 
+  // Links between nodes
+  function drawLink(link) {
+    var
+      lastAttrib = xScale.domain()[xScale.domain().length-1],
+      rightBorder = x(lastAttrib, dataIs.length-1)+ xScale.bandwidth(),
+      ys = yScales[dataIs.length-1](link.source[id]) + yScales[dataIs.length-1].bandwidth()/2,
+      yt = yScales[dataIs.length-1](link.target[id]) + yScales[dataIs.length-1].bandwidth()/2,
+      miny = Math.min(ys, yt),
+      maxy = Math.max(ys, yt),
+      midy = maxy-miny;
+    context.moveTo(rightBorder, miny); //starting point
+    context.quadraticCurveTo(
+      rightBorder + midy/6, miny + midy/2, // mid point
+      rightBorder, maxy // end point
+    );
+  }
+
+  function drawLinks() {
+    if (DEBUG) console.log("Draw links ", links[links.length-1].length , links);
+    if (!links.length) return;
+
+    context.save();
+    context.beginPath();
+    context.strokeStyle = nv.linkColor;
+    context.globalAlpha = Math.min(1,
+      Math.max(0.1,1000 / links[links.length-1].length )
+    ); // More links more transparency
+    // context.lineWidth = 0.5;
+    visibleLinks.forEach(drawLink);
+    context.stroke();
+    context.restore();
+  }
+
 
   function drawLine(points, width, color, close) {
     context.beginPath();
@@ -956,6 +991,12 @@ function navio(selection, _h) {
     // Initialize new filter level
     filtersByLevel[mDataIs.length] = [];
 
+    if (links.length>0) {
+      visibleLinks = links.filter(function (d) {
+        return d.source.visible && d.target.visible;
+      });
+    }
+
     // Delete unnecesary brushes
     dBrushes.splice(mDataIs.length);
 
@@ -1029,6 +1070,8 @@ function navio(selection, _h) {
 
     });
 
+
+    drawLinks();
 
     drawBrushes(updateBrushes);
     drawCloseButton();
@@ -1203,6 +1246,15 @@ function navio(selection, _h) {
 
   nv.id = function(_) {
     return arguments.length ? (id = _, nv) : id;
+  };
+
+  nv.links = function(_) {
+    if (arguments.length) {
+      links = _;
+      return nv;
+    } else {
+      return links;
+    }
   };
 
   return nv;
