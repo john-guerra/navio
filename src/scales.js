@@ -15,17 +15,17 @@ export function scaleText(digits = 1) {
   // Computes the actual value, based on the index of the first digits in the domain
   function compute(d) {
     let ci = dRepresentativesIndexes.get(
-      d.slice(0, digits).toLocaleUpperCase()
+      d.slice(0, digits)
     );
     if (ci === undefined) {
       console.log(
         `scaleText Couldn't find index for ${d
           .slice(0, digits)
-          .toLocaleUpperCase()} did you call domain? Using ascii of first letter`
+          } did you call domain? Using ascii of first letter`
       );
       ci = d
         .slice(0, digits)
-        .toLocaleUpperCase()
+
         .charCodeAt(0);
     }
     return scale(ci) || "white";
@@ -77,7 +77,7 @@ export function scaleText(digits = 1) {
       computeRepresentatives(
         data
           .filter(d => d !== undefined && d !== null)
-          .map(d => d.slice(0, digits).toLocaleUpperCase())
+          .map(d => d.slice(0, digits))
       );
       scale.domain([0, dRepresentativesCounts.keys().length]);
       return compute;
