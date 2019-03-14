@@ -198,7 +198,7 @@ function navio(selection, _h) {
   }
 
   function d3DescendingNull(a, b) {
-    return b === null ? (a === null ? 0 : -1)
+    return a === null ? (b === null ? 0 : -1)
       : b < a ? -1 : b > a ? 1 : b >= a ? 0 : NaN;
   }
 
@@ -206,7 +206,13 @@ function navio(selection, _h) {
     if (d3.event && d3.event.defaultPrevented) return; // dragged
     if (DEBUG) console.log("click " + d);
 
-    dSortBy[d.level] = d.attrib;
+
+    dSortBy[d.level] = {
+      attrib:d.attrib,
+      reverse:dSortBy[d.level]!==undefined && dSortBy[d.level].attrib === d.attrib ?
+        !dSortBy[d.level].reverse :
+        false
+    };
 
     updateSorting(d.level);
     removeBrushOnLevel(d.level);
@@ -595,15 +601,21 @@ function navio(selection, _h) {
       .text(function (d) {
         return d.attrib === "__seqId" ?
           "sequential Index" :
-          d.attrib;
+          d.attrib +
+          (dSortBy[d.level]!==undefined &&
+            dSortBy[d.level].attrib === d.attrib ?
+            dSortBy[d.level].reverse ?
+              " ↓" :
+              " ↑" :
+            "");
       })
       .attr("x", xScale.bandwidth()/2)
       .attr("y", 0)
       .style("font-weight", function (d) {
-        return dSortBy.hasOwnProperty(d.level) &&
-          dSortBy[d.level] === d.attrib ?
+        return (dSortBy[d.level]!==undefined &&
+          dSortBy[d.level].attrib === d.attrib ?
           "bolder" :
-          "normal";
+          "normal");
       })
       .style("font-family", "sans-serif")
       .style("font-size", nv.attribFontSize+"px")
@@ -807,9 +819,11 @@ function navio(selection, _h) {
     var before = performance.now();
 
 
-    const attrib = dSortBy[levelToUpdate];
+    const sort = dSortBy[levelToUpdate];
     dataIs[levelToUpdate] = dataIs[levelToUpdate].sort(function (a, b) {
-      return d3AscendingNull(data[a][attrib], data[b][attrib]);
+      return sort.reverse ?
+        d3DescendingNull(data[a][sort.attrib], data[b][sort.attrib]) :
+        d3AscendingNull(data[a][sort.attrib], data[b][sort.attrib]);
     });
     dataIs[levelToUpdate].forEach(function (row,i) { data[row].__i[levelToUpdate] = i; });
 
