@@ -1,4 +1,4 @@
-// https://github.com/john-guerra/Navio#readme v0.0.17 Copyright 2019 John Alexis Guerra Gómez
+// https://github.com/john-guerra/Navio#readme v0.0.18 Copyright 2019 John Alexis Guerra Gómez
 import * as d3 from 'd3';
 import { map, interpolateBlues, interpolatePurples, interpolateBrBG, format, event, select, path, scaleBand, scaleQuantize, brushY, mouse, drag, extent, scaleSequential, scaleOrdinal, schemeCategory10, min } from 'd3';
 import { interpolateBlues as interpolateBlues$1, interpolatePurples as interpolatePurples$1, interpolateBrBG as interpolateBrBG$1 } from 'd3-scale-chromatic';
@@ -159,9 +159,7 @@ function navio(selection, _h) {
       path$$1.arc(crossSize/2, crossSize/2, crossSize*1.2, 0, Math.PI*2);
       sel.attr("d", path$$1.toString());
     })
-    .on("click", function () {
-      deleteOneLevel();
-    });
+    .on("click", deleteOneLevel);
 
   xScale = scaleBand()
     // .rangeBands([0, nv.attribWidth], 0.1, 0);
@@ -194,13 +192,31 @@ function navio(selection, _h) {
 
   context.imageSmoothingEnabled = context.mozImageSmoothingEnabled = context.webkitImageSmoothingEnabled = false;
 
-
-
   context.globalCompositeOperation = "source-over";
   // context.strokeStyle = "rgba(0,100,160,1)";
   // context.strokeStyle = "rgba(0,0,0,0.02)";
 
 
+
+  function showLoading(ele) {
+    select(ele).style("cursor", "progress");
+    svg.style("cursor", "progress");
+  }
+
+  function hideLoading(ele) {
+    select(ele).style("cursor", null);
+    svg.style("cursor", null);
+  }
+
+  function deferEvent(cbk) {
+    return function(d, i, all) {
+      showLoading(this);
+      setTimeout(() => {
+        cbk(d, i, all);
+        hideLoading(this);
+      },100);
+    };
+  }
 
   function invertOrdinalScale(scale, x) {
     // Taken from https://bl.ocks.org/shimizu/808e0f5cadb6a63f28bb00082dc8fe3f
@@ -226,6 +242,7 @@ function navio(selection, _h) {
   function onSortLevel(d) {
     if (event && event.defaultPrevented) return; // dragged
 
+    showLoading(this);
 
     dSortBy[d.level] = {
       attrib:d.attrib,
@@ -384,6 +401,7 @@ function navio(selection, _h) {
 
     function onSelectByRange() {
       // if (DEBUG) console.log("brushended", d3.event);
+      showLoading(this);
       if (!event.sourceEvent) return; // Only transition after input.
       if (!event.selection){
         // return;
@@ -433,13 +451,19 @@ function navio(selection, _h) {
       );
       updateCallback(nv.getVisible());
 
+
+      hideLoading(this);
     }// onSelectByRange
 
     function onSelectByValue() {
+      showLoading(this);
       var clientY = mouse(event.target)[1],
         clientX = mouse(event.target)[0];
 
+
       onSelectByValueFromCoords(clientX, clientY);
+
+      hideLoading(this);
     }
 
 
@@ -621,7 +645,7 @@ function navio(selection, _h) {
       })
       .style("font-family", "sans-serif")
       .style("font-size", nv.attribFontSize+"px")
-      .on("click", onSortLevel)
+      .on("click", deferEvent(onSortLevel))
       .call(drag()
         .container(attribOverlayEnter.merge(attribOverlay).node())
         .on("start", attribDragstarted)

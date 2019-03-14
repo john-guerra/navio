@@ -138,9 +138,7 @@ function navio(selection, _h) {
       path.arc(crossSize/2, crossSize/2, crossSize*1.2, 0, Math.PI*2);
       sel.attr("d", path.toString());
     })
-    .on("click", function () {
-      deleteOneLevel();
-    });
+    .on("click", deleteOneLevel);
 
   xScale = d3.scaleBand()
     // .rangeBands([0, nv.attribWidth], 0.1, 0);
@@ -173,13 +171,31 @@ function navio(selection, _h) {
 
   context.imageSmoothingEnabled = context.mozImageSmoothingEnabled = context.webkitImageSmoothingEnabled = false;
 
-
-
   context.globalCompositeOperation = "source-over";
   // context.strokeStyle = "rgba(0,100,160,1)";
   // context.strokeStyle = "rgba(0,0,0,0.02)";
 
 
+
+  function showLoading(ele) {
+    d3.select(ele).style("cursor", "progress");
+    svg.style("cursor", "progress");
+  }
+
+  function hideLoading(ele) {
+    d3.select(ele).style("cursor", null);
+    svg.style("cursor", null);
+  }
+
+  function deferEvent(cbk) {
+    return function(d, i, all) {
+      showLoading(this);
+      setTimeout(() => {
+        cbk(d, i, all);
+        hideLoading(this);
+      },100);
+    };
+  }
 
   function invertOrdinalScale(scale, x) {
     // Taken from https://bl.ocks.org/shimizu/808e0f5cadb6a63f28bb00082dc8fe3f
@@ -206,6 +222,7 @@ function navio(selection, _h) {
     if (d3.event && d3.event.defaultPrevented) return; // dragged
     if (DEBUG) console.log("click " + d);
 
+    showLoading(this);
 
     dSortBy[d.level] = {
       attrib:d.attrib,
@@ -369,9 +386,10 @@ function navio(selection, _h) {
 
     function onSelectByRange() {
       // if (DEBUG) console.log("brushended", d3.event);
+      showLoading(this);
       if (!d3.event.sourceEvent) return; // Only transition after input.
       if (!d3.event.selection){
-        if (DEBUG) console.log("Empty selection",d3.event.selection,d3.event.type, d3.event.sourceEvent);
+        if (DEBUG) console.log("Empty selection", d3.event.selection,d3.event.type, d3.event.sourceEvent);
         // return;
         // d3.event.preventDefault();
         // onSelectByValueFromCoords(d3.event.sourceEvent.clientX, d3.event.sourceEvent.clientY);
@@ -426,14 +444,20 @@ function navio(selection, _h) {
       if (DEBUG) console.log("Selected " + filteredData.length + " calling updateCallback");
       updateCallback(nv.getVisible());
 
+
+      hideLoading(this);
     }// onSelectByRange
 
     function onSelectByValue() {
       if (DEBUG) console.log("click");
+      showLoading(this);
       var clientY = d3.mouse(d3.event.target)[1],
         clientX = d3.mouse(d3.event.target)[0];
 
+
       onSelectByValueFromCoords(clientX, clientY);
+
+      hideLoading(this);
     }
 
 
@@ -619,7 +643,7 @@ function navio(selection, _h) {
       })
       .style("font-family", "sans-serif")
       .style("font-size", nv.attribFontSize+"px")
-      .on("click", onSortLevel)
+      .on("click", deferEvent(onSortLevel))
       .call(d3.drag()
         .container(attribOverlayEnter.merge(attribOverlay).node())
         .on("start", attribDragstarted)
