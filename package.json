@@ -1,6 +1,6 @@
 {
   "name": "navio",
-  "version": "0.0.20",
+  "version": "0.0.21",
   "description": "A visualization widget for summarizing and exploring data",
   "main": "dist/navio.min.js",
   "module": "dist/navio.esm.js",
