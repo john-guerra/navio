@@ -35,6 +35,7 @@ function navio(selection, _h) {
     id = "__seqId",
     updateCallback = function () {};
 
+  nv.howManyItemsShouldSearchForNotNull = 100;
   nv.margin = 10;
   nv.attribWidth = 15;
   nv.levelsSeparation = 40;
@@ -188,6 +189,17 @@ function navio(selection, _h) {
     var qScale = d3.scaleQuantize().domain(range).range(domain);
 
     return qScale(x);
+  }
+
+  // Like d3.ascending but supporting null
+  function d3AscendingNull(a, b) {
+    return b === null ? (a === null ? 0 : -1)
+      : a < b ? -1 : a > b ? 1 : a >= b ? 0 : NaN;
+  }
+
+  function d3DescendingNull(a, b) {
+    return b === null ? (a === null ? 0 : -1)
+      : b < a ? -1 : b > a ? 1 : b >= a ? 0 : NaN;
   }
 
   function onSortLevel(d) {
@@ -797,7 +809,7 @@ function navio(selection, _h) {
 
     const attrib = dSortBy[levelToUpdate];
     dataIs[levelToUpdate] = dataIs[levelToUpdate].sort(function (a, b) {
-      return d3.ascending(data[a][attrib], data[b][attrib]);
+      return d3AscendingNull(data[a][attrib], data[b][attrib]);
     });
     dataIs[levelToUpdate].forEach(function (row,i) { data[row].__i[levelToUpdate] = i; });
 
@@ -1044,6 +1056,19 @@ function navio(selection, _h) {
     return nv;
   };
 
+  function findNotNull(data, attr) {
+    let i;
+    for ( i = 0; i<nv.howManyItemsShouldSearchForNotNull && i< data.length; i++ ) {
+      if (data[0][attr] !== null &&
+        data[0][attr] !== undefined &&
+        data[0][attr] !== "") {
+        return data[i][attr];
+      }
+    }
+
+    return data[i][attr];
+  }
+
   // Adds all the attributes on the data, or all the attributes provided on the list based on their types
   nv.addAllAttribs = function (_attribs) {
     if (!data || !data.length) throw Error("addAllAttribs called without data to guess the attribs. Make sure to call it after setting the data");
@@ -1053,15 +1078,21 @@ function navio(selection, _h) {
       if (attr === "__seqId" ||
         attr === "__i")
         return;
-      if (typeof(data[0][attr]) === typeof(new Date())) {
-        nv.addDateAttrib(attr);
-      } else if (typeof(data[0][attr]) === typeof(0)) {
+
+      const dataSample = findNotNull(data, attr);
+      if (dataSample === null ||
+        dataSample === undefined ||
+        dataSample === "") {
+        nv.addCategoricalAttrib(attr);
+      } else if (typeof(dataSample) === typeof(0)) {
         // Numbers
         if (d3.min(data, d=> d[attr]) < 0) {
           nv.addDivergingAttrib(attr);
         } else {
           nv.addSequentialAttrib(attr);
         }
+      } else if (typeof(dataSample) === typeof(new Date())) {
+        nv.addDateAttrib(attr);
       } else {
         // Default categories
         nv.addCategoricalAttrib(attr);

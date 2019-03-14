@@ -1,6 +1,6 @@
-// https://github.com/john-guerra/Navio#readme v0.0.16 Copyright 2019 John Alexis Guerra Gómez
+// https://github.com/john-guerra/Navio#readme v0.0.17 Copyright 2019 John Alexis Guerra Gómez
 import * as d3 from 'd3';
-import { map, interpolateBlues, interpolatePurples, interpolateBrBG, format, event, select, path, scaleBand, scaleQuantize, brushY, mouse, drag, ascending, extent, scaleSequential, scaleOrdinal, schemeCategory10, min } from 'd3';
+import { map, interpolateBlues, interpolatePurples, interpolateBrBG, format, event, select, path, scaleBand, scaleQuantize, brushY, mouse, drag, extent, scaleSequential, scaleOrdinal, schemeCategory10, min } from 'd3';
 import { interpolateBlues as interpolateBlues$1, interpolatePurples as interpolatePurples$1, interpolateBrBG as interpolateBrBG$1 } from 'd3-scale-chromatic';
 
 class FilterByRange {
@@ -57,6 +57,7 @@ function navio(selection, _h) {
     id = "__seqId",
     updateCallback = function () {};
 
+  nv.howManyItemsShouldSearchForNotNull = 100;
   nv.margin = 10;
   nv.attribWidth = 15;
   nv.levelsSeparation = 40;
@@ -74,7 +75,6 @@ function navio(selection, _h) {
 
 
   function nozoom() {
-    console.log("nozoom");
     event.preventDefault();
   }
 
@@ -212,9 +212,14 @@ function navio(selection, _h) {
     return qScale(x);
   }
 
+  // Like d3.ascending but supporting null
+  function d3AscendingNull(a, b) {
+    return b === null ? (a === null ? 0 : -1)
+      : a < b ? -1 : a > b ? 1 : a >= b ? 0 : NaN;
+  }
+
   function onSortLevel(d) {
     if (event && event.defaultPrevented) return; // dragged
-    console.log("click " + d);
 
     dSortBy[d.level] = d.attrib;
 
@@ -237,9 +242,7 @@ function navio(selection, _h) {
   function drawItem(item, level) {
     var attrib, i, y ;
 
-    if (yScales[level].bandwidth() > nv.divisionsThreshold) {
-      { console.log("Add borders"); }
-    }
+    if (yScales[level].bandwidth() > nv.divisionsThreshold) ;
 
     for (i = 0; i < dimensionsOrder.length; i++) {
       attrib = dimensionsOrder[i];
@@ -346,8 +349,6 @@ function navio(selection, _h) {
     function applyFilters() {
       let before, after;
 
-      console.log("applyFilters ", filtersByLevel);
-
       before = performance.now();
       // Check if each item fits on any filter
       var filteredData = dataIs[i].filter(d => {
@@ -364,7 +365,6 @@ function navio(selection, _h) {
 
       // var filteredData = filtersByLevel[i].reduce(reduceFilters, dataIs[i]);
       after = performance.now();
-      console.log("Applying filters " + (after-before) + "ms");
 
 
       return filteredData;
@@ -375,7 +375,6 @@ function navio(selection, _h) {
       // if (DEBUG) console.log("brushended", d3.event);
       if (!event.sourceEvent) return; // Only transition after input.
       if (!event.selection){
-        console.log("Empty selection",event.selection,event.type, event.sourceEvent);
         // return;
         // d3.event.preventDefault();
         // onSelectByValueFromCoords(d3.event.sourceEvent.clientX, d3.event.sourceEvent.clientY);
@@ -408,13 +407,8 @@ function navio(selection, _h) {
       assignIndexes(filteredData);
 
       var after = performance.now();
-      console.log("Brushend filtering " + (after-before) + "ms");
-
-
-      console.log("Computing new data");
       var newData = dataIs;
       if (filteredData.length===0) {
-        console.log("Empty selection!");
         return;
       } else {
         newData = dataIs.slice(0,i+1);
@@ -426,14 +420,11 @@ function navio(selection, _h) {
         newData,
         colScales
       );
-      console.log("out of updateData");
-      console.log("Selected " + filteredData.length + " calling updateCallback");
       updateCallback(nv.getVisible());
 
     }// onSelectByRange
 
     function onSelectByValue() {
-      console.log("click");
       var clientY = mouse(event.target)[1],
         clientX = mouse(event.target)[0];
 
@@ -442,7 +433,6 @@ function navio(selection, _h) {
 
 
     function onSelectByValueFromCoords(clientX, clientY) {
-      console.log("onSelectByValueFromCoords", clientX, clientY);
 
 
       removeAllBrushesBut(-1); // Remove all brushes
@@ -450,7 +440,6 @@ function navio(selection, _h) {
       var before = performance.now();
       var itemId = invertOrdinalScale(yScales[i], clientY);
       var after = performance.now();
-      console.log("invertOrdinalScale " + (after-before) + "ms");
 
       var itemAttr = invertOrdinalScale(xScale, clientX - levelScale(i));
       if (itemAttr === undefined) return;
@@ -484,8 +473,6 @@ function navio(selection, _h) {
         newData,
         colScales
       );
-
-      console.log("Selected " + nv.getVisible().length + " calling updateCallback");
       updateCallback(nv.getVisible());
     }
   } // addBrush
@@ -663,8 +650,6 @@ function navio(selection, _h) {
   function attribDragstarted(d) {
     if (!event.sourceEvent.shiftKey)
       return;
-
-    console.log("start", d);
     select(this.parentNode)
       .attr("transform", function (d) {
         return "translate(" +
@@ -695,7 +680,6 @@ function navio(selection, _h) {
   function attribDragended(d) {
     if (!event.sourceEvent.shiftKey)
       return;
-    console.log("end", d);
 
 
     var attrDraggedInto = invertOrdinalScale(xScale, event.x + nv.attribFontSize/2 - levelScale(d.level));
@@ -804,13 +788,11 @@ function navio(selection, _h) {
     // nv.updateData(mData, mColScales, mSortByAttr);
 
     var after = performance.now();
-    console.log("Init data " + (after-before) + "ms");
 
   };
 
   function updateSorting(levelToUpdate) {
     if (!dSortBy.hasOwnProperty(levelToUpdate)) {
-      console.log("UpdateSorting called without attrib in dSortBy", levelToUpdate, dSortBy);
       return;
     }
 
@@ -819,22 +801,18 @@ function navio(selection, _h) {
 
     const attrib = dSortBy[levelToUpdate];
     dataIs[levelToUpdate] = dataIs[levelToUpdate].sort(function (a, b) {
-      return ascending(data[a][attrib], data[b][attrib]);
+      return d3AscendingNull(data[a][attrib], data[b][attrib]);
     });
     dataIs[levelToUpdate].forEach(function (row,i) { data[row].__i[levelToUpdate] = i; });
 
     var after = performance.now();
-    console.log("Sorting level " + levelToUpdate + " " + (after-before) + "ms");
 
   }
 
   function updateScales(levelToUpdate) {
-    console.log("Update scales");
     var before = performance.now();
     // yScales=[];
     var lastLevel = dataIs.length-1;
-
-    console.log("Delete unvecessary scales");
     // Delete unvecessary scales
     yScales.splice(lastLevel+1, yScales.length);
     levelToUpdate = levelToUpdate!==undefined ? levelToUpdate : lastLevel;
@@ -842,13 +820,9 @@ function navio(selection, _h) {
       .range([y0, height-nv.margin - 30])
       .paddingInner(0.0)
       .paddingOuter(0);
-
-
-    console.log("Compute representatives");
     var representatives = [];
     if (dataIs[levelToUpdate].length>height) {
       var itemsPerpixel = Math.max(Math.floor(dataIs[levelToUpdate].length / (height*2)), 1);
-      console.log("itemsPerpixel", itemsPerpixel);
       dataIs[levelToUpdate].itemsPerpixel = itemsPerpixel;
       for (var i = 0; i< dataIs[levelToUpdate].length; i+=itemsPerpixel ) {
         representatives.push(dataIs[levelToUpdate][i]);
@@ -859,21 +833,6 @@ function navio(selection, _h) {
     }
     dataIs[levelToUpdate].representatives = representatives;
     yScales[levelToUpdate].domain(representatives.map(function (rep) { return data[rep][id];}));
-
-
-    // data.forEach(function (levelData, i) {
-    //   yScales[i] = d3.scaleBand()
-    //     .range([y0, height-nv.margin - 30])
-    //     .paddingInner(0.0)
-    //     .paddingOuter(0);
-    //   yScales[i].domain(levelData.map(function (d) {
-    //     return d[id];
-    //   })
-    //   );
-    // });
-
-
-    console.log("Update color scale domains");
     // Update color scales domains
 
     // colScales = d3.map();
@@ -907,11 +866,9 @@ function navio(selection, _h) {
       .paddingOuter(0);
 
     var after = performance.now();
-    console.log("Updating Scales " + (after-before) + "ms");
   }
 
   nv.updateData = function (mDataIs, mColScales, levelToUpdate) {
-    console.log("updateData");
     var before = performance.now();
     var ctxWidth;
     if (typeof mDataIs !== typeof []) {
@@ -949,13 +906,11 @@ function navio(selection, _h) {
       .attr("height", height);
     nv.update();
     var after = performance.now();
-    console.log("Updating data " + (after-before) + "ms");
 
   };
 
   function deleteOneLevel() {
     if (dataIs.length<=1) return;
-    console.log("Delete one level");
     removeBrushOnLevel(dataIs.length-2);
     dataIs[dataIs.length-2].forEach(function (d) { data[d].visible=true; });
 
@@ -1006,7 +961,6 @@ function navio(selection, _h) {
     drawCloseButton();
 
     var after = performance.now();
-    console.log("Redrawing " + (after-before) + "ms");
 
   };
 
@@ -1066,6 +1020,19 @@ function navio(selection, _h) {
     return nv;
   };
 
+  function findNotNull(data, attr) {
+    let i;
+    for ( i = 0; i<nv.howManyItemsShouldSearchForNotNull && i< data.length; i++ ) {
+      if (data[0][attr] !== null &&
+        data[0][attr] !== undefined &&
+        data[0][attr] !== "") {
+        return data[i][attr];
+      }
+    }
+
+    return data[i][attr];
+  }
+
   // Adds all the attributes on the data, or all the attributes provided on the list based on their types
   nv.addAllAttribs = function (_attribs) {
     if (!data || !data.length) throw Error("addAllAttribs called without data to guess the attribs. Make sure to call it after setting the data");
@@ -1075,14 +1042,25 @@ function navio(selection, _h) {
       if (attr === "__seqId" ||
         attr === "__i")
         return;
-      if (typeof(data[0][attr]) === typeof("")) {
+
+      const dataSample = findNotNull(data, attr);
+      if (dataSample === null ||
+        dataSample === undefined ||
+        dataSample === "") {
         nv.addCategoricalAttrib(attr);
-      } else if (typeof(data[0][attr]) === typeof(new Date())) {
+      } else if (typeof(dataSample) === typeof(0)) {
+        // Numbers
+        if (min(data, d=> d[attr]) < 0) {
+          nv.addDivergingAttrib(attr);
+        } else {
+          nv.addSequentialAttrib(attr);
+        }
+      } else if (typeof(dataSample) === typeof(new Date())) {
         nv.addDateAttrib(attr);
-      } else if (typeof(data[0][attr]) === typeof(0) && min(data, d=> d[attr]) < 0) {
-        nv.addDivergingAttrib(attr);
       } else {
-        nv.addSequentialAttrib(attr);
+        // Default categories
+        nv.addCategoricalAttrib(attr);
+
       }
     });
 
