@@ -436,6 +436,15 @@ function navio(selection, _h) {
 
 
     function brushed() {
+      if (!d3.event.sourceEvent) return; // Only transition after input.
+      if (!d3.event.selection){
+        if (DEBUG) console.log("Empty selection", d3.event.selection,d3.event.type, d3.event.sourceEvent);
+        // return;
+        // d3.event.preventDefault();
+        // onSelectByValueFromCoords(d3.event.sourceEvent.clientX, d3.event.sourceEvent.clientY);
+        return; // Ignore empty selections.
+      }
+
       const screenX = d3.event.sourceEvent.offsetX,
         screenY = d3.event.sourceEvent.offsetY;
 
@@ -566,6 +575,11 @@ function navio(selection, _h) {
     var itemId = invertOrdinalScale(yScales[level], screenY);
     var itemAttr = invertOrdinalScale(xScale, screenX - levelScale(level));
     var d = dData.get(itemId);
+
+    if (!d || d=== undefined) {
+      console.log("Couldn't find datum for tooltip y", screenY, d);
+      return;
+    }
 
     svg.select(".nvTooltip")
       .attr("transform", "translate(" + (screenX) + "," + (screenY+20) + ")")
