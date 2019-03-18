@@ -53,8 +53,6 @@ TLDR
   <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
   <script type="text/javascript" src="https://unpkg.com/navio/dist/navio.min.js"></script>
 <script>
-
-<script>
   // NAVIO  Step 1.  Create a Navio passing a d3 selection to place it and an optional height
   var nv = navio(d3.select("#navio"), 600);
 
@@ -86,7 +84,7 @@ TLDR
   <title>Basic Usage</title>
 </head>
 <body>
-
+  
   // Your Navio widget goes here
   <div id="Navio"></div>
 
