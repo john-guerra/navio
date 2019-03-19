@@ -13,12 +13,14 @@ export function scaleText(digits = 1) {
 
   // Computes the actual value, based on the index of the first digits in the domain
   function compute(d) {
+    if (typeof(d)!==typeof("")) return "white";
+
     let ci = dRepresentativesIndexes.get(
       d.slice(0, digits)
     );
     if (ci === undefined) {
       console.log(
-        `scaleText Couldn't find index for ${d.slice(0, digits)} did you call domain? Using ascii of first letter`
+        `scaleText Couldn't find index for ${d} did you call domain? Using ascii of first letter`
       );
       ci = d
         .slice(0, digits)
@@ -72,7 +74,7 @@ export function scaleText(digits = 1) {
       // Compute representatives for letters/substrings
       computeRepresentatives(
         data
-          .filter(d => d !== undefined && d !== null)
+          .filter(d => typeof(d) === typeof(""))
           .map(d => d.slice(0, digits))
       );
       scale.domain([0, dRepresentativesCounts.keys().length]);

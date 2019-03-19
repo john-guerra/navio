@@ -31,6 +31,7 @@ function navio(selection, _h) {
     defaultColorInterpolator =  "interpolateBlues" in d3 ? d3.interpolateBlues : interpolateBlues, // necessary for supporting d3v4 and d3v5
     defaultColorInterpolatorDate =  "interpolatePurples" in d3 ? d3.interpolatePurples : interpolatePurples,
     defaultColorInterpolatorDiverging =  "interpolateBrBG" in d3 ? d3.interpolateBrBG : interpolateBrBG,
+    defaultBooleanColorRange = ["#e9a3c9", "#a1d76a", "white"], //true false null
     visibleColorRange = ["white", "#b5cf6b"],
     fmt = d3.format(",.0d"),
     x0=0,
@@ -709,9 +710,9 @@ function navio(selection, _h) {
       .style("font-family", "sans-serif")
       .style("font-size", function (d) {
         // make it grow
-        if (dSortBy[d.level]!==undefined &&
-          dSortBy[d.level].attrib === d.attrib )
-          d3.select(this).dispatch("mousemove");
+        // if (dSortBy[d.level]!==undefined &&
+        //   dSortBy[d.level].attrib === d.attrib )
+        // d3.select(this).dispatch("mousemove");
         return nv.attribFontSize + "px";
       })
       .on("click", deferEvent(onSortLevel))
@@ -971,7 +972,6 @@ function navio(selection, _h) {
           if (attrib === "visible") return;
 
           var scale = colScales.get(attrib);
-
           if (scale.__type==="seq" || scale.__type==="date") {
             scale.domain(d3.extent(
               dataIs[0].map(function (i) {
@@ -1225,6 +1225,18 @@ function navio(selection, _h) {
     return nv;
   };
 
+  nv.addBooleanAttrib = function (attr, _scale ) {
+    const scale = _scale ||
+      d3.scaleOrdinal()
+        .domain([true, false, null])
+        .range(defaultBooleanColorRange);
+
+    scale.__type = "bool";
+    nv.addAttrib(attr, scale);
+
+    return nv;
+  };
+
 
   // Adds all the attributes on the data, or all the attributes provided on the list based on their types
   nv.addAllAttribs = function (_attribs) {
@@ -1266,10 +1278,13 @@ function navio(selection, _h) {
       } else if (typeof(firstNotNull) === typeof(new Date())) {
         console.log(`Navio: Adding attr ${attr} as date`);
         nv.addDateAttrib(attr);
+      } else if (typeof(firstNotNull) === typeof(true)) {
+        console.log(`Navio: Adding attr ${attr} as boolean`);
+        nv.addBooleanAttrib(attr);
       } else {
         // Default categories
-        console.log(`Navio: Don't know what to do with attr ${attr} adding as text (type=${typeof(firstNotNull)})`);
-        nv.addTextAttrib(attr);
+        console.log(`Navio: Don't know what to do with attr ${attr} adding as categorical (type=${typeof(firstNotNull)})`);
+        nv.addCategoricalAttrib(attr);
 
       }
     });
