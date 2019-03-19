@@ -31,7 +31,7 @@ function navio(selection, _h) {
     defaultColorInterpolator =  "interpolateBlues" in d3 ? d3.interpolateBlues : interpolateBlues, // necessary for supporting d3v4 and d3v5
     defaultColorInterpolatorDate =  "interpolatePurples" in d3 ? d3.interpolatePurples : interpolatePurples,
     defaultColorInterpolatorDiverging =  "interpolateBrBG" in d3 ? d3.interpolateBrBG : interpolateBrBG,
-    defaultBooleanColorRange = ["#e9a3c9", "#a1d76a", "white"], //true false null
+    defaultBooleanColorRange = ["#a1d76a", "#e9a3c9", "white"], //true false null
     visibleColorRange = ["white", "#b5cf6b"],
     fmt = d3.format(",.0d"),
     x0=0,
