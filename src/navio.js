@@ -34,25 +34,25 @@ function navio(selection, _h) {
     defaultBooleanColorRange = ["#a1d76a", "#e9a3c9", "white"], //true false null
     visibleColorRange = ["white", "#b5cf6b"],
     fmt = d3.format(",.0d"),
-    x0=0,
-    y0=100,
     id = "__seqId",
     updateCallback = function () {};
 
+  nv.x0=0;
+  nv.y0=100;
   nv.maxNumDistictForCategorical = 10;
   nv.howManyItemsShouldSearchForNotNull = 100;
   nv.margin = 10;
+  nv.showAttribTitles = true;
   nv.attribWidth = 15;
-  nv.levelsSeparation = 40;
-  nv.divisionsColor = "white";
-  nv.levelConvectionsColor = "rgba(205, 220, 163, 0.5)";
-  nv.divisionsThreshold = 4; // What's the minimum row width needed to draw divisions
+  nv.attribRotation = -45;
   nv.attribFontSize = 13;
   nv.attribFontSizeSelected = 32;
+  nv.levelsSeparation = 40;
+  nv.divisionsColor = "white";
+  nv.levelConnectionsColor = "rgba(205, 220, 163, 0.5)";
+  nv.divisionsThreshold = 4; // What's the minimum row width needed to draw divisions
 
-  nv.startColor = "white";
-  nv.endColor = "red";
-  nv.legendFont = "14px Arial";
+  nv.legendFont = "14px sans-serif";
   nv.linkColor = "#2171b5";
   // nv.linkColor = "rgba(0,0,70,0.9)";
 
@@ -97,7 +97,7 @@ function navio(selection, _h) {
   svg.append("g")
     .attr("class", "nvTooltip")
     .style("text-shadow", "0 1px 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, -1px 0 0 #fff")
-    .attr("transform", "translate(-100,-10)")
+    .attr("transform", `translate(${nv.x0},-10)`)
     .append("text")
     .attr("x", 0)
     .attr("y", 0)
@@ -177,10 +177,6 @@ function navio(selection, _h) {
   context.imageSmoothingEnabled = context.mozImageSmoothingEnabled = context.webkitImageSmoothingEnabled = false;
 
   context.globalCompositeOperation = "source-over";
-  // context.strokeStyle = "rgba(0,100,160,1)";
-  // context.strokeStyle = "rgba(0,0,0,0.02)";
-
-
 
   function showLoading(ele) {
     d3.select(ele).style("cursor", "progress");
@@ -341,7 +337,7 @@ function navio(selection, _h) {
     context.rect(levelScale(i),
       yScales[i].range()[0]-1,
       xScale.range()[1]+1,
-      yScales[i].range()[1]+2-100);
+      yScales[i].range()[1]+2 - yScales[i].range()[0]);
     context.strokeStyle = "black";
     context.lineWidth = 1;
     context.stroke();
@@ -680,60 +676,62 @@ function navio(selection, _h) {
       })
       .attr("height", function (d) { return yScales[d.level].range()[1] - yScales[d.level].range()[0]; });
 
-    attribOverlayEnter
-      .append("text")
-      .merge(attribOverlay.select("text"))
-      .style("cursor", "point")
-      .style("-webkit-user-select", "none")
-      .style("-moz-user-select", "none")
-      .style("-ms-user-select", "none")
-      .style("user-select", "none")
-      .text(function (d) {
-        return d.attrib === "__seqId" ?
-          "sequential Index" :
-          d.attrib +
-          (dSortBy[d.level]!==undefined &&
+    if (nv.showAttribTitles) {
+      attribOverlayEnter
+        .append("text")
+        .merge(attribOverlay.select("text"))
+        .style("cursor", "point")
+        .style("-webkit-user-select", "none")
+        .style("-moz-user-select", "none")
+        .style("-ms-user-select", "none")
+        .style("user-select", "none")
+        .text(function (d) {
+          return d.attrib === "__seqId" ?
+            "sequential Index" :
+            d.attrib +
+            (dSortBy[d.level]!==undefined &&
+              dSortBy[d.level].attrib === d.attrib ?
+              dSortBy[d.level].reverse ?
+                " ↓" :
+                " ↑" :
+              "");
+        })
+        .attr("x", xScale.bandwidth()/2)
+        .attr("y", 0)
+        .style("font-weight", function (d) {
+          return (dSortBy[d.level]!==undefined &&
             dSortBy[d.level].attrib === d.attrib ?
-            dSortBy[d.level].reverse ?
-              " ↓" :
-              " ↑" :
-            "");
-      })
-      .attr("x", xScale.bandwidth()/2)
-      .attr("y", 0)
-      .style("font-weight", function (d) {
-        return (dSortBy[d.level]!==undefined &&
-          dSortBy[d.level].attrib === d.attrib ?
-          "bolder" :
-          "normal");
-      })
-      .style("font-family", "sans-serif")
-      .style("font-size", function (d) {
-        // make it grow
-        // if (dSortBy[d.level]!==undefined &&
-        //   dSortBy[d.level].attrib === d.attrib )
-        // d3.select(this).dispatch("mousemove");
-        return nv.attribFontSize + "px";
-      })
-      .on("click", deferEvent(onSortLevel))
-      .call(d3.drag()
-        .container(attribOverlayEnter.merge(attribOverlay).node())
-        .on("start", attribDragstarted)
-        .on("drag", attribDragged)
-        .on("end", attribDragended))
-      .on("mousemove", function () {
-        var sel = d3.select(this);
-        sel = sel.transition!==undefined? sel.transition().duration(150) : sel;
-        sel
-          .style("font-size", nv.attribFontSizeSelected+"px");
-      })
-      .on("mouseout", function () {
-        var sel = d3.select(this);
-        sel = sel.transition!==undefined ? sel.transition().duration(150) : sel;
-        sel
-          .style("font-size", nv.attribFontSize+"px");
-      })
-      .attr("transform", "rotate(-45)");
+            "bolder" :
+            "normal");
+        })
+        .style("font-family", "sans-serif")
+        .style("font-size", function (d) {
+          // make it grow ?
+          // if (dSortBy[d.level]!==undefined &&
+          //   dSortBy[d.level].attrib === d.attrib )
+          // d3.select(this).dispatch("mousemove");
+          return Math.min(nv.attribFontSize, nv.attribWidth) + "px";
+        })
+        .on("click", deferEvent(onSortLevel))
+        .call(d3.drag()
+          .container(attribOverlayEnter.merge(attribOverlay).node())
+          .on("start", attribDragstarted)
+          .on("drag", attribDragged)
+          .on("end", attribDragended))
+        .on("mousemove", function () {
+          var sel = d3.select(this);
+          sel = sel.transition!==undefined? sel.transition().duration(150) : sel;
+          sel
+            .style("font-size", nv.attribFontSizeSelected+"px");
+        })
+        .on("mouseout", function () {
+          var sel = d3.select(this);
+          sel = sel.transition!==undefined ? sel.transition().duration(150) : sel;
+          sel
+            .style("font-size", Math.min(nv.attribFontSize, nv.attribWidth) +"px");
+        })
+        .attr("transform", `rotate(${nv.attribRotation})`);
+    } // if (nv.showAttribTitles) {
 
 
     levelOverlayEnter
@@ -875,7 +873,7 @@ function navio(selection, _h) {
     }
   }
 
-  function drawLevelConvections(level) {
+  function drawLevelConnections(level) {
     if (level <= 0) {
       return;
     }
@@ -905,8 +903,8 @@ function navio(selection, _h) {
         locPrevLevel
 
       ];
-      drawLine(points, 1, nv.levelConvectionsColor);
-      drawLine(points, 1, nv.levelConvectionsColor, true);
+      drawLine(points, 1, nv.levelConnectionsColor);
+      drawLine(points, 1, nv.levelConnectionsColor, true);
     });
   }
 
@@ -927,7 +925,7 @@ function navio(selection, _h) {
     if (DEBUG) console.log("Delete unvecessary scales");
     yScales.splice(lastLevel+1, yScales.length);
     yScales[levelToUpdate] = d3.scaleBand()
-      .range([y0, height-nv.margin - 30])
+      .range([nv.y0, height-nv.margin - 30])
       .paddingInner(0.0)
       .paddingOuter(0);
 
@@ -957,7 +955,7 @@ function navio(selection, _h) {
       .paddingInner(0.1)
       .paddingOuter(0);
     levelScale.domain(dataIs.map(function (d,i) { return i; }))
-      .range([x0+nv.margin, ((xScale.range()[1] + nv.levelsSeparation) * dataIs.length) + x0])
+      .range([nv.x0+nv.margin, ((xScale.range()[1] + nv.levelsSeparation) * dataIs.length) + nv.x0])
       .paddingInner(0)
       .paddingOuter(0);
 
@@ -1105,7 +1103,7 @@ function navio(selection, _h) {
       updateColorDomains
     });
 
-    ctxWidth = levelScale.range()[1] + nv.margin + x0;
+    ctxWidth = levelScale.range()[1] + nv.margin + nv.x0;
     d3.select(canvas)
       .attr("width", ctxWidth)
       .attr("height", height)
@@ -1128,7 +1126,7 @@ function navio(selection, _h) {
 
     var before = performance.now();
 
-    var w = levelScale.range()[1] + nv.margin + x0;
+    var w = levelScale.range()[1] + nv.margin + nv.x0;
     context.clearRect(0,0,w+1,height+1);
     dataIs.forEach(function (levelData, i) {
       // var itemsPerpixel = Math.floor(levelData.length/height);
@@ -1145,7 +1143,7 @@ function navio(selection, _h) {
       // }
 
 
-      drawLevelConvections(i);
+      drawLevelConnections(i);
 
     });
 

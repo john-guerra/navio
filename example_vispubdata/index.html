@@ -41,9 +41,9 @@
 var nn = navio(d3.select("#target"), 800);
 
 // Step 1.5 (Optional) Set parameters
-nn.attribWidth = 12;
-nn.attribFontSize = 10;
-
+nn.attribWidth = 10;
+nn.attribFontSize = 9;
+nn.y0 = 150;
 
 d3.csv("./IEEE VIS papers 1990-2018 - Main dataset.csv", d3.autoType)
   .then(function (data) {
