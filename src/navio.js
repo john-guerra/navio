@@ -4,12 +4,14 @@ import {interpolateBlues, interpolatePurples, interpolateBrBG} from "d3-scale-ch
 import {FilterByRange, FilterByValue} from "./filters.js";
 import {scaleText} from "./scales.js";
 
+import Popper from "popper.js";
+
 let DEBUG = false;
 
 //eleId must be the ID of a context element where everything is going to be drawn
 function navio(selection, _h) {
   "use strict";
-  var nv = this || {},
+  let nv = this || {},
     data = [], //Contains the original data attributes
     dataIs = [], //Contains only the indices to the data, is an array of arrays, one for each level
     links = [],
@@ -26,8 +28,12 @@ function navio(selection, _h) {
     height = _h!==undefined ? _h : 600,
     colScales = d3.map(),
     levelScale,
+    svg,
     canvas,
     context,
+    tooltip,
+    tooltipElement,
+    tooltipCoords = { x: -50, y: -50},
     defaultColorInterpolator =  "interpolateBlues" in d3 ? d3.interpolateBlues : interpolateBlues, // necessary for supporting d3v4 and d3v5
     defaultColorInterpolatorDate =  "interpolatePurples" in d3 ? d3.interpolatePurples : interpolatePurples,
     defaultColorInterpolatorDiverging =  "interpolateBrBG" in d3 ? d3.interpolateBrBG : interpolateBrBG,
@@ -37,6 +43,7 @@ function navio(selection, _h) {
     id = "__seqId",
     updateCallback = function () {};
 
+  // Default parameters
   nv.x0=0;
   nv.y0=100;
   nv.maxNumDistictForCategorical = 10;
@@ -54,7 +61,8 @@ function navio(selection, _h) {
 
   nv.legendFont = "14px sans-serif";
   nv.linkColor = "#2171b5";
-  // nv.linkColor = "rgba(0,0,70,0.9)";
+
+  nv.tooltipFontSize = 12;
 
 
   function nozoom() {
@@ -62,121 +70,196 @@ function navio(selection, _h) {
     d3.event.preventDefault();
   }
 
-  // Try to support strings and elements
-  selection = typeof(selection) === typeof("") ? d3.select(selection) : selection;
-  selection = selection.selectAll === undefined ? d3.select(selection) : selection;
+  // function initTooltipSVG() {
+  //   svg.append("g")
+  //     .attr("class", "nvTooltip")
+  //     .style("text-shadow", "0 1px 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, -1px 0 0 #fff")
+  //     .attr("transform", `translate(${nv.x0},-10)`)
+  //     .append("text")
+  //     .attr("x", 0)
+  //     .attr("y", 0)
+  //     .style("pointer-events", "none")
+  //     .style("font-family", "sans-serif")
+  //     .style("font-size", "16pt")
+  //     .style("text-anchor", "middle");
 
-  selection.selectAll("*").remove();
+  //   svg.select(".nvTooltip > text")
+  //     .append("tspan")
+  //     .attr("class", "tool_id")
+  //     .attr("x", 0)
+  //     .attr("dy", "1.2em");
 
-  selection
-    .on("touchstart", nozoom)
-    .on("touchmove", nozoom)
-    // .attr("width", 150)
-    .style("height", height + "px")
-    .attr("class", "navio")
-    .append("div")
-    // .style("float", "left")
-    .attr("id", "navio")
-    .style("position", "relative");
-  selection
-    .select("#navio")
-    .append("canvas");
-  var svg = selection
-    .select("#navio")
-    .append("svg")
-    .style("overflow", "visible")
-    .style("position", "absolute")
-    .style("z-index", 99)
-    .style("top", 0)
-    .style("left", 0);
+  //   svg.select(".nvTooltip > text")
+  //     .append("tspan")
+  //     .attr("class", "tool_value_name")
+  //     .style("font-weight", "bold")
+  //     .attr("x", 0)
+  //     .attr("dy", "1.2em");
+
+  //   svg.select(".nvTooltip > text")
+  //     .append("tspan")
+  //     .attr("class", "tool_value_val")
+  //     .style("font-weight", "bold")
+  //     .attr("x", 0)
+  //     .attr("dy", "1.2em");
+  // }
 
 
-  svg.append("g")
-    .attr("class", "attribs");
 
-  svg.append("g")
-    .attr("class", "nvTooltip")
-    .style("text-shadow", "0 1px 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, -1px 0 0 #fff")
-    .attr("transform", `translate(${nv.x0},-10)`)
-    .append("text")
-    .attr("x", 0)
-    .attr("y", 0)
-    .style("pointer-events", "none")
-    .style("font-family", "sans-serif")
-    .style("font-size", "16pt")
-    .style("text-anchor", "middle");
+  function initTooltipPopper() {
+    tooltipElement = selection
+      .append("div")
+      .attr("class", "tooltip")
+      // .style("text-shadow", "0 1px 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, -1px 0 0 #fff")
+      .style("pointer-events", "none")
+      .style("font-family", "sans-serif")
+      .style("font-size", nv.tooltipFontSize)
+      .style("text-align", "center")
+      .style("background", "#b2ddf1")
+      .style("color", "black")
+      .style("z-index", 4)
+      .style("border-radius", "4px")
+      .style("box-shadow", "0 0 2px rgba(0,0,0,0.5)")
+      .style("padding", "10px")
+      .style("text-align", "center");
 
-  svg.select(".nvTooltip > text")
-    .append("tspan")
-    .attr("class", "tool_id")
-    .attr("x", 0)
-    .attr("dy", "1.2em");
 
-  svg.select(".nvTooltip > text")
-    .append("tspan")
-    .attr("class", "tool_value_name")
-    .style("font-weight", "bold")
-    .attr("x", 0)
-    .attr("dy", "1.2em");
+    tooltipElement
+      .append("div")
+      .attr("class", "tool_id");
 
-  svg.select(".nvTooltip > text")
-    .append("tspan")
-    .attr("class", "tool_value_val")
-    .style("font-weight", "bold")
-    .attr("x", 0)
-    .attr("dy", "1.2em");
+    tooltipElement
+      .append("div")
+      .attr("class", "tool_value_name")
+      .style("font-weight", "bold")
+      .style("font-size", "120%");
 
-  svg.append("g")
-    .attr("id", "closeButton")
-    .style("fill", "white")
-    .style("stroke", "black")
-    .style("display", "none")
-    .append("path")
-    .call(function (sel) {
-      var crossSize = 7,
-        path = d3.path(); // Draw a cross and a circle
-      path.moveTo(0, 0);
-      path.lineTo(crossSize, crossSize);
-      path.moveTo(crossSize, 0);
-      path.lineTo(0, crossSize);
-      path.moveTo(crossSize*1.2 + crossSize/2, crossSize/2);
-      path.arc(crossSize/2, crossSize/2, crossSize*1.2, 0, Math.PI*2);
-      sel.attr("d", path.toString());
-    })
-    .on("click", deleteOneLevel);
+    tooltipElement
+      .append("div")
+      .attr("class", "tool_value_val")
+      .style("max-width", "400px")
+      .style("max-height", "5.5em")
+      .style("text-align", "left")
+      .style("overflow", "hidden")
+      .style("font-size", "90%");
 
-  xScale = d3.scaleBand()
-    // .rangeBands([0, nv.attribWidth], 0.1, 0);
-    .range([0, nv.attribWidth])
-    .round(true)
-    .paddingInner(0.1)
-    .paddingOuter(0);
-  levelScale = d3.scaleBand()
-    .round(true);
-  colScales = d3.map();
 
-  x = function (val, level) {
-    return levelScale(level) + xScale(val);
-  };
+    const ref= {
+      getBoundingClientRect: () => ({
+        top: tooltipCoords.y,
+        right: tooltipCoords.x,
+        bottom: tooltipCoords.y,
+        left: tooltipCoords.x,
+        width: 0,
+        height: 0,
+      }),
+      clientWidth: 0,
+      clientHeight: 0,
+    };
 
-  canvas = selection.select("canvas").node();
-  // canvas.style.position = "absolute";
-  canvas.style.top = canvas.offsetTop + "px";
-  canvas.style.left = canvas.offsetLeft + "px";
-  // canvas.style.width =  "150px";
-  canvas.style.height = height + "px";
 
-  const scale = window.devicePixelRatio;
-  // canvas.width = width * scale;
-  canvas.height = height * scale;
+    tooltip = new Popper(ref,
+      tooltipElement.node(),
+      {
+        placement: "right",
+        modifiers: {
+          preventOverflow: {
+            boundariesElement: svg.node(),
+          },
+        },
+      });
 
-  context = canvas.getContext("2d");
+  }
 
-  context.scale(scale,scale);
+  function init() {
+    // Try to support strings and elements
+    selection = typeof(selection) === typeof("") ? d3.select(selection) : selection;
+    selection = selection.selectAll === undefined ? d3.select(selection) : selection;
 
-  context.imageSmoothingEnabled = context.mozImageSmoothingEnabled = context.webkitImageSmoothingEnabled = false;
+    selection.selectAll("*").remove();
 
-  context.globalCompositeOperation = "source-over";
+    selection
+      .on("touchstart", nozoom)
+      .on("touchmove", nozoom)
+      // .attr("width", 150)
+      .style("height", height + "px")
+      .attr("class", "navio")
+      .append("div")
+      // .style("float", "left")
+      .attr("id", "navio")
+      .style("position", "relative");
+    selection
+      .select("#navio")
+      .append("canvas");
+    svg = selection
+      .select("#navio")
+      .append("svg")
+      .style("overflow", "visible")
+      .style("position", "absolute")
+      .style("z-index", 3)
+      .style("top", 0)
+      .style("left", 0);
+
+
+    svg.append("g")
+      .attr("class", "attribs");
+
+    initTooltipPopper();
+
+    svg.append("g")
+      .attr("id", "closeButton")
+      .style("fill", "white")
+      .style("stroke", "black")
+      .style("display", "none")
+      .append("path")
+      .call(function (sel) {
+        var crossSize = 7,
+          path = d3.path(); // Draw a cross and a circle
+        path.moveTo(0, 0);
+        path.lineTo(crossSize, crossSize);
+        path.moveTo(crossSize, 0);
+        path.lineTo(0, crossSize);
+        path.moveTo(crossSize*1.2 + crossSize/2, crossSize/2);
+        path.arc(crossSize/2, crossSize/2, crossSize*1.2, 0, Math.PI*2);
+        sel.attr("d", path.toString());
+      })
+      .on("click", deleteOneLevel);
+
+    xScale = d3.scaleBand()
+      // .rangeBands([0, nv.attribWidth], 0.1, 0);
+      .range([0, nv.attribWidth])
+      .round(true)
+      .paddingInner(0.1)
+      .paddingOuter(0);
+    levelScale = d3.scaleBand()
+      .round(true);
+    colScales = d3.map();
+
+    x = function (val, level) {
+      return levelScale(level) + xScale(val);
+    };
+
+    canvas = selection.select("canvas").node();
+    // canvas.style.position = "absolute";
+    canvas.style.top = canvas.offsetTop + "px";
+    canvas.style.left = canvas.offsetLeft + "px";
+    // canvas.style.width =  "150px";
+    canvas.style.height = height + "px";
+
+    const scale = window.devicePixelRatio;
+    // canvas.width = width * scale;
+    canvas.height = height * scale;
+
+    context = canvas.getContext("2d");
+
+    context.scale(scale,scale);
+
+    context.imageSmoothingEnabled = context.mozImageSmoothingEnabled = context.webkitImageSmoothingEnabled = false;
+
+    context.globalCompositeOperation = "source-over";
+  }
+
+
 
   function showLoading(ele) {
     d3.select(ele).style("cursor", "progress");
@@ -245,7 +328,7 @@ function navio(selection, _h) {
 
     const sort = dSortBy[levelToUpdate];
     dataIs[levelToUpdate].sort(function (a, b) {
-      return sort.reverse ?
+      return sort.desc ?
         d3DescendingNull(data[a][sort.attrib], data[b][sort.attrib]) :
         d3AscendingNull(data[a][sort.attrib], data[b][sort.attrib]);
     });
@@ -267,8 +350,8 @@ function navio(selection, _h) {
 
     dSortBy[d.level] = {
       attrib:d.attrib,
-      reverse:dSortBy[d.level]!==undefined && dSortBy[d.level].attrib === d.attrib ?
-        !dSortBy[d.level].reverse :
+      desc:dSortBy[d.level]!==undefined && dSortBy[d.level].attrib === d.attrib ?
+        !dSortBy[d.level].desc :
         false
     };
 
@@ -578,17 +661,28 @@ function navio(selection, _h) {
       return;
     }
 
-    svg.select(".nvTooltip")
-      .attr("transform", "translate(" + (screenX) + "," + (screenY+20) + ")")
-      .call(function (tool) {
-        tool.select(".tool_id")
-          .text(itemId);
-        tool.select(".tool_value_name")
-          .text(itemAttr + " : " );
-        tool.select(".tool_value_val")
-          .text(d[itemAttr]);
 
-      });
+    // let t = svg.selectAll(".test")
+    //   .data([0]);
+
+    // t.enter()
+    //   .append("circle")
+    //   .attr("class", "test")
+    //   .merge(t)
+    //   .attr("cx", screenX)
+    //   .attr("cy", screenY)
+    //   .style("fill", "red")
+    //   .attr("r", 3);
+
+    tooltipCoords.x = screenX;
+    tooltipCoords.y = screenY;
+
+    tooltipElement.select(".tool_id").text(itemId);
+    tooltipElement.select(".tool_value_name").text(itemAttr);
+    tooltipElement.select(".tool_value_val").text(d[itemAttr]);
+
+    tooltip.scheduleUpdate();
+
 
     if ( DEBUG ) console.log("Mouse over", d);
   }
@@ -601,16 +695,21 @@ function navio(selection, _h) {
   }
 
   function onMouseOut() {
-    svg.select(".nvTooltip")
-      .attr("transform", "translate(" + (-200) + "," + (-200) + ")")
-      .call(function (tool) {
-        tool.select(".tool_id")
-          .text("");
-        tool.select(".tool_value_name")
-          .text("");
-        tool.select(".tool_value_val")
-          .text("");
-      });
+    tooltipCoords.x = -200;
+    tooltipCoords.y = -200;
+    // tooltipElement.html("");
+    tooltip.scheduleUpdate();
+
+    // svg.select(".nvTooltip")
+    //   .attr("transform", "translate(" + (-200) + "," + (-200) + ")")
+    //   .call(function (tool) {
+    //     tool.select(".tool_id")
+    //       .text("");
+    //     tool.select(".tool_value_name")
+    //       .text("");
+    //     tool.select(".tool_value_val")
+    //       .text("");
+    //   });
 
   }
 
@@ -691,7 +790,7 @@ function navio(selection, _h) {
             d.attrib +
             (dSortBy[d.level]!==undefined &&
               dSortBy[d.level].attrib === d.attrib ?
-              dSortBy[d.level].reverse ?
+              dSortBy[d.level].desc ?
                 " ↓" :
                 " ↑" :
               "");
@@ -1122,26 +1221,19 @@ function navio(selection, _h) {
   }; // updateData
 
   nv.update = function(_updateBrushes) {
-    var updateBrushes = _updateBrushes !== undefined ? _updateBrushes : false;
+    if (!dataIs.length) return nv;
 
+    var updateBrushes = _updateBrushes !== undefined ? _updateBrushes : false;
     var before = performance.now();
 
     var w = levelScale.range()[1] + nv.margin + nv.x0;
     context.clearRect(0,0,w+1,height+1);
     dataIs.forEach(function (levelData, i) {
-      // var itemsPerpixel = Math.floor(levelData.length/height);
-      // if (itemsPerpixel>1) { //draw one per pixel
-      //   for (var j = 0; j< levelData.length; j+=(itemsPerpixel-1)) {
-      //     drawItem(levelData[j], i);
-      //   }
-      // } else { // draw all
 
       drawLevelBorder(i);
       levelData.representatives.forEach(function (rep) {
         drawItem(data[rep], i);
       });
-      // }
-
 
       drawLevelConnections(i);
 
@@ -1155,7 +1247,7 @@ function navio(selection, _h) {
 
     var after = performance.now();
     if (DEBUG) console.log("Redrawing " + (after-before) + "ms");
-
+    return nv;
   };
 
   nv.addAttrib = function (attr, scale) {
@@ -1342,6 +1434,24 @@ function navio(selection, _h) {
       .map(function (d) { return data[d]; });
   };
 
+  nv.sortBy = function (_attrib, _desc = false, _level = undefined) {
+    // The default level is the last one
+    let level = Math.max(0, _level !== undefined && _level < dataIs.length ? _level : dataIs.length-1);
+
+    if (_attrib !== undefined) {
+      // if (dimensionsOrder.indexOf(_attrib)===-1) {
+      //   throw `sortBy: ${_attrib} is not in the list of attributes`
+      // }
+      dSortBy[level] = {
+        attrib:_attrib,
+        desc:_desc
+      };
+      return nv.update();
+    } else {
+      dSortBy[level];
+    }
+  };
+
   nv.updateCallback = function(_) {
     return arguments.length ? (updateCallback = _, nv) : updateCallback;
   };
@@ -1367,6 +1477,8 @@ function navio(selection, _h) {
     }
   };
 
+
+  init();
   return nv;
 }
 
