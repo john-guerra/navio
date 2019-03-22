@@ -60,9 +60,12 @@ function navio(selection, _h) {
   nv.divisionsThreshold = 4; // What's the minimum row width needed to draw divisions
 
   nv.legendFont = "14px sans-serif";
-  nv.linkColor = "#2171b5";
+  nv.linkColor = "#ccc";
 
   nv.tooltipFontSize = 12;
+  nv.tooltipBgColor = "#b2ddf1";
+  nv.tooltipMargin = 50;
+  nv.tooltipArrowSize = 10;
 
 
   function nozoom() {
@@ -70,59 +73,101 @@ function navio(selection, _h) {
     d3.event.preventDefault();
   }
 
-  // function initTooltipSVG() {
-  //   svg.append("g")
-  //     .attr("class", "nvTooltip")
-  //     .style("text-shadow", "0 1px 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, -1px 0 0 #fff")
-  //     .attr("transform", `translate(${nv.x0},-10)`)
-  //     .append("text")
-  //     .attr("x", 0)
-  //     .attr("y", 0)
-  //     .style("pointer-events", "none")
-  //     .style("font-family", "sans-serif")
-  //     .style("font-size", "16pt")
-  //     .style("text-anchor", "middle");
-
-  //   svg.select(".nvTooltip > text")
-  //     .append("tspan")
-  //     .attr("class", "tool_id")
-  //     .attr("x", 0)
-  //     .attr("dy", "1.2em");
-
-  //   svg.select(".nvTooltip > text")
-  //     .append("tspan")
-  //     .attr("class", "tool_value_name")
-  //     .style("font-weight", "bold")
-  //     .attr("x", 0)
-  //     .attr("dy", "1.2em");
-
-  //   svg.select(".nvTooltip > text")
-  //     .append("tspan")
-  //     .attr("class", "tool_value_val")
-  //     .style("font-weight", "bold")
-  //     .attr("x", 0)
-  //     .attr("dy", "1.2em");
-  // }
-
-
 
   function initTooltipPopper() {
     tooltipElement = selection
       .append("div")
-      .attr("class", "tooltip")
+      .attr("class", "popover")
       // .style("text-shadow", "0 1px 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, -1px 0 0 #fff")
       .style("pointer-events", "none")
       .style("font-family", "sans-serif")
       .style("font-size", nv.tooltipFontSize)
       .style("text-align", "center")
-      .style("background", "#b2ddf1")
+      .style("background", nv.tooltipBgColor)
       .style("color", "black")
       .style("z-index", 4)
       .style("border-radius", "4px")
       .style("box-shadow", "0 0 2px rgba(0,0,0,0.5)")
       .style("padding", "10px")
-      .style("text-align", "center");
+      .style("text-align", "center")
+      .style("display", "none");
 
+    tooltipElement
+      .append("style")
+      .attr("scoped", "")
+      .text(`
+        [x-arrow] {
+          position: absolute;
+          width: 0;
+          height: 0;
+          border-style: solid;
+          position: absolute;
+          margin: ${nv.tooltipArrowSize}px;
+          border-color: ${nv.tooltipBgColor}
+        }
+
+        .popover[x-placement="left"] {
+            margin-right: ${nv.tooltipArrowSize + nv.tooltipMargin}px;
+        }
+
+        .popover[x-placement="left"] [x-arrow] {
+          border-width: ${nv.tooltipArrowSize}px 0 ${nv.tooltipArrowSize}px ${nv.tooltipArrowSize}px;
+          border-top-color: transparent;
+          border-right-color: transparent;
+          border-bottom-color: transparent;
+          right: -${nv.tooltipArrowSize}px;
+          top: calc(50% - ${nv.tooltipArrowSize}px);
+          margin-left: 0;
+          margin-right: 0;
+        }
+
+        .popover[x-placement="right"] {
+            margin-left: ${nv.tooltipArrowSize + nv.tooltipMargin}px;
+        }
+
+        .popover[x-placement="right"] [x-arrow] {
+          border-width: ${nv.tooltipArrowSize}px ${nv.tooltipArrowSize}px ${nv.tooltipArrowSize}px 0;
+          border-left-color: transparent;
+          border-top-color: transparent;
+          border-bottom-color: transparent;
+          left: -${nv.tooltipArrowSize}px;
+          top: calc(50% - ${nv.tooltipArrowSize}px);
+          margin-left: 0;
+          margin-right: 0;
+        }
+
+        .popover[x-placement="bottom"] {
+            margin-top: ${nv.tooltipArrowSize + nv.tooltipMargin}px;
+        }
+
+        .popover[x-placement="bottom"] [x-arrow] {
+          border-width: 0 ${nv.tooltipArrowSize}px ${nv.tooltipArrowSize}px ${nv.tooltipArrowSize}px;
+          border-left-color: transparent;
+          border-right-color: transparent;
+          border-top-color: transparent;
+          top: -${nv.tooltipArrowSize}px;
+          left: calc(50% - ${nv.tooltipArrowSize}px);
+          margin-top: 0;
+          margin-bottom: 0;
+        }
+
+        .popover[x-placement="top"] {
+            margin-bottom: ${nv.tooltipArrowSize + nv.tooltipMargin}px;
+        }
+
+        .popover[x-placement="top"] [x-arrow] {
+          border-width: ${nv.tooltipArrowSize}px ${nv.tooltipArrowSize}px 0 ${nv.tooltipArrowSize}px;
+          border-left-color: transparent;
+          border-right-color: transparent;
+          border-bottom-color: transparent;
+          bottom: -${nv.tooltipArrowSize}px;
+          left: calc(50% - ${nv.tooltipArrowSize}px);
+          margin-top: 0;
+          margin-bottom: 0;
+        }
+
+
+      `);
 
     tooltipElement
       .append("div")
@@ -143,30 +188,34 @@ function navio(selection, _h) {
       .style("overflow", "hidden")
       .style("font-size", "90%");
 
+    tooltipElement
+      .append("div")
+      .attr("x-arrow", "");
+
 
     const ref= {
       getBoundingClientRect: () => ({
-        top: tooltipCoords.y,
-        right: tooltipCoords.x,
-        bottom: tooltipCoords.y,
-        left: tooltipCoords.x,
-        width: 0,
-        height: 0,
+        top: tooltipCoords.y - 10 ,
+        right: tooltipCoords.x + 10,
+        bottom: tooltipCoords.y + 10,
+        left: tooltipCoords.x + 10,
+        width: 10,
+        height: 10,
       }),
-      clientWidth: 0,
-      clientHeight: 0,
+      clientWidth: 10,
+      clientHeight: 10,
     };
 
 
     tooltip = new Popper(ref,
       tooltipElement.node(),
       {
-        placement: "right",
-        modifiers: {
-          preventOverflow: {
-            boundariesElement: svg.node(),
-          },
-        },
+        placement: "auto",
+        // modifiers: {
+        //   preventOverflow: {
+        //     boundariesElement: selection.node(),
+        //   },
+        // },
       });
 
   }
@@ -386,7 +435,7 @@ function navio(selection, _h) {
       context.beginPath();
       context.moveTo(Math.round(x(attrib, level)), y);
       context.lineTo(Math.round(x(attrib, level) + xScale.bandwidth()), y);
-      context.lineWidth = Math.ceil(yScales[level].bandwidth())+1;
+      context.lineWidth = Math.ceil(yScales[level].bandwidth());
       // context.lineWidth = 1;
       context.strokeStyle = item[attrib] === undefined ||
                 item[attrib] === null ||
@@ -681,6 +730,8 @@ function navio(selection, _h) {
     tooltipElement.select(".tool_value_name").text(itemAttr);
     tooltipElement.select(".tool_value_val").text(d[itemAttr]);
 
+    tooltipElement.style("display", "initial");
+
     tooltip.scheduleUpdate();
 
 
@@ -697,7 +748,7 @@ function navio(selection, _h) {
   function onMouseOut() {
     tooltipCoords.x = -200;
     tooltipCoords.y = -200;
-    // tooltipElement.html("");
+    tooltipElement.style("display", "none");
     tooltip.scheduleUpdate();
 
     // svg.select(".nvTooltip")
@@ -923,7 +974,7 @@ function navio(selection, _h) {
   function drawLink(link) {
     var
       lastAttrib = xScale.domain()[xScale.domain().length-1],
-      rightBorder = x(lastAttrib, dataIs.length-1)+ xScale.bandwidth(),
+      rightBorder = x(lastAttrib, dataIs.length-1)+ xScale.bandwidth()+2,
       ys = yScales[dataIs.length-1](link.source[id]) + yScales[dataIs.length-1].bandwidth()/2,
       yt = yScales[dataIs.length-1](link.target[id]) + yScales[dataIs.length-1].bandwidth()/2,
       miny = Math.min(ys, yt),
@@ -1222,12 +1273,15 @@ function navio(selection, _h) {
 
   nv.update = function(_updateBrushes) {
     if (!dataIs.length) return nv;
-
     var updateBrushes = _updateBrushes !== undefined ? _updateBrushes : false;
+
     var before = performance.now();
 
     var w = levelScale.range()[1] + nv.margin + nv.x0;
     context.clearRect(0,0,w+1,height+1);
+
+    drawLinks();
+
     dataIs.forEach(function (levelData, i) {
 
       drawLevelBorder(i);
@@ -1240,7 +1294,7 @@ function navio(selection, _h) {
     });
 
 
-    drawLinks();
+
 
     drawBrushes(updateBrushes);
     drawCloseButton();
