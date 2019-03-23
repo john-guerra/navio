@@ -77,15 +77,16 @@ function navio(selection, _h) {
   function initTooltipPopper() {
     if (tooltipElement) tooltipElement.remove();
 
-    tooltipElement = selection
+    tooltipElement = d3.select("body")
       .append("div")
-      .attr("class", "popover")
+      .attr("class", "_nv_popover")
       // .style("text-shadow", "0 1px 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, -1px 0 0 #fff")
       .style("pointer-events", "none")
       .style("font-family", "sans-serif")
       .style("font-size", nv.tooltipFontSize)
       .style("text-align", "center")
       .style("background", nv.tooltipBgColor)
+      .style("position", "relative")
       .style("color", "black")
       .style("z-index", 4)
       .style("border-radius", "4px")
@@ -99,7 +100,6 @@ function navio(selection, _h) {
       .attr("scoped", "")
       .text(`
         [x-arrow] {
-          position: absolute;
           width: 0;
           height: 0;
           border-style: solid;
@@ -108,11 +108,11 @@ function navio(selection, _h) {
           border-color: ${nv.tooltipBgColor}
         }
 
-        .popover[x-placement="left"] {
+        ._nv_popover[x-placement="left"] {
             margin-right: ${nv.tooltipArrowSize + nv.tooltipMargin}px;
         }
 
-        .popover[x-placement="left"] [x-arrow] {
+        ._nv_popover[x-placement="left"] [x-arrow] {
           border-width: ${nv.tooltipArrowSize}px 0 ${nv.tooltipArrowSize}px ${nv.tooltipArrowSize}px;
           border-top-color: transparent;
           border-right-color: transparent;
@@ -123,11 +123,11 @@ function navio(selection, _h) {
           margin-right: 0;
         }
 
-        .popover[x-placement="right"] {
+        ._nv_popover[x-placement="right"] {
             margin-left: ${nv.tooltipArrowSize + nv.tooltipMargin}px;
         }
 
-        .popover[x-placement="right"] [x-arrow] {
+        ._nv_popover[x-placement="right"] [x-arrow] {
           border-width: ${nv.tooltipArrowSize}px ${nv.tooltipArrowSize}px ${nv.tooltipArrowSize}px 0;
           border-left-color: transparent;
           border-top-color: transparent;
@@ -138,11 +138,11 @@ function navio(selection, _h) {
           margin-right: 0;
         }
 
-        .popover[x-placement="bottom"] {
+        ._nv_popover[x-placement="bottom"] {
             margin-top: ${nv.tooltipArrowSize + nv.tooltipMargin}px;
         }
 
-        .popover[x-placement="bottom"] [x-arrow] {
+        ._nv_popover[x-placement="bottom"] [x-arrow] {
           border-width: 0 ${nv.tooltipArrowSize}px ${nv.tooltipArrowSize}px ${nv.tooltipArrowSize}px;
           border-left-color: transparent;
           border-right-color: transparent;
@@ -153,11 +153,11 @@ function navio(selection, _h) {
           margin-bottom: 0;
         }
 
-        .popover[x-placement="top"] {
+        ._nv_popover[x-placement="top"] {
             margin-bottom: ${nv.tooltipArrowSize + nv.tooltipMargin}px;
         }
 
-        .popover[x-placement="top"] [x-arrow] {
+        ._nv_popover[x-placement="top"] [x-arrow] {
           border-width: ${nv.tooltipArrowSize}px ${nv.tooltipArrowSize}px 0 ${nv.tooltipArrowSize}px;
           border-left-color: transparent;
           border-right-color: transparent;
@@ -196,18 +196,35 @@ function navio(selection, _h) {
 
 
     const ref= {
-      getBoundingClientRect: () => ({
-        top: tooltipCoords.y,
-        right: tooltipCoords.x,
-        bottom: tooltipCoords.y,
-        left: tooltipCoords.x,
-        width: 0,
-        height: 0,
-      }),
+      getBoundingClientRect: () => {
+        const svgBR = selection.node().getBoundingClientRect();
+        return {
+          top: tooltipCoords.y + svgBR.top,
+          right: tooltipCoords.x + svgBR.left,
+          bottom: tooltipCoords.y + svgBR.top,
+          left: tooltipCoords.x + svgBR.left,
+          width: 0,
+          height: 0,
+        };
+      },
       clientWidth: 0,
       clientHeight: 0,
     };
 
+    // const ref= {
+    //   getBoundingClientRect: () => {
+    //     return {
+    //       top: tooltipCoords.y,
+    //       right: tooltipCoords.x,
+    //       bottom: tooltipCoords.y,
+    //       left: tooltipCoords.x,
+    //       width: 0,
+    //       height: 0,
+    //     };
+    //   },
+    //   clientWidth: 0,
+    //   clientHeight: 0,
+    // };
 
     tooltip = new Popper(ref,
       tooltipElement.node(),
@@ -712,8 +729,8 @@ function navio(selection, _h) {
       return;
     }
 
-    tooltipCoords.x = clientX;
-    tooltipCoords.y = clientY;
+    tooltipCoords.x = xOnWidget;
+    tooltipCoords.y = yOnWidget;
 
     tooltipElement.select(".tool_id").text(itemId);
     tooltipElement.select(".tool_value_name").text(itemAttr);
@@ -734,7 +751,7 @@ function navio(selection, _h) {
       clientY = d3.event.clientY;
 
 
-    if (DEBUG) console.log("onMouseOver", yOnWidget, clientY, d3.event.offsetY, d3.event.clientY, d3.event);
+    if (DEBUG) console.log("onMouseOver", xOnWidget, yOnWidget, clientY, d3.event.pageY, d3.event.offsetY, d3.event);
     showTooptip(xOnWidget, yOnWidget, clientX, clientY, overData.level);
   }
 

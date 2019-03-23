@@ -2,6 +2,8 @@
 <html>
 <head>
   <title>Navio example: IEEEVIS Publications</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css" integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS" crossorigin="anonymous">
+
   <style>
     body {
       font-family: sans-serif;
@@ -9,81 +11,33 @@
   </style>
 </head>
 <body>
-  <h1>IEEEVIS Publications 1990-2018</h1>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
-  <br>
+  <div class="container">
+    <h1>IEEEVIS Publications 1990-2018</h1>
 
-  <!-- Placeholder for the widget -->
-  <div id="target" style="width:55%; float:left; overflow-x: scroll;"></div>
-  <div style="width:45%; float:left">
-    <h2>Papers</h2>
-    <span id="paperCount"></span>
-    <table cellpadding="10">
-      <tr>
-        <th>Title</th>
-        <th>Conference</th>
-        <th>Year</th>
-        <th>XPloreCitationCount_02-2019</th>
-      </tr>
-      <tbody id="papers">
-      </tbody>
-    </table>
+    <!-- Placeholder for the widget -->
+    <div id="target" style="width:55%; float:left; overflow-x: scroll;"></div>
+    <div style="width:45%; float:left">
+      <h2>Papers</h2>
+      <span id="paperCount"></span>
+      <table cellpadding="10">
+        <tr>
+          <th>Title</th>
+          <th>Conference</th>
+          <th>Year</th>
+          <th>XPloreCitationCount_02-2019</th>
+        </tr>
+        <tbody id="papers">
+        </tbody>
+      </table>
+    </div>
   </div>
 
 
   <!-- Step 0: Load the libraries -->
   <script src="https://d3js.org/d3.v5.js"></script>
   <script src="https://unpkg.com/popper.js@1.14/dist/umd/popper.min.js"></script>
-  <!-- <script src="https://unpkg.com/navio@0.0.36/dist/navio.min.js"></script> -->
-  <script src="../dist/navio.js"></script>
+  <script src="https://unpkg.com/navio/dist/navio.min.js"></script>
+  <!-- <script src="../dist/navio.js"></script> -->
 
 <script>
 /* global d3, navio */
