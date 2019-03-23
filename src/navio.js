@@ -6,7 +6,7 @@ import {scaleText} from "./scales.js";
 
 import Popper from "popper.js";
 
-let DEBUG = false;
+let DEBUG = true;
 
 //eleId must be the ID of a context element where everything is going to be drawn
 function navio(selection, _h) {
@@ -75,6 +75,8 @@ function navio(selection, _h) {
 
 
   function initTooltipPopper() {
+    if (tooltipElement) tooltipElement.remove();
+
     tooltipElement = selection
       .append("div")
       .attr("class", "popover")
@@ -195,15 +197,15 @@ function navio(selection, _h) {
 
     const ref= {
       getBoundingClientRect: () => ({
-        top: tooltipCoords.y - 10 ,
-        right: tooltipCoords.x + 10,
-        bottom: tooltipCoords.y + 10,
-        left: tooltipCoords.x + 10,
-        width: 10,
-        height: 10,
+        top: tooltipCoords.y,
+        right: tooltipCoords.x,
+        bottom: tooltipCoords.y,
+        left: tooltipCoords.x,
+        width: 0,
+        height: 0,
       }),
-      clientWidth: 10,
-      clientHeight: 10,
+      clientWidth: 0,
+      clientHeight: 0,
     };
 
 
@@ -574,10 +576,12 @@ function navio(selection, _h) {
         return; // Ignore empty selections.
       }
 
-      const screenX = d3.event.sourceEvent.offsetX,
-        screenY = d3.event.sourceEvent.offsetY;
+      const clientX = d3.event.sourceEvent.clientX,
+        clientY = d3.event.sourceEvent.clientY,
+        xOnWidget = d3.event.sourceEvent.offsetX,
+        yOnWidget = d3.event.sourceEvent.offsetY;
 
-      showTooptip(screenX, screenY, level);
+      showTooptip(xOnWidget, yOnWidget, clientX, clientY, level);
     }
 
 
@@ -700,31 +704,18 @@ function navio(selection, _h) {
     }
   } // addBrush
 
-  function showTooptip(screenX, screenY, level) {
-    var itemId = invertOrdinalScale(yScales[level], screenY);
-    var itemAttr = invertOrdinalScale(xScale, screenX - levelScale(level));
+  function showTooptip(xOnWidget, yOnWidget, clientX, clientY, level) {
+    var itemId = invertOrdinalScale(yScales[level], yOnWidget);
+    var itemAttr = invertOrdinalScale(xScale, xOnWidget - levelScale(level));
     var d = dData.get(itemId);
 
     if (!d || d=== undefined) {
-      console.log("Couldn't find datum for tooltip y", screenY, d);
+      console.log("Couldn't find datum for tooltip y", yOnWidget, d);
       return;
     }
 
-
-    // let t = svg.selectAll(".test")
-    //   .data([0]);
-
-    // t.enter()
-    //   .append("circle")
-    //   .attr("class", "test")
-    //   .merge(t)
-    //   .attr("cx", screenX)
-    //   .attr("cy", screenY)
-    //   .style("fill", "red")
-    //   .attr("r", 3);
-
-    tooltipCoords.x = screenX;
-    tooltipCoords.y = screenY;
+    tooltipCoords.x = clientX;
+    tooltipCoords.y = clientY;
 
     tooltipElement.select(".tool_id").text(itemId);
     tooltipElement.select(".tool_value_name").text(itemAttr);
@@ -739,10 +730,14 @@ function navio(selection, _h) {
   }
 
   function onMouseOver(overData) {
-    var screenY = d3.mouse(d3.event.target)[1],
-      screenX = d3.mouse(d3.event.target)[0];
+    const xOnWidget = d3.mouse(d3.event.target)[0],
+      yOnWidget = d3.mouse(d3.event.target)[1],
+      clientX = d3.event.clientX,
+      clientY = d3.event.clientY;
 
-    showTooptip(screenX, screenY, overData.level);
+
+    if (DEBUG) console.log("onMouseOver", yOnWidget, clientY, d3.event.offsetY, d3.event.clientY, d3.event);
+    showTooptip(xOnWidget, yOnWidget, clientX, clientY, overData.level);
   }
 
   function onMouseOut() {
@@ -1192,6 +1187,7 @@ function navio(selection, _h) {
 
   nv.initData = function (mData,  mColScales) {
     var before = performance.now();
+
     // getAttribs(mData[0][0]);
     colScales  = mColScales;
     colScales.keys().forEach(function (d) {
@@ -1440,6 +1436,8 @@ function navio(selection, _h) {
 
 
   nv.data = function(_) {
+    initTooltipPopper();
+
     if (!colScales.has("visible")) {
       nv.addAttrib("visible",
         d3.scaleOrdinal()
@@ -1502,7 +1500,7 @@ function navio(selection, _h) {
       };
       return nv.update();
     } else {
-      dSortBy[level];
+      return dSortBy[level];
     }
   };
 
