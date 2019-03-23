@@ -18,27 +18,20 @@
 // navio  Step 1.  Create a navio passing the selector to place it and the height
 var nn = navio(d3.select("#target"), 600);
 
-// navio Step 2. Add the Categorical and Sequential attributes you want to use (Or use addAllAttribs after loading the data)
+// navio Step 2 [optional] Add the Categorical and Sequential attributes you want to use manually (Or use addAllAttribs after loading the data)
 // var catColumns = ["car-type", "gate-name", "dayOfTheWeek", "car-id", "year"];
 // var seqColumns = ["minutes", "hours", "day", "month", "seconds", "carIdPart1", "carIdPart2", "Timestamp"];
 // catColumns.forEach((c) => nn.addCategoricalAttrib(c));
 // seqColumns.forEach((c) => nn.addSequentialAttrib(c));
 
-// d3.csv("./Lekagul Sensor Data.csv")
-//   .then(function (data) {
-//     data.forEach(type);
 d3.csv("./Lekagul Sensor Data.csv", type, function (err, data) {
   if (err) throw err;
-
-  data.forEach( d=> d["Random number"]=Math.random()*10-8);
 
   // navio Step 3. Load your data!
   nn.data(data);
   nn.addAllAttribs();
 
 });
-
-
 
 
 var fmt = d3.timeParse("%Y-%m-%d %H:%M:%S");

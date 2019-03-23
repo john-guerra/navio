@@ -6,7 +6,7 @@ import {scaleText} from "./scales.js";
 
 import Popper from "popper.js";
 
-let DEBUG = true;
+let DEBUG = false;
 
 //eleId must be the ID of a context element where everything is going to be drawn
 function navio(selection, _h) {
@@ -429,6 +429,7 @@ function navio(selection, _h) {
   function drawItem(item, level) {
     var attrib, i, y ;
 
+    context.save();
     for (i = 0; i < dimensionsOrder.length; i++) {
       attrib = dimensionsOrder[i];
       y = Math.round(yScales[level](item[id]) + yScales[level].bandwidth()/2);
@@ -461,12 +462,12 @@ function navio(selection, _h) {
         context.strokeStyle = nv.divisionsColor;
         context.stroke();
       }
-
     }
-
+    context.restore();
   } // drawItem
 
   function drawLevelBorder(i) {
+    context.save();
     context.beginPath();
     context.rect(levelScale(i),
       yScales[i].range()[0]-1,
@@ -475,6 +476,7 @@ function navio(selection, _h) {
     context.strokeStyle = "black";
     context.lineWidth = 1;
     context.stroke();
+    context.restore();
   }
 
 
@@ -1185,6 +1187,14 @@ function navio(selection, _h) {
     return val;
   }
 
+  function recomputeVisibleLinks() {
+    if (links.length>0) {
+      visibleLinks = links.filter(function (d) {
+        return d.source.visible && d.target.visible;
+      });
+    }
+  }
+
   nv.initData = function (mData,  mColScales) {
     var before = performance.now();
 
@@ -1212,7 +1222,6 @@ function navio(selection, _h) {
   };
 
 
-
   nv.updateData = function (mDataIs, mColScales, opts) {
     const {levelToUpdate, updateColorDomains} = opts || {};
 
@@ -1233,11 +1242,7 @@ function navio(selection, _h) {
     // Initialize new filter level
     filtersByLevel[mDataIs.length] = [];
 
-    if (links.length>0) {
-      visibleLinks = links.filter(function (d) {
-        return d.source.visible && d.target.visible;
-      });
-    }
+    recomputeVisibleLinks();
 
     // Delete unnecesary brushes
     dBrushes.splice(mDataIs.length);
@@ -1523,6 +1528,7 @@ function navio(selection, _h) {
   nv.links = function(_) {
     if (arguments.length) {
       links = _;
+      recomputeVisibleLinks();
       return nv;
     } else {
       return links;

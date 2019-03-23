@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
 <style>
-#nn {
+#nv {
   float:left;
 }
 
@@ -16,14 +16,14 @@
 }
 
 </style>
-<div id="nn"></div>
+<div id="nv"></div>
 <svg width="400" height="600"></svg>
 
 <script src="https://d3js.org/d3.v5.js"></script>
 <script src="../dist/navio.js"></script>
 <!-- <script src="https://unpkg.com/navio/dist/navio.min.js"></script> -->
 <script>
-/* global d3, Navio */
+/* global d3, navio */
 
 var svg = d3.select("svg"),
   width = +svg.attr("width"),
@@ -41,9 +41,35 @@ var simulation = d3.forceSimulation()
   .force("charge", d3.forceManyBody())
   .force("center", d3.forceCenter(width / 2, height / 2));
 
-var nn = new navio(d3.select("#nn"), height);
-nn.id("id");
-nn.addCategoricalAttrib("group", color);
+var nv = new navio(d3.select("#nv"), height);
+nv.id("id");
+nv.addCategoricalAttrib("group", color);
+
+// d3 v4
+// d3.json("miserables.json", function(error, graph) {
+d3.json("miserables.json").then(function(graph) {
+  // if (error) throw error;
+  var dNodes = {};
+  graph.nodes.forEach(function (d) { dNodes[d.id] = d;});
+  graph.links.forEach(function (d) {
+    d.source = dNodes[d.source];
+    d.target = dNodes[d.target];
+  });
+
+  nv.data(graph.nodes);
+  nv.updateCallback(function (nodes) {
+    update({
+      nodes:nodes,
+      links:graph.links
+    });
+  });
+
+  nv.links(graph.links); // If you set the links after the data, you should trigger update on your own
+  nv.update();
+
+  update(graph);
+
+});
 
 function update(graph) {
   simulation.stop();
@@ -63,7 +89,7 @@ function update(graph) {
 
   var linkEnter = link
     .enter().append("line")
-      .attr("stroke-width", function(d) { return Math.sqrt(d.value); });
+    .attr("stroke-width", function(d) { return Math.sqrt(d.value); });
   link.exit().remove();
 
   var node = nodesG
@@ -112,35 +138,6 @@ function update(graph) {
 
 
 }
-
-// d3 v4
-// d3.json("miserables.json", function(error, graph) {
-d3.json("miserables.json").
-  then(function(graph) {
-  // if (error) throw error;
-  var dNodes = {};
-  graph.nodes.forEach(function (d) { dNodes[d.id] = d;});
-  graph.links.forEach(function (d) {
-    d.source = dNodes[d.source];
-    d.target = dNodes[d.target];
-  });
-
-  nn.links(graph.links);
-
-  nn.data(graph.nodes);
-  nn.updateCallback(function (nodes) {
-    update({
-      nodes:nodes,
-      links:graph.links
-    });
-  });
-
-  update(graph);
-
-
-
-
-});
 
 function dragstarted(d) {
   if (!d3.event.active) simulation.alphaTarget(0.3).restart();
