@@ -5,13 +5,13 @@
 
 ## Try it on Observable:
 
-You can explore your own data very easily on ObervableHQ. Just fork [this base Navio notebook](https://beta.observablehq.com/@john-guerra/navio), change your data and attributes.
+You can explore your own data very easily on ObervableHQ, using [this base Navio notebook](https://beta.observablehq.com/@john-guerra/navio). If you want to load your own data you can use the [Navio-load notebook](https://beta.observablehq.com/@john-guerra/navio-load)
 
-## Use it with Shipyard:
+## Use it with your own data with shipyard:
 
 If you have data and just want a quick way of summarize it, explore it or filter it, you can try Shipyard, our stand-alone application for Navio. (You can also export template code to use it)
 
-[Try Shipyard](https://john-guerra.github.io/shipyard/)
+[Try Shipyard](https://shipyard.navio.dev)
 ![Shipyard demo](https://github.com/john-guerra/shipyard/raw/master/demo.png)
 
 ### Demos:

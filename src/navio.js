@@ -229,20 +229,17 @@ function navio(selection, _h) {
 
     selection.selectAll("*").remove();
 
-    selection
+    const divNavio = selection
       .on("touchstart", nozoom)
       .on("touchmove", nozoom)
-      // .attr("width", 150)
       .style("height", height + "px")
       .attr("class", "navio")
       .append("div")
-      // .style("float", "left")
       .style("position", "relative");
-    selection
-      .select("div.navio")
+
+    divNavio
       .append("canvas");
-    svg = selection
-      .select("div.navio")
+    svg = divNavio
       .append("svg")
       .style("overflow", "visible")
       .style("position", "absolute")
