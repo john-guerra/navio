@@ -77,9 +77,9 @@
 
     if (error) throw error;
 
-    nn.links(filteredGraph.links);
-    nn.data(filteredGraph.nodes);
-    nn.updateCallback(function (nodes) {
+    nv.links(filteredGraph.links);
+    nv.data(filteredGraph.nodes);
+    nv.updateCallback(function (nodes) {
       update({
         nodes:nodes,
         links:graph.links
@@ -89,13 +89,13 @@
   };
 
 
-  var nn = new navio(
+  var nv = new navio(
     "#nn",
     height
   ).id("name");
-  nn.addSequentialAttrib("commonVotes");
-  nn.addCategoricalAttrib("party");
-  nn.addCategoricalAttrib("cluster", color);
+  nv.addSequentialAttrib("commonVotes");
+  nv.addCategoricalAttrib("party");
+  nv.addCategoricalAttrib("cluster", color);
   function update(graph) {
     simulation.stop();
     var dVisibleNodes = {};
@@ -107,7 +107,7 @@
         dVisibleNodes[d.target.id];
     });
 
-    var visible = nn.getVisible();
+    var visible = nv.getVisible();
     console.log("nodes = " + graph.nodes.length + " links="+visibleLinks.length);
     size.domain(d3.extent(visible, function (d) { return d.commonVotes; }));
     graph.nodes.forEach(function (d) {

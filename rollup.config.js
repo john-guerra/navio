@@ -19,7 +19,8 @@ export default [
     ],
     external: [
       "d3",
-      "d3-scale-chromatic"
+      "d3-scale-chromatic",
+      "popper.js"
     ],
     output: {
       extend: true,
@@ -30,7 +31,8 @@ export default [
       name: "navio",
       globals: {
         d3:"d3",
-        "d3-scale-chromatic":"d3ScaleChromatic"
+        "d3-scale-chromatic":"d3ScaleChromatic",
+        "popper.js":"Popper"
       }
     }
   },
@@ -45,7 +47,8 @@ export default [
     ],
     external: [
       "d3",
-      "d3-scale-chromatic"
+      "d3-scale-chromatic",
+      "popper.js"
     ],
     output: {
       extend: true,
@@ -56,7 +59,8 @@ export default [
       name: "navio",
       globals: {
         d3:"d3",
-        "d3-scale-chromatic":"d3ScaleChromatic"
+        "d3-scale-chromatic":"d3ScaleChromatic",
+        "popper.js":"Popper"
       }
     }
   },
@@ -72,7 +76,8 @@ export default [
       terser({output: {preamble: copyright}})
     ],
     external: ["d3",
-      "d3-scale-chromatic"
+      "d3-scale-chromatic",
+      "popper.js"
     ],
     output: {
       extend: true,
@@ -82,7 +87,8 @@ export default [
       name: "navio",
       globals: {
         d3:"d3",
-        "d3-scale-chromatic":"d3ScaleChromatic"
+        "d3-scale-chromatic":"d3ScaleChromatic",
+        "popper.js":"Popper"
       }
     }
   }

@@ -237,13 +237,12 @@ function navio(selection, _h) {
       .attr("class", "navio")
       .append("div")
       // .style("float", "left")
-      .attr("id", "navio")
       .style("position", "relative");
     selection
-      .select("#navio")
+      .select("div.navio")
       .append("canvas");
     svg = selection
-      .select("#navio")
+      .select("div.navio")
       .append("svg")
       .style("overflow", "visible")
       .style("position", "absolute")
