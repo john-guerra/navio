@@ -6,7 +6,7 @@
 </h1>
 <h4 align="center">A visualization widget to understand and navigate your data</h4>
 
-You can use it to summarize 100ks of records a dozens of columns, and explore and navigate with three simple interactions:
+You can use it to summarize hundreds of thousands of records a dozens of columns, explore and navigate them with three simple interactions:
 
 | Sort | Filter a Range | Filter By Value|
 | -----| --- | ---|
