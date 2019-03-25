@@ -567,14 +567,14 @@ function navio(selection, _h) {
       before = performance.now();
       // Check if each item fits on any filter
       var filteredData = dataIs[level].filter(d => {
-        data[d].visible = false;
+        data[d].selected = false;
         for (let filter of filtersByLevel[level]) {
           if (filter.filter(data[d])) {
-            data[d].visible = true;
+            data[d].selected = true;
             break;
           }
         }
-        return data[d].visible;
+        return data[d].selected;
       });
 
 
@@ -1138,7 +1138,7 @@ function navio(selection, _h) {
       // colScales = d3.map();
       dDimensions.keys().forEach(
         function (attrib) {
-          if (attrib === "visible") return;
+          if (attrib === "selected") return;
 
           var scale = colScales.get(attrib);
           if (scale.__type==="seq" || scale.__type==="date") {
@@ -1177,7 +1177,7 @@ function navio(selection, _h) {
     showLoading(this);
     if (DEBUG) console.log("Delete one level");
     removeBrushOnLevel(dataIs.length-2);
-    dataIs[dataIs.length-2].forEach(function (d) { data[d].visible=true; });
+    dataIs[dataIs.length-2].forEach(function (d) { data[d].selected=true; });
 
     dataIs = dataIs.slice(0, dataIs.length-1);
 
@@ -1214,7 +1214,7 @@ function navio(selection, _h) {
   function recomputeVisibleLinks() {
     if (links.length>0) {
       visibleLinks = links.filter(function (d) {
-        return d.source.visible && d.target.visible;
+        return d.source.selected && d.target.selected;
       });
     }
   }
@@ -1413,7 +1413,7 @@ function navio(selection, _h) {
     attribs.forEach(function (attr) {
       if (attr === "__seqId" ||
         attr === "__i" ||
-        attr === "visible")
+        attr === "selected")
         return;
 
       const firstNotNull = findNotNull(data, attr);
@@ -1465,14 +1465,14 @@ function navio(selection, _h) {
   nv.data = function(_) {
     initTooltipPopper();
 
-    if (!colScales.has("visible")) {
-      nv.addAttrib("visible",
+    if (!colScales.has("selected")) {
+      nv.addAttrib("selected",
         d3.scaleOrdinal()
           .domain([false,true])
           .range(visibleColorRange)
           //, "#cddca3", "#8c6d31", "#bd9e39"]
       );
-      moveAttrToPos("visible", 0);
+      moveAttrToPos("selected", 0);
     }
     if (!colScales.has("__seqId")) {
       nv.addSequentialAttrib(
@@ -1487,7 +1487,7 @@ function navio(selection, _h) {
       data = _.slice(0);
 
       data.forEach(function (d) {
-        d.visible = true;
+        d.selected = true;
       });
       dataIs = [data.map(function (_, i) { return i; })];
 
@@ -1507,11 +1507,13 @@ function navio(selection, _h) {
     }
   };
 
-  nv.getVisible = function() {
+  nv.getSelected = function() {
     return dataIs[dataIs.length-1]
-      .filter(function (d) { return data[d].visible; })
+      .filter(function (d) { return data[d].selected; })
       .map(function (d) { return data[d]; });
   };
+  // Legacy support
+  nv.getVisible = nv.getSelected;
 
   nv.sortBy = function (_attrib, _desc = false, _level = undefined) {
     // The default level is the last one
@@ -1535,7 +1537,7 @@ function navio(selection, _h) {
     return arguments.length ? (updateCallback = _, nv) : updateCallback;
   };
 
-  nv.visibleColorRange = function(_) {
+  nv.selectedColorRange = function(_) {
     return arguments.length ? (visibleColorRange = _, nv) : visibleColorRange;
   };
 

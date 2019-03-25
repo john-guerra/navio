@@ -1,31 +1,26 @@
 <h1 align="center">
-  navio
   <br>
-  <a href="https://infovis.co/momaExplorer"><img src="imgs/Navio_MomaExplorer.gif" alt="Moma Explorer" height="300"></a>
+  <a href="https://observablehq.com/@john-guerra/navio-load"><img src="imgs/navio_thumb_v3.gif" alt="Moma Explorer" height="300"></a>
+  Navio
   <br>
 </h1>
 <h4 align="center">A visualization widget to understand and navigate your data</h4>
 
-It supports three main interactions:
+You can use it to summarize 100ks of records a dozens of columns, and explore and navigate with three simple interactions:
 
 | Sort | Filter a Range | Filter By Value|
 | -----| --- | ---|
-| <img src="imgs/Navio_MomaExplorer.gif" alt="Moma Explorer" height="300"> | <img src="imgs/Navio_MomaExplorer.gif" alt="Moma Explorer" height="300"> | <img src="imgs/Navio_MomaExplorer.gif" alt="Moma Explorer" height="300"> |
-, click on a header to sort the data, click on a value to select it, or drag to select a range.
-![Navio Demo with the MoMa Collection](imgs/Navio_MomaExplorer.gif)
+| Click on a header to sort <br> <a href="https://navio.dev/example_vispubdata"><img src="imgs/navio_sort.gif" alt="Navio sort on les miserables network" width="300"></a> | Drag to select a range <br> <a href="http://infovis.co/momaExplorer/"><img src="imgs/navio_range.gif" alt="Moma Explorer" width="300"></a> | Click on a value to select all instances <br> <a href="https://navio.dev/example_vispubdata"> <img src="imgs/navio_value.gif" alt="Navio select a value with the vispubdata" width="300"></a> |
 
-## Try it on Observable:
+## Try it!
 
-You can explore your own data very easily on ObervableHQ, using [this base Navio notebook](https://beta.observablehq.com/@john-guerra/navio). If you want to load your own data you can use the [Navio-load notebook](https://beta.observablehq.com/@john-guerra/navio-load)
+You can test Navio right now with your **own CSV or JSON data** (less than 200MB), using:
 
-## Use it with your own data with shipyard:
+| Obervable Notebook | Shipyard |
+| ---- | --- |
+| <a href="https://beta.observablehq.com/@john-guerra/navio-load"> <img src="imgs/Navio_load.png" alt="Navio-load Observable" width="400"></a> | <a href="https://shipyard.navio.dev"> <img src="https://github.com/john-guerra/shipyard/raw/master/demo.png" alt="Navio select a value with the vispubdata" width="400"></a>
 
-If you have data and just want a quick way of summarize it, explore it or filter it, you can try Shipyard, our stand-alone application for Navio. (You can also export template code to use it)
-
-[Try Shipyard](https://shipyard.navio.dev)
-![Shipyard demo](https://github.com/john-guerra/shipyard/raw/master/demo.png)
-
-### Demos:
+Other demos:
 
 * [MoMa Collection](https://john-guerra.github.io/momaExplorer/) ([Code](https://github.com/john-guerra/momaExplorer))
 * [Navio-only Vast 2017 MiniChallenge1 ](http://john-guerra.github.io/navio/example_vastChallenge2017/index.html) ([Code](https://github.com/john-guerra/navio/tree/master/example_vastChallenge2017))
