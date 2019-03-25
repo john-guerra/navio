@@ -102,10 +102,13 @@ TLDR
 ```
 
 3. **Create a Navio Instance**
+
 ``` javascript
 var nv = navio(d3.select("#Navio"), 600); //height 600
 ```
+
 4. [Optional] **Configure navio to your liking**
+
 ```javascript
 nv.x0 = 0;  //Where to start drawing navio in x
 nv.y0 = 100; //Where to start drawing navio in y, useful if your attrib names are too long

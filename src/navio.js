@@ -1,4 +1,4 @@
-// import * as d3 from "../node_modules/d3/build/d3.js"; // Force react to use the es6 module
+// import * as d3 from "./../../node_modules/d3/dist/d3.js"; // Force react to use the es6 module
 import * as d3 from "d3";
 import {interpolateBlues, interpolatePurples, interpolateBrBG} from "d3-scale-chromatic";
 import {FilterByRange, FilterByValue} from "./filters.js";
@@ -6,7 +6,7 @@ import {scaleText} from "./scales.js";
 
 import Popper from "popper.js";
 
-let DEBUG = false;
+let DEBUG = true;
 
 //eleId must be the ID of a context element where everything is going to be drawn
 function navio(selection, _h) {
@@ -326,11 +326,18 @@ function navio(selection, _h) {
 
 
   function showLoading(ele) {
+    d3.select("body")
+      .append("div")
+      .attr("class", "_nv_loading")
+      .style("position", "fixed")
+      .style("font-size", "50px")
+      .text("Loading");
     d3.select(ele).style("cursor", "progress");
     svg.style("cursor", "progress");
   }
 
   function hideLoading(ele) {
+    // d3.select("._nv_loading").remove();
     d3.select(ele).style("cursor", null);
     svg.style("cursor", null);
   }
@@ -338,10 +345,10 @@ function navio(selection, _h) {
   function deferEvent(cbk) {
     return function(d, i, all) {
       showLoading(this);
-      setTimeout(() => {
+      requestAnimationFrame(() => {
         cbk(d, i, all);
         hideLoading(this);
-      },100);
+      });
     };
   }
 
@@ -651,10 +658,14 @@ function navio(selection, _h) {
         newData.push(filteredData);
       }
 
+
       nv.updateData(
         newData,
         colScales
       );
+      // Update the sorting of the last level
+      updateSorting(dataIs.length-1);
+
       if (DEBUG) console.log("out of updateData");
       if (DEBUG) console.log("Selected " + filteredData.length + " calling updateCallback");
       updateCallback(nv.getVisible());
@@ -1260,8 +1271,6 @@ function navio(selection, _h) {
     // Delete unnecesary brushes
     dBrushes.splice(mDataIs.length);
 
-    // Update the sorting of the last level
-    updateSorting(mDataIs.length-1);
     updateScales({
       levelToUpdate,
       updateColorDomains
