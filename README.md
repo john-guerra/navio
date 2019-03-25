@@ -1,6 +1,17 @@
-# Navio
+<h1 align="center">
+  navio
+  <br>
+  <a href="https://infovis.co/momaExplorer"><img src="imgs/Navio_MomaExplorer.gif" alt="Moma Explorer" height="300"></a>
+  <br>
+</h1>
+<h4 align="center">A visualization widget to understand and navigate your data</h4>
 
-**Navio** is a d3 visualization widget to help summarizing, exploring and navigating large datasets. It supports three main interactions, click on a header to sort the data, click on a value to select it, or drag to select a range.
+It supports three main interactions:
+
+| Sort | Filter a Range | Filter By Value|
+| -----| --- | ---|
+| <img src="imgs/Navio_MomaExplorer.gif" alt="Moma Explorer" height="300"> | <img src="imgs/Navio_MomaExplorer.gif" alt="Moma Explorer" height="300"> | <img src="imgs/Navio_MomaExplorer.gif" alt="Moma Explorer" height="300"> |
+, click on a header to sort the data, click on a value to select it, or drag to select a range.
 ![Navio Demo with the MoMa Collection](imgs/Navio_MomaExplorer.gif)
 
 ## Try it on Observable:
