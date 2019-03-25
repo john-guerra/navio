@@ -1,6 +1,6 @@
 <h1 align="center">
   <br>
-  <a href="https://observablehq.com/@john-guerra/navio-load"><img src="imgs/navio_thumb_v3.gif" alt="Moma Explorer" height="300"></a>
+  <a href="https://observablehq.com/@john-guerra/navio-load"><img src="imgs/navio_thumb_v3.gif" alt="Moma Explorer" max-height="300"></a>
   Navio
   <br>
 </h1>
