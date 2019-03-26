@@ -13,9 +13,11 @@
     "popper.js": "^1.14.7"
   },
   "devDependencies": {
+    "@babel/core": "^7.4.0",
     "prettier": "^1.16.4",
     "rollup": "^0.65.0",
     "rollup-plugin-ascii": "0.0.3",
+    "rollup-plugin-babel": "^4.3.2",
     "rollup-plugin-commonjs": "^9.1.0",
     "rollup-plugin-node-resolve": "^3.4.0",
     "rollup-plugin-terser": "^2.0.2"
