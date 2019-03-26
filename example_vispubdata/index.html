@@ -36,8 +36,8 @@
   <!-- Step 0: Load the libraries -->
   <script src="https://d3js.org/d3.v5.js"></script>
   <script src="https://unpkg.com/popper.js@1.14/dist/umd/popper.min.js"></script>
-  <!-- <script src="https://unpkg.com/navio/dist/navio.min.js"></script> -->
-  <script src="../dist/navio.js"></script>
+  <script src="https://unpkg.com/navio/dist/navio.min.js"></script>
+  <!-- <script src="../dist/navio.js"></script> -->
 
 <script>
 /* global d3, navio */
@@ -47,8 +47,8 @@ var nn = navio(d3.select("#target"), 700)
   .sortBy("XPloreCitationCount_02-2019", false);
 
 // Step 1.5 (Optional) Set parameters
-nn.attribWidth = 10;
-nn.attribFontSize = 9;
+nn.attribWidth = 11;
+nn.attribFontSize = 10;
 nn.y0 = 150;
 
 d3.csv("./IEEE VIS papers 1990-2018 - Main dataset.csv", d3.autoType)

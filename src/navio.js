@@ -6,7 +6,7 @@ import {scaleText} from "./scales.js";
 
 import Popper from "popper.js";
 
-let DEBUG = true;
+let DEBUG = false;
 
 //eleId must be the ID of a context element where everything is going to be drawn
 function navio(selection, _h) {
@@ -47,7 +47,7 @@ function navio(selection, _h) {
   nv.y0=100;
   nv.maxNumDistictForCategorical = 10;
   nv.howManyItemsShouldSearchForNotNull = 100;
-  nv.margin = 20;
+  nv.margin = 30;
 
   nv.levelsSeparation = 40;
   nv.divisionsColor = "white";
@@ -204,7 +204,7 @@ function navio(selection, _h) {
 
     const ref= {
       getBoundingClientRect: () => {
-        const svgBR = selection.node().getBoundingClientRect();
+        const svgBR = svg.node().getBoundingClientRect();
         return {
           top: tooltipCoords.y + svgBR.top,
           right: tooltipCoords.x + svgBR.left,
@@ -294,7 +294,7 @@ function navio(selection, _h) {
         path.arc(crossSize/2, crossSize/2, crossSize*1.2, 0, Math.PI*2);
         sel.attr("d", path.toString());
       })
-      .on("click", deleteOneLevel);
+      .on("click", () => deleteSubsequentLevels()); //delete last level
 
     xScale = d3.scaleBand()
       // .rangeBands([0, nv.attribWidth], 0.1, 0);
@@ -502,6 +502,7 @@ function navio(selection, _h) {
 
 
   function removeBrushOnLevel(lev) {
+    if (lev<0) return;
     d3.select("#level"+lev)
       .selectAll(".brush")
       .call(dBrushes[lev].move, null);
@@ -581,10 +582,13 @@ function navio(selection, _h) {
 
     // Start from the previous data
     let newData = dataIs;
+
     for (let level = fromLevel; level <= lastLevel; level ++) {
       // We don't have filters for this level, delete subsequent levels
       if (!filtersByLevel.hasOwnProperty(level) || !filtersByLevel[level].length ) {
-        deleteOneLevel(level+1);
+        newData = deleteSubsequentLevels(level+1, newData, {
+          shouldUpdate: false
+        });
         break;
       }
       // else apply filters
@@ -867,7 +871,7 @@ function navio(selection, _h) {
     filterExpEnter
       .merge(levelOverlay.select(".filterExplanation"))
       .attr("transform",
-        (_, i) => `translate(${rightBorder(i)}, ${(yScales[i].range()[1] + 27)})`);
+        (_, i) => `translate(${rightBorder(i)}, ${(yScales[i].range()[1] + nv.filterFontSize*1.2)})`);
 
     filterExpEnter
       .append("rect")
@@ -875,14 +879,13 @@ function navio(selection, _h) {
       .attr("class", "bgExplanation")
       .style("fill", "white")
       .attr("x", 0)
-      .attr("y", -nv.filterFontSize*0.6)
+      .attr("y", nv.filterFontSize*0.3)
       .attr("width", levelScale.bandwidth())
-      .attr("height", (_, i) => filtersByLevel[i] ? filtersByLevel[i].length * nv.filterFontSize*1.2 : 0);
+      .attr("height", (_, i) => filtersByLevel[i] ? filtersByLevel[i].length * nv.filterFontSize*1.3 : 0);
 
     const filterExpTexts = filterExpEnter
       .append("text")
       .style("font-size", nv.filterFontSize)
-      .style("text-anchor", "middle")
       .merge(levelOverlay.select(".filterExplanation > text"))
       // .attr("x", function (_, i) {return  levelScale(i); })
       // .attr("y", function (_, i) {return yScales[i].range()[1] + 25; })
@@ -897,13 +900,13 @@ function navio(selection, _h) {
       .enter()
       .append("tspan")
       .merge(filterExpTexts)
-      .attr("dy", (_, i) => i*nv.filterFontSize*1.2)
+      .attr("dy", nv.filterFontSize*1.2)
       .attr("x", 0)
       .style("cursor", "not-allowed")
       .text( f => "Ⓧ " + f.toStr())
       .on("click", (f, i) => {
-        console.log("click");
-        filtersByLevel[f.level].splice(i);
+        console.log("Click remove filter",i, f );
+        filtersByLevel[f.level].splice(i, 1);
 
         applyFiltersAndUpdate(f.level);
       } );
@@ -1290,37 +1293,43 @@ function navio(selection, _h) {
   }
 
 
-  function deleteOneLevel(_level, shouldUpdate) {
+  // Deletes the last level by default, or all the subsequent levels of _level on _dataIs
+  function deleteSubsequentLevels(_level, _dataIs, opts) {
     if (dataIs.length<=1) return;
 
+    let {shouldUpdate} = opts || {};
+
     let level = _level !== undefined ? _level : dataIs.length - 1;
+    _dataIs = _dataIs !== undefined ? _dataIs : dataIs;
     shouldUpdate = shouldUpdate!==undefined ? shouldUpdate : true;
 
-    if (!dataIs.hasOwnProperty(level)) {
+    if (!_dataIs.hasOwnProperty(level)) {
       if (DEBUG) console.log("Asked to delete a level that doens't exist ", level);
-      return;
+      return _dataIs;
     }
 
     showLoading(this);
     if (DEBUG) console.log("Delete one level", level);
-    removeBrushOnLevel(level - 1);
-    dataIs[level - 1].forEach(d => data[d].selected=true);
-
-    if (filtersByLevel.hasOwnProperty(level-1) && filtersByLevel[level-1].length) {
-      // Cleanup filters from the previous level
-      filtersByLevel[level-1].forEach( (_,i) => delete filtersByLevel[level-1][i]);
+    if (level>0) {
+      removeBrushOnLevel(level - 1);
+      _dataIs[level - 1].forEach(d => data[d].selected=true);
+      if (filtersByLevel.hasOwnProperty(level-1) && filtersByLevel[level-1].length) {
+        // Cleanup filters from the previous level
+        filtersByLevel[level-1].forEach( (_,i) => delete filtersByLevel[level-1][i]);
+      }
+      filtersByLevel[level-1] = [];
     }
-    filtersByLevel[level-1] = [];
 
-    dataIs = dataIs.slice(0, level);
+    _dataIs.splice(level);
 
     if (shouldUpdate) {
-      nv.updateData(dataIs, colScales);
+      nv.updateData(_dataIs, colScales);
       updateCallback(nv.getVisible());
 
     }
 
     hideLoading(this);
+    return _dataIs;
   }
 
   function moveAttrToPos(attr, pos) {
@@ -1420,10 +1429,10 @@ function navio(selection, _h) {
     colScales = mColScales !== undefined ? mColScales: colScales;
     dataIs = mDataIs;
 
-    // // Delete filters on unused levels
-    // filtersByLevel.splice(mDataIs.length);
-    // // Initialize new filter level
-    // filtersByLevel[mDataIs.length] = [];
+    // Delete filters on unused levels
+    filtersByLevel.splice(mDataIs.length);
+    // Initialize new filter level
+    filtersByLevel[mDataIs.length] = [];
 
     recomputeVisibleLinks();
 
