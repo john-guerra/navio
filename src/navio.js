@@ -582,11 +582,9 @@ function navio(selection, _h) {
     // Start from the previous data
     let newData = dataIs;
     for (let level = fromLevel; level <= lastLevel; level ++) {
-
-      // TODO: Do I need this?
       // We don't have filters for this level, delete subsequent levels
       if (!filtersByLevel.hasOwnProperty(level) || !filtersByLevel[level].length ) {
-        newData.splice(level+1);
+        deleteOneLevel(level+1);
         break;
       }
       // else apply filters
@@ -884,6 +882,7 @@ function navio(selection, _h) {
     const filterExpTexts = filterExpEnter
       .append("text")
       .style("font-size", nv.filterFontSize)
+      .style("text-anchor", "middle")
       .merge(levelOverlay.select(".filterExplanation > text"))
       // .attr("x", function (_, i) {return  levelScale(i); })
       // .attr("y", function (_, i) {return yScales[i].range()[1] + 25; })
@@ -906,10 +905,7 @@ function navio(selection, _h) {
         console.log("click");
         filtersByLevel[f.level].splice(i);
 
-        // TODO: do I need this param?
-        applyFiltersAndUpdate(f.level, {
-          shouldDrawBrushes:true
-        });
+        applyFiltersAndUpdate(f.level);
       } );
 
     filterExpTexts.exit().remove();
@@ -1294,10 +1290,11 @@ function navio(selection, _h) {
   }
 
 
-  function deleteOneLevel(_level) {
+  function deleteOneLevel(_level, shouldUpdate) {
     if (dataIs.length<=1) return;
 
     let level = _level !== undefined ? _level : dataIs.length - 1;
+    shouldUpdate = shouldUpdate!==undefined ? shouldUpdate : true;
 
     if (!dataIs.hasOwnProperty(level)) {
       if (DEBUG) console.log("Asked to delete a level that doens't exist ", level);
@@ -1317,8 +1314,11 @@ function navio(selection, _h) {
 
     dataIs = dataIs.slice(0, level);
 
-    nv.updateData(dataIs, colScales);
-    updateCallback(nv.getVisible());
+    if (shouldUpdate) {
+      nv.updateData(dataIs, colScales);
+      updateCallback(nv.getVisible());
+
+    }
 
     hideLoading(this);
   }
