@@ -146,6 +146,7 @@
         update(graph);
       });
     simulation.alpha(0.7).restart();
+
     function ticked() {
       context.clearRect(0, 0, width, height);
       if (simulation.alpha() < 0.15) {
