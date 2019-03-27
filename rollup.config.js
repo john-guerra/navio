@@ -1,7 +1,7 @@
 import ascii from "rollup-plugin-ascii";
 import node from "rollup-plugin-node-resolve";
 import commonjs from "rollup-plugin-commonjs";
-// import {terser} from "rollup-plugin-terser";
+import {terser} from "rollup-plugin-terser";
 // import babel from "rollup-plugin-babel";
 import * as meta from "./package.json";
 
@@ -33,7 +33,7 @@ export default [
       format: "umd",
       indent: false,
       name: "navio",
-      sourcemap: true,
+      // sourcemap: true,
       globals: {
         d3:"d3",
         "d3-scale-chromatic":"d3ScaleChromatic",
@@ -64,7 +64,35 @@ export default [
       file: meta.module,
       format: "esm",
       indent: false,
-      sourcemap: true,
+      // sourcemap: true,
+      name: "navio",
+      globals: {
+        d3:"d3",
+        "d3-scale-chromatic":"d3ScaleChromatic",
+        "popper.js":"Popper"
+      }
+    }
+  },
+  {
+    input: "src/index.js",
+    plugins: [
+      node({
+        jsxnext: true,
+        main: true,
+        browser: true
+      }),
+      ascii(),
+      terser({output: {preamble: copyright}})
+    ],
+    external: ["d3",
+      "d3-scale-chromatic",
+      "popper.js"
+    ],
+    output: {
+      extend: true,
+      file: "dist/navio.min.js",
+      format: "umd",
+      indent: false,
       name: "navio",
       globals: {
         d3:"d3",
