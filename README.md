@@ -119,22 +119,31 @@ var nv = navio(d3.select("#Navio"), 600); //height 600
 4. [Optional] **Configure navio to your liking**
 
 ```javascript
+// Default parameters
 nv.x0 = 0;  //Where to start drawing navio in x
 nv.y0 = 100; //Where to start drawing navio in y, useful if your attrib names are too long
 nv.maxNumDistictForCategorical = 10; // addAllAttribs uses this for deciding if an attribute is categorical (has less than nv.maxNumDistictForCategorical categories) or text
 nv.howManyItemsShouldSearchForNotNull = 100; // How many rows should addAllAttribs search to decide guess an attribute type
 nv.margin = 10; // Margin around navio
+
+nv.levelsSeparation = 40; // Separation between the levels
+nv.divisionsColor = "white"; // Border color for the divisions
+nv.nullColor = "#ffedfd"; // Color for null values
+nv.levelConnectionsColor = "rgba(205, 220, 163, 0.5)"; // Color for the conections between levels
+nv.divisionsThreshold = 4; // What's the minimum row height needed to draw divisions
+nv.fmtCounts = d3.format(",.0d"); // Format used to display the counts on the bottom
+nv.legendFont = "14px sans-serif"; // The font for the header
+nv.linkColor = "#ccc"; // Color used for network links if provided with nv.links()
+nv.nestedFilters = true; // Should navio use nested levels?
+
 nv.showAttribTitles = true; // Show headers?
 nv.attribWidth = 15; // Width of the columns
 nv.attribRotation = -45; // Headers rotation
 nv.attribFontSize = 13; // Headers font size
 nv.attribFontSizeSelected = 32; // Headers font size when mouse over
-nv.levelsSeparation = 40; // Separation between the levels
-nv.divisionsColor = "white"; // Border color for the divisions
-nv.levelConnectionsColor = "rgba(205, 220, 163, 0.5)"; // Color for the conections between levels
-nv.divisionsThreshold = 4; // What's the minimum row width needed to draw divisions
-nv.legendFont = "14px sans-serif"; // The font for the header
-nv.linkColor = "#ccc"; // Color used for network links if provided with nv.links()
+
+nv.filterFontSize = 10; // Font size of the filters explanations on the bottom
+
 nv.tooltipFontSize = 12; // Font size for the tooltip
 nv.tooltipBgColor = "#b2ddf1"; // Font color for tooltip background
 nv.tooltipMargin = 50; // How much to separate the tooltip from the cursor
@@ -146,12 +155,12 @@ nv.id("attribName"); // Shows this id on the tooltip, should be unique
 4. [Optional] **Add your attributes manually**. Navio supports six types of attributes: categorical, sequential (numerical), diverging (numerical with negative values), text, date and boolean. You can either add them manually or use `nv.addAllAttribs()` to auto detect them (must be called after seting the data with `nv.data(your_data)`)
 
 ```javascript
-nv.addCategoricalAttrib("attribName", [customScale])
-nv.addSequentialAttrib("attribName", [customScale])
-nv.addDivergingAttrib("attribName", [customScale])
-nv.addTextAttrib("attribName", [customScale])
-nv.addDateAttrib("attribName", [customScale])
-nv.addBooleanAttrib("attribName", [customScale])
+nv.addCategoricalAttrib("attribName", [customScale]);
+nv.addSequentialAttrib("attribName", [customScale]);
+nv.addDivergingAttrib("attribName", [customScale]);
+nv.addTextAttrib("attribName", [customScale]);
+nv.addDateAttrib("attribName", [customScale]);
+nv.addBooleanAttrib("attribName", [customScale]);
 ```
 
 If you ommit the [customScale] parameter it will use the defaults. You can also create your own custom made parameters using `nv.addAttrib("attribName", customScale)`. For example, if you already have a scale for setting the colors of a `cluster` property on your visualization, you can tell navio to use the same matching colors. Make sure to set the domain and range of the scale, as navio will not try to do it with this function.

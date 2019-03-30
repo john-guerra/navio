@@ -42,35 +42,39 @@ function navio(selection, _h) {
     id = "__seqId",
     updateCallback = function () {};
 
-  // Default parameters
-  nv.x0=0;
-  nv.y0=100;
-  nv.maxNumDistictForCategorical = 10;
-  nv.howManyItemsShouldSearchForNotNull = 100;
-  nv.margin = 30;
 
-  nv.levelsSeparation = 40;
-  nv.divisionsColor = "white";
-  nv.nullColor = "#ffedfd";
-  nv.levelConnectionsColor = "rgba(205, 220, 163, 0.5)";
-  nv.divisionsThreshold = 4; // What's the minimum row width needed to draw divisions
-  nv.fmtCounts = d3.format(",.0d");
-  nv.legendFont = "14px sans-serif";
-  nv.linkColor = "#ccc";
+
+
+  // Default parameters
+  nv.x0 = 0;  //Where to start drawing navio in x
+  nv.y0 = 100; //Where to start drawing navio in y, useful if your attrib names are too long
+  nv.maxNumDistictForCategorical = 10; // addAllAttribs uses this for deciding if an attribute is categorical (has less than nv.maxNumDistictForCategorical categories) or text
+  nv.howManyItemsShouldSearchForNotNull = 100; // How many rows should addAllAttribs search to decide guess an attribute type
+  nv.margin = 10; // Margin around navio
+
+  nv.levelsSeparation = 40; // Separation between the levels
+  nv.divisionsColor = "white"; // Border color for the divisions
+  nv.nullColor = "#ffedfd"; // Color for null values
+  nv.levelConnectionsColor = "rgba(205, 220, 163, 0.5)"; // Color for the conections between levels
+  nv.divisionsThreshold = 4; // What's the minimum row height needed to draw divisions
+  nv.fmtCounts = d3.format(",.0d"); // Format used to display the counts on the bottom
+  nv.legendFont = "14px sans-serif"; // The font for the header
+  nv.linkColor = "#ccc"; // Color used for network links if provided with nv.links()
   nv.nestedFilters = true;
 
-  nv.showAttribTitles = true;
-  nv.attribWidth = 15;
-  nv.attribRotation = -45;
-  nv.attribFontSize = 13;
-  nv.attribFontSizeSelected = 32;
+  nv.showAttribTitles = true; // Show headers?
+  nv.attribWidth = 15; // Width of the columns
+  nv.attribRotation = -45; // Headers rotation
+  nv.attribFontSize = 13; // Headers font size
+  nv.attribFontSizeSelected = 32; // Headers font size when mouse over
 
   nv.filterFontSize = 10;
 
-  nv.tooltipFontSize = 12;
-  nv.tooltipBgColor = "#b2ddf1";
-  nv.tooltipMargin = 50;
-  nv.tooltipArrowSize = 10;
+
+  nv.tooltipFontSize = 12; // Font size for the tooltip
+  nv.tooltipBgColor = "#b2ddf1"; // Font color for tooltip background
+  nv.tooltipMargin = 50; // How much to separate the tooltip from the cursor
+  nv.tooltipArrowSize = 10; // How big is the arrow on the tooltip
 
 
 
