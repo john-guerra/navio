@@ -27,6 +27,7 @@ Other demos:
 * [Co-voting patterns of the Colombian senate](http://johnguerra.co/viz/senadoColombia)
 * [Simplest example with Networks on SVG](https://john-guerra.github.io/navio/example/) ([Code](https://github.com/john-guerra/navio/tree/master/example))
 * [Simple example with Networks on Canvas](https://john-guerra.github.io/navio/exampleSenate/) ([Code](https://github.com/john-guerra/navio/tree/master/exampleSenate))
+* [IEEEVIS Publications Data](https://john-guerra.github.io/navio/example_vispubdata/) ([Code](https://github.com/john-guerra/navio/blob/master/example_vispubdata/index.html)) ([Observable Notebook](https://observablehq.com/@john-guerra/navio))
 
 # Install
 
