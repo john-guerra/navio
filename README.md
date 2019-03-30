@@ -16,9 +16,9 @@ You can use it to summarize hundreds of thousands of records a dozens of columns
 
 You can test Navio right now with your **own CSV or JSON data** (less than 200MB), using:
 
-| Obervable Notebook | Shipyard |
-| ---- | --- |
-| <a href="https://beta.observablehq.com/@john-guerra/navio-load"> <img src="imgs/Navio_load.png" alt="Navio-load Observable" width="400"></a> | <a href="https://shipyard.navio.dev"> <img src="https://github.com/john-guerra/shipyard/raw/master/demo.png" alt="Navio select a value with the vispubdata" width="400"></a>
+| Obervable Notebook | Shipyard | Jupyter Notebook |
+| ---- | --- | --- |
+| <a href="https://beta.observablehq.com/@john-guerra/navio-load"> <img src="imgs/navio_observable.gif" alt="Navio-load Observable" width="400"></a> | <a href="https://shipyard.navio.dev"> <img src="imgs/shipyard_loading.gif" alt="Shipyard loading data" width="400"></a> | <a href="https://github.com/john-guerra/navio_jupyter"> <img src="imgs/Navio_jupyter.png" alt="Navio Jupyter Notebooks" width="400"></a>
 
 Other demos:
 
@@ -48,22 +48,22 @@ Requires [^popper.js@0.14](https://github.com/FezVrasta/popper.js/), [^d3@4.13](
 # Usage
 
 TLDR
+
 ```html
 <!DOCTYPE html>
 <body>
   <!-- Placeholder for the widget -->
   <div id="navio"></div>
 
-
   <!-- NAVIO Step 0: Load the libraries -->
   <script type="text/javascript" src="https://d3js.org/d3.v4.min.js"></script>
   <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
   <script src="https://unpkg.com/popper.js@1.14/dist/umd/popper.min.js"></script>
   <script type="text/javascript" src="https://unpkg.com/navio/dist/navio.min.js"></script>
+
 <script>
   // NAVIO  Step 1.  Create a Navio passing a d3 selection to place it and an optional height
   var nv = navio(d3.select("#navio"), 600);
-
 
   d3.csv(YOUR_DATA, function (err, data) {
     if (err) throw err;
@@ -73,6 +73,9 @@ TLDR
 
     // NAVIO Step 3. Detect your attributes (or load them manually)
     nv.addAllAttribs();
+
+    // Optional, setup a selection callback
+    nv.updateCallback( selected => console.log("selected in Navio: ", selected.length));
   });
 </script>
 </body>

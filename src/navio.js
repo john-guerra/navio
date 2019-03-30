@@ -236,7 +236,7 @@ function navio(selection, _h) {
     tooltip = new Popper(ref,
       tooltipElement.node(),
       {
-        placement: "auto",
+        placement: "right",
         // modifiers: {
         //   preventOverflow: {
         //     boundariesElement: selection.node(),

@@ -93,6 +93,7 @@
     "#nn",
     height
   ).id("name");
+  nv.addTextAttrib("name");
   nv.addSequentialAttrib("commonVotes");
   nv.addCategoricalAttrib("party");
   nv.addCategoricalAttrib("cluster", color);
@@ -142,6 +143,7 @@
       .on("click", function () {
         console.log("Clustering");
         netClustering.cluster(visible, visibleLinks);
+        nv.update();
         console.log("done");
         update(graph);
       });
