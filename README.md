@@ -41,6 +41,13 @@ You can use [this Notebook to compare Navio with Parallel Coordinates](https://o
 <a href="https://observablehq.com/@john-guerra/navio-vs-parallel-coordinates"> <img src="imgs/Navio_vs_Parallel_Coordinates.png" alt="Navio versus Parallel Coordinates"
   ></a>
 
+**Navio vs Scatterplot Matrix**
+
+Use [this Notebook to compare Navio with a Scatterplot Matrix](https://observablehq.com/@john-guerra/navio-vs-scatterplot-matrix), using your own data. Please be aware that the Vegalite implementation of the Scatterplot Matrix only support quantitative attributes and will also break with a dozen attributes and a few hundred rows)
+
+<a href="https://observablehq.com/@john-guerra/navio-vs-scatterplot-matrix"> <img src="imgs/Navio_vs_Scatterplot_Matrix.png" alt="Navio versus Scatterplot Matrix"
+  ></a>
+
 
 # Install
 
