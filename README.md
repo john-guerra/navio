@@ -33,7 +33,11 @@ Other demos:
 
 Why using something else for summarizing your data?. Here is how Navio compares with other alternatives:
 
-* [Navio vs Parallel Coordinates](https://observablehq.com/@john-guerra/navio-vs-parallel-coordinates)
+* Navio vs Parallel Coordinates
+
+You can use [this Notebook to compare Navio with Parallel Coordinates](https://observablehq.com/@john-guerra/navio-vs-parallel-coordinates), using your own data. Please be aware that the Vegalite implementation of Parallel Coordinates will break with a few thousand rows (on the fifaDataset used below it broke with 400 rows and 86 attributes of the [fifa19 Kaggle Dataset](https://www.kaggle.com/karangadiya/fifa19))
+<a href="https://observablehq.com/@john-guerra/navio-vs-parallel-coordinates"> <img src="imgs/Navio_vs_PC.png" alt="Navio versus Parallel Coordinates" width="400"></a>
+
 
 # Install
 
