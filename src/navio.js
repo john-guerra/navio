@@ -60,7 +60,7 @@ function navio(selection, _h) {
   nv.fmtCounts = d3.format(",.0d"); // Format used to display the counts on the bottom
   nv.legendFont = "14px sans-serif"; // The font for the header
   nv.linkColor = "#ccc"; // Color used for network links if provided with nv.links()
-  nv.nestedFilters = true;
+  nv.nestedFilters = true; // Should navio use nested levels?
 
   nv.showAttribTitles = true; // Show headers?
   nv.attribWidth = 15; // Width of the columns
@@ -68,8 +68,7 @@ function navio(selection, _h) {
   nv.attribFontSize = 13; // Headers font size
   nv.attribFontSizeSelected = 32; // Headers font size when mouse over
 
-  nv.filterFontSize = 10;
-
+  nv.filterFontSize = 10; // Font size of the filters explanations on the bottom
 
   nv.tooltipFontSize = 12; // Font size for the tooltip
   nv.tooltipBgColor = "#b2ddf1"; // Font color for tooltip background

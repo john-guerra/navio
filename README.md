@@ -29,6 +29,12 @@ Other demos:
 * [Simple example with Networks on Canvas](https://john-guerra.github.io/navio/exampleSenate/) ([Code](https://github.com/john-guerra/navio/tree/master/exampleSenate))
 * [IEEEVIS Publications Data](https://john-guerra.github.io/navio/example_vispubdata/) ([Code](https://github.com/john-guerra/navio/blob/master/example_vispubdata/index.html)) ([Observable Notebook](https://observablehq.com/@john-guerra/navio))
 
+# Comparing
+
+Why using something else for summarizing your data?. Here is how Navio compares with other alternatives:
+
+* [Navio vs Parallel Coordinates](https://observablehq.com/@john-guerra/navio-vs-parallel-coordinates)
+
 # Install
 
 ```js
