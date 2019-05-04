@@ -145,18 +145,18 @@ var nv = navio(d3.select("#Navio"), 600); //height 600
 // Default parameters
 nv.x0 = 0;  //Where to start drawing navio in x
 nv.y0 = 100; //Where to start drawing navio in y, useful if your attrib names are too long
-nv.maxNumDistictForCategorical = 10; // addAllAttribs uses this for deciding if an attribute is categorical (has less than nv.maxNumDistictForCategorical categories) or text
+nv.maxNumDistictForCategorical = 10; // addAllAttribs uses this for deciding if an attribute is categorical (has less than nv.maxNumDistictForCategorical categories) or ordered
+nv.maxNumDistictForOrdered = 90; // addAllAttribs uses this for deciding if an attribute is ordered (has less than nv.maxNumDistictForCategorical categories) or text. Use nv.maxNumDistictForOrdered = Infinity for never choosing Text
+
 nv.howManyItemsShouldSearchForNotNull = 100; // How many rows should addAllAttribs search to decide guess an attribute type
 nv.margin = 10; // Margin around navio
 
 nv.levelsSeparation = 40; // Separation between the levels
 nv.divisionsColor = "white"; // Border color for the divisions
-nv.nullColor = "#ffedfd"; // Color for null values
 nv.levelConnectionsColor = "rgba(205, 220, 163, 0.5)"; // Color for the conections between levels
 nv.divisionsThreshold = 4; // What's the minimum row height needed to draw divisions
 nv.fmtCounts = d3.format(",.0d"); // Format used to display the counts on the bottom
 nv.legendFont = "14px sans-serif"; // The font for the header
-nv.linkColor = "#ccc"; // Color used for network links if provided with nv.links()
 nv.nestedFilters = true; // Should navio use nested levels?
 
 nv.showAttribTitles = true; // Show headers?
@@ -172,7 +172,30 @@ nv.tooltipBgColor = "#b2ddf1"; // Font color for tooltip background
 nv.tooltipMargin = 50; // How much to separate the tooltip from the cursor
 nv.tooltipArrowSize = 10; // How big is the arrow on the tooltip
 
+nv.digitsForText = 2; // How many digits to use for text attributes
+
 nv.id("attribName"); // Shows this id on the tooltip, should be unique
+
+// Default colors for values
+nv.nullColor = "#ffedfd"; // Color for null values
+nv.defaultColorInterpolator = d3.interpolateBlues;
+nv.defaultColorInterpolatorDate = d3.interpolatePurples;
+nv.defaultColorInterpolatorDiverging = d3.interpolateBrBG;
+nv.defaultColorInterpolatorOrdered = d3.interpolateOranges;
+nv.defaultColorInterpolatorText = d3.interpolateGreys;
+nv.defaultColorRangeBoolean = ["#a1d76a", "#e9a3c9", "white"]; //true false null
+nv.defaultColorRangeSelected = ["white", "#b5cf6b"];
+nv.defaultColorCategorical = d3.schemeCategory10;
+
+// // Discouraged: If you want to break perceptual rules to have many more categories use
+// // the following "Piñata mode 🎉"
+// nv.defaultColorCategorical = d3.schemeCategory10
+//   .concat(d3.schemeAccent)
+//   .concat(d3.schemePastel1)
+//   .concat(d3.schemeSet2)
+//   .concat(d3.schemeSet3);
+// nv.maxNumDistictForCategorical = nv.defaultColorCategorical.length;
+
 ```
 
 4. [Optional] **Add your attributes manually**. Navio supports six types of attributes: categorical, sequential (numerical), diverging (numerical with negative values), text, date and boolean. You can either add them manually or use `nv.addAllAttribs()` to auto detect them (must be called after seting the data with `nv.data(your_data)`)
@@ -181,7 +204,8 @@ nv.id("attribName"); // Shows this id on the tooltip, should be unique
 nv.addCategoricalAttrib("attribName", [customScale]);
 nv.addSequentialAttrib("attribName", [customScale]);
 nv.addDivergingAttrib("attribName", [customScale]);
-nv.addTextAttrib("attribName", [customScale]);
+nv.addTextAttrib("attribName", [customScale]); // Colors by the first nv.digitsForText
+nv.addOrderedAttrib("attribName", [customScale]); // Sorts and then colors by rank
 nv.addDateAttrib("attribName", [customScale]);
 nv.addBooleanAttrib("attribName", [customScale]);
 ```

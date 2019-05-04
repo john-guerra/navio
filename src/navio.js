@@ -1,8 +1,8 @@
 // import * as d3 from "./../../node_modules/d3/dist/d3.js"; // Force react to use the es6 module
 import * as d3 from "d3";
-import {interpolateBlues, interpolatePurples, interpolateBrBG} from "d3-scale-chromatic";
+import {interpolateBlues, interpolatePurples, interpolateBrBG, interpolateOranges, interpolateGreys} from "d3-scale-chromatic";
 import {FilterByRange, FilterByValue} from "./filters.js";
-import {scaleText} from "./scales.js";
+import {scaleText, scaleOrdered, d3AscendingNull, d3DescendingNull} from "./scales.js";
 
 import Popper from "popper.js";
 
@@ -34,11 +34,6 @@ function navio(selection, _h) {
     tooltip,
     tooltipElement,
     tooltipCoords = { x: -50, y: -50},
-    defaultColorInterpolator =  "interpolateBlues" in d3 ? d3.interpolateBlues : interpolateBlues, // necessary for supporting d3v4 and d3v5
-    defaultColorInterpolatorDate =  "interpolatePurples" in d3 ? d3.interpolatePurples : interpolatePurples,
-    defaultColorInterpolatorDiverging =  "interpolateBrBG" in d3 ? d3.interpolateBrBG : interpolateBrBG,
-    defaultBooleanColorRange = ["#a1d76a", "#e9a3c9", "white"], //true false null
-    visibleColorRange = ["white", "#b5cf6b"],
     id = "__seqId",
     updateCallback = function () {};
 
@@ -48,7 +43,9 @@ function navio(selection, _h) {
   // Default parameters
   nv.x0 = 0;  //Where to start drawing navio in x
   nv.y0 = 100; //Where to start drawing navio in y, useful if your attrib names are too long
-  nv.maxNumDistictForCategorical = 10; // addAllAttribs uses this for deciding if an attribute is categorical (has less than nv.maxNumDistictForCategorical categories) or text
+  nv.maxNumDistictForCategorical = 10; // addAllAttribs uses this for deciding if an attribute is categorical (has less than nv.maxNumDistictForCategorical categories) or ordered
+  nv.maxNumDistictForOrdered = 90; // addAllAttribs uses this for deciding if an attribute is ordered (has less than nv.maxNumDistictForCategorical categories) or text
+  // use nv.maxNumDistictForOrdered = Infinity for never choosing Text
   nv.howManyItemsShouldSearchForNotNull = 100; // How many rows should addAllAttribs search to decide guess an attribute type
   nv.margin = 10; // Margin around navio
 
@@ -75,14 +72,23 @@ function navio(selection, _h) {
   nv.tooltipMargin = 50; // How much to separate the tooltip from the cursor
   nv.tooltipArrowSize = 10; // How big is the arrow on the tooltip
 
+  nv.digitsForText = 2; // How many digits to use for text attributes
 
+  // Necessary hack for supporting d3v4 and d3v5
+  nv.defaultColorInterpolator =  "interpolateBlues" in d3 ? d3.interpolateBlues : interpolateBlues;
+  nv.defaultColorInterpolatorDate =  "interpolatePurples" in d3 ? d3.interpolatePurples : interpolatePurples;
+  nv.defaultColorInterpolatorDiverging =  "interpolateBrBG" in d3 ? d3.interpolateBrBG : interpolateBrBG;
+  nv.defaultColorInterpolatorOrdered =  "interpolateOranges" in d3 ? d3.interpolateOranges : interpolateOranges;
+  nv.defaultColorInterpolatorText = "interpolateGreys" in d3 ? d3.interpolateGreys : interpolateGreys;
+  nv.defaultColorRangeBoolean = ["#a1d76a", "#e9a3c9", "white"]; //true false null
+  nv.defaultColorRangeSelected = ["white", "#b5cf6b"];
+  nv.defaultColorCategorical = d3.schemeCategory10;
 
 
   function nozoom() {
     if (DEBUG) console.log("nozoom");
     d3.event.preventDefault();
   }
-
 
   function initTooltipPopper() {
     if (tooltipElement) tooltipElement.remove();
@@ -366,46 +372,7 @@ function navio(selection, _h) {
     return qScale(x);
   }
 
-  // Like d3.ascending but supporting null
-  function d3AscendingNull(a, b) {
-    if (b === null || b === undefined) {
-      if (a === null || a === undefined) return 0; // a == b == null
-      else return 1; // b==null a!=null
-    } else { // b!=null
-      if (a === null || a === undefined) return -1;
-      else {
-        // Both are non null
-        if (typeof(a)!==typeof(b)) {
-          a = ""+a; b = ""+b; //If they have different types, convert them to strings
-        }
 
-        if (a < b) return -1;
-        else if (a > b) return 1;
-        else if (a >= b) return 0;
-        else return NaN;
-      }
-    }
-  }
-
-  function d3DescendingNull(a, b) {
-    if (b === null || b === undefined) {
-      if (a === null || a === undefined) return 0; // a == b == null
-      else return -1; // b==null a!=null
-    } else { // b!=null
-      if (a === null || a === undefined) return 1;
-      else {
-        // Both are non null
-        if (typeof(a)!==typeof(b)) {
-          a = ""+a; b = ""+b; //If they have different types, convert them to strings
-        }
-
-        if (a < b) return 1;
-        else if (a > b) return -1;
-        else if (a >= b) return 0;
-        else return NaN;
-      }
-    }
-  }
 
   function updateSorting(levelToUpdate, _dataIs) {
     if (!dSortBy.hasOwnProperty(levelToUpdate)) {
@@ -1251,8 +1218,7 @@ function navio(selection, _h) {
           }));
           const absMax = Math.max(-min, max); // Assumes diverging point on 0
           scale.domain([-absMax, absMax]);
-
-        } else if (scale.__type==="text") {
+        } else if (scale.__type==="text" || scale.__type==="ordered" ) {
           scale.domain(dataIs[0].map((i)  => data[i][attrib]));
         }
 
@@ -1531,7 +1497,7 @@ function navio(selection, _h) {
       d3.extent(data, function (d) { return d[attr]; }) :
       [0, 1];   //if we don"t have data, set the default domain
     const scale = _scale ||
-      d3.scaleSequential(defaultColorInterpolator)
+      d3.scaleSequential(nv.defaultColorInterpolator)
         .domain(domain);
     scale.__type = "seq";
     nv.addAttrib(attr, scale);
@@ -1545,7 +1511,7 @@ function navio(selection, _h) {
       [0, 1];
 
     const scale = _scale ||
-      d3.scaleSequential(defaultColorInterpolatorDate)
+      d3.scaleSequential(nv.defaultColorInterpolatorDate)
         .domain(domain); //if we don"t have data, set the default domain
     nv.addAttrib(attr,scale);
 
@@ -1559,7 +1525,7 @@ function navio(selection, _h) {
       d3.extent(data, function (d) { return d[attr]; }) :
       [-1,  1];
     const scale = _scale ||
-      d3.scaleSequential(defaultColorInterpolatorDiverging)
+      d3.scaleSequential(nv.defaultColorInterpolatorDiverging)
         .domain([domain[0], domain[1]]); //if we don"t have data, set the default domain
     scale.__type = "div";
     nv.addAttrib(attr, scale);
@@ -1568,7 +1534,7 @@ function navio(selection, _h) {
 
   nv.addCategoricalAttrib = function (attr, _scale ) {
     const scale = _scale ||
-      d3.scaleOrdinal(d3.schemeCategory10);
+      d3.scaleOrdinal(nv.defaultColorCategorical);
     scale.__type = "cat";
     nv.addAttrib(attr, scale);
 
@@ -1577,7 +1543,16 @@ function navio(selection, _h) {
 
   nv.addTextAttrib = function (attr, _scale ) {
     const scale = _scale ||
-      scaleText();
+      scaleText(nv.nullColor, nv.digitsForText, nv.defaultColorInterpolatorText);
+
+    nv.addAttrib(attr, scale);
+
+    return nv;
+  };
+
+  nv.addOrderedAttrib = function (attr, _scale ) {
+    const scale = _scale ||
+      scaleOrdered(nv.nullColor, nv.defaultColorInterpolatorOrdered);
 
     nv.addAttrib(attr, scale);
 
@@ -1588,7 +1563,7 @@ function navio(selection, _h) {
     const scale = _scale ||
       d3.scaleOrdinal()
         .domain([true, false, null])
-        .range(defaultBooleanColorRange);
+        .range(nv.defaultColorRangeBoolean);
 
     scale.__type = "bool";
     nv.addAttrib(attr, scale);
@@ -1612,17 +1587,18 @@ function navio(selection, _h) {
       if (firstNotNull === null ||
         firstNotNull === undefined ||
         typeof(firstNotNull) === typeof("")) {
-        const counts = scaleText()
-          .computeRepresentatives(data.slice(0, nv.howManyItemsShouldSearchForNotNull)
-            .map(d => d[attr]))
-          .counts;
+        const numDistictValues = d3.set(data.slice(0, nv.howManyItemsShouldSearchForNotNull)
+          .map(d => d[attr])).values().length;
 
         // How many different elements are there
-        if (counts.keys().length < nv.maxNumDistictForCategorical) {
+        if (numDistictValues < nv.maxNumDistictForCategorical) {
           console.log(`Navio: Adding attr ${attr} as categorical`);
           nv.addCategoricalAttrib(attr);
+        } else if (numDistictValues < nv.maxNumDistictForOrdered) {
+          nv.addOrderedAttrib(attr);
+          console.log(`Navio: Attr ${attr} has more than ${nv.maxNumDistictForCategorical} distinct values (${numDistictValues}) using orderedAttrib`);
         } else {
-          console.log(`Navio: Attr ${attr} has too many distinct elements (${counts.keys().length}) using textAttrib`);
+          console.log(`Navio: Attr ${attr} has more than ${nv.maxNumDistictForOrdered} distinct values (${numDistictValues}) using textAttrib`);
           nv.addTextAttrib(attr);
         }
       } else if (typeof(firstNotNull) === typeof(0)) {
@@ -1661,7 +1637,7 @@ function navio(selection, _h) {
       nv.addAttrib("selected",
         d3.scaleOrdinal()
           .domain([false,true])
-          .range(visibleColorRange)
+          .range(nv.defaultColorRangeSelected)
           //, "#cddca3", "#8c6d31", "#bd9e39"]
       );
       moveAttrToPos("selected", 0);
@@ -1735,12 +1711,12 @@ function navio(selection, _h) {
   };
 
   nv.selectedColorRange = function(_) {
-    return arguments.length ? (visibleColorRange = _, nv) : visibleColorRange;
+    return arguments.length ? (nv.defaultColorRangeSelected = _, nv) : nv.defaultColorRangeSelected;
   };
 
-  nv.defaultColorInterpolator = function(_) {
-    return arguments.length ? (defaultColorInterpolator = _, nv) : defaultColorInterpolator;
-  };
+  // nv.defaultColorInterpolator = function(_) {
+  //   return arguments.length ? (nv.defaultColorInterpolator = _, nv) : nv.defaultColorInterpolator;
+  // };
 
   nv.id = function(_) {
     return arguments.length ? (id = _, nv) : id;
