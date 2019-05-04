@@ -373,10 +373,17 @@ function navio(selection, _h) {
       else return 1; // b==null a!=null
     } else { // b!=null
       if (a === null || a === undefined) return -1;
-      else if (a < b) return -1;
-      else if (a > b) return 1;
-      else if (a >= b) return 0;
-      else return NaN;
+      else {
+        // Both are non null
+        if (typeof(a)!==typeof(b)) {
+          a = ""+a; b = ""+b; //If they have different types, convert them to strings
+        }
+
+        if (a < b) return -1;
+        else if (a > b) return 1;
+        else if (a >= b) return 0;
+        else return NaN;
+      }
     }
   }
 
@@ -386,10 +393,17 @@ function navio(selection, _h) {
       else return -1; // b==null a!=null
     } else { // b!=null
       if (a === null || a === undefined) return 1;
-      else if (a < b) return 1;
-      else if (a > b) return -1;
-      else if (a >= b) return 0;
-      else return NaN;
+      else {
+        // Both are non null
+        if (typeof(a)!==typeof(b)) {
+          a = ""+a; b = ""+b; //If they have different types, convert them to strings
+        }
+
+        if (a < b) return 1;
+        else if (a > b) return -1;
+        else if (a >= b) return 0;
+        else return NaN;
+      }
     }
   }
 
