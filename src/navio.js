@@ -421,7 +421,7 @@ function navio(selection, _h) {
     updateCallback(nv.getVisible());
   }
 
-  function getAttribs(obj) {
+  function getAttribsFromObject(obj) {
     var attr, res = [];
     for (attr in obj) {
       if (obj.hasOwnProperty(attr)) {
@@ -1374,7 +1374,7 @@ function navio(selection, _h) {
   nv.initData = function (mData,  mColScales) {
     var before = performance.now();
 
-    // getAttribs(mData[0][0]);
+    // getAttribsFromObject(mData[0][0]);
     colScales  = mColScales;
     colScales.keys().forEach(function (d) {
       dDimensions.set(d, true);
@@ -1576,7 +1576,7 @@ function navio(selection, _h) {
   nv.addAllAttribs = function (_attribs) {
     if (!data || !data.length) throw Error("addAllAttribs called without data to guess the attribs. Make sure to call it after setting the data");
 
-    var attribs = _attribs!==undefined ? _attribs : getAttribs(data[0]);
+    var attribs = _attribs!==undefined ? _attribs : getAttribsFromObject(data[0]);
     attribs.forEach(function (attr) {
       if (attr === "__seqId" ||
         attr === "__i" ||
@@ -1730,6 +1730,17 @@ function navio(selection, _h) {
     } else {
       return links;
     }
+  };
+
+  // Returns a d3.scale used for coloring the corresponding attrib
+  // check scale.__type for finding out the type of attribute (if undefined, navio doesn't know the type)
+  nv.getColorScale = function(attrib) {
+    return colScales.get(attrib);
+  };
+
+  // Returns an array with the list (in order) of attributes used right now
+  nv.getAttribs = function() {
+    return dimensionsOrder;
   };
 
 
