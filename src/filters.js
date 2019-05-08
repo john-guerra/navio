@@ -1,35 +1,97 @@
-export class FilterByRange {
-  constructor(opts ) {
-    this.first = opts.first;
-    this.last = opts.last;
-    this.level = opts.level;
-    this.itemAttr = opts.itemAttr;
+export function FilterByRange(opts) {
+  const first = opts.first;
+  const last = opts.last;
+  const level = opts.level;
+  const itemAttr = opts.itemAttr;
+  const getAttrib = opts.getAttrib || (d => d[itemAttr]);
+  const getAttribName = opts.getAttribName || (attrib => typeof(attrib) === "function" ? attrib.name :  attrib);
+
+  function filter(d) {
+    return d.__i[level] >= first.__i[level] && d.__i[level] <= last.__i[level];
   }
 
-  filter(d) {
-    return d.__i[this.level] >= this.first.__i[this.level] && d.__i[this.level] <= this.last.__i[this.level];
+  function toStr() {
+    let firstVal = `${getAttrib(first,itemAttr)}`,
+      lastVal = `${getAttrib(last,itemAttr)}`;
+    firstVal = typeof(firstVal) === typeof("") ? firstVal.slice(0,5) : firstVal;
+    lastVal = typeof(lastVal) === typeof("") ? lastVal.slice(0,5) : lastVal;
+    return `${getAttribName(itemAttr)} range including ${firstVal} to ${lastVal}`;
   }
 
-  toStr() {
-    let firstVal = `${this.first[this.itemAttr]}`,
-      lastVal = `${this.last[this.itemAttr]}`;
-    firstVal = typeof(this.first[this.itemAttr]) === typeof("") ? firstVal.slice(0,5) : firstVal;
-    lastVal = typeof(this.first[this.itemAttr]) === typeof("") ? lastVal.slice(0,5) : lastVal;
-    return `${this.itemAttr} range including ${firstVal} to ${lastVal}`;
-  }
+  return {
+    filter,
+    toStr,
+    type:"range"
+  };
 }
 
-export class FilterByValue {
-  constructor(opts ) {
-    this.itemAttr = opts.itemAttr;
-    this.sel = opts.sel;
+export function FilterByValue(opts) {
+  const itemAttr = opts.itemAttr;
+  const sel = opts.sel;
+  const getAttrib = opts.getAttrib || (d => d[itemAttr]);
+  const getAttribName = opts.getAttribName || (attrib => typeof(attrib) === "function" ? attrib.name :  attrib);
+
+
+  function filter(d) {
+    return getAttrib(d, itemAttr) === getAttrib(sel, itemAttr);
   }
 
-  filter(d) {
-    return d[this.itemAttr] === this.sel[this.itemAttr];
+  function toStr() {
+    return `${getAttribName(itemAttr)} == ${getAttrib(sel, itemAttr)}`;
   }
 
-  toStr() {
-    return `${this.itemAttr} == ${this.sel[this.itemAttr]}`;
+  return {
+    filter,
+    toStr,
+    type:"value"
+  };
+}
+
+export function FilterByValueDifferent(opts) {
+  const itemAttr = opts.itemAttr;
+  const sel = opts.sel;
+  const getAttrib = opts.getAttrib || (d => d[itemAttr]);
+  const getAttribName = opts.getAttribName || (attrib => typeof(attrib) === "function" ? attrib.name :  attrib);
+
+
+  function filter(d) {
+    return getAttrib(d, itemAttr) !== getAttrib(sel, itemAttr);
   }
+
+  function toStr() {
+    return `${getAttribName(itemAttr)} != ${getAttrib(sel, itemAttr)}`;
+  }
+
+  return {
+    filter,
+    toStr,
+    type:"negativeValue"
+  };
+}
+
+export function FilterByRangeNegative(opts) {
+  const first = opts.first;
+  const last = opts.last;
+  const level = opts.level;
+  const itemAttr = opts.itemAttr;
+  const getAttrib = opts.getAttrib || (d => d[itemAttr]);
+  const getAttribName = opts.getAttribName || (attrib => typeof(attrib) === "function" ? attrib.name :  attrib);
+
+  function filter(d) {
+    return d.__i[level] >= first.__i[level] && d.__i[level] <= last.__i[level];
+  }
+
+  function toStr() {
+    let firstVal = `${getAttrib(first,itemAttr)}`,
+      lastVal = `${getAttrib(last,itemAttr)}`;
+    firstVal = typeof(firstVal) === typeof("") ? firstVal.slice(0,5) : firstVal;
+    lastVal = typeof(lastVal) === typeof("") ? lastVal.slice(0,5) : lastVal;
+    return `${getAttribName(itemAttr)} range including ${firstVal} to ${lastVal}`;
+  }
+
+  return {
+    filter,
+    toStr,
+    type:"negativeRange"
+  };
 }
