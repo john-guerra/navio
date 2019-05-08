@@ -742,7 +742,7 @@ function navio(selection, _h) {
 
 
       let newFilter;
-      if (d3.event.altKey) {
+      if (d3.event.sourceEvent.altKey) {
         newFilter= new FilterByRangeNegative({
           first,
           last,

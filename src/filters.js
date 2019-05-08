@@ -78,7 +78,7 @@ export function FilterByRangeNegative(opts) {
   const getAttribName = opts.getAttribName || (attrib => typeof(attrib) === "function" ? attrib.name :  attrib);
 
   function filter(d) {
-    return d.__i[level] >= first.__i[level] && d.__i[level] <= last.__i[level];
+    return d.__i[level] < first.__i[level] || d.__i[level] > last.__i[level];
   }
 
   function toStr() {
@@ -86,7 +86,7 @@ export function FilterByRangeNegative(opts) {
       lastVal = `${getAttrib(last,itemAttr)}`;
     firstVal = typeof(firstVal) === typeof("") ? firstVal.slice(0,5) : firstVal;
     lastVal = typeof(lastVal) === typeof("") ? lastVal.slice(0,5) : lastVal;
-    return `${getAttribName(itemAttr)} range including ${firstVal} to ${lastVal}`;
+    return `${getAttribName(itemAttr)} range excluding ${firstVal} to ${lastVal}`;
   }
 
   return {
