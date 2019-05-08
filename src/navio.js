@@ -73,6 +73,10 @@ function navio(selection, _h) {
   nv.tooltipMargin = 50; // How much to separate the tooltip from the cursor
   nv.tooltipArrowSize = 10; // How big is the arrow on the tooltip
 
+  nv.addAllAttribsRecursionLevel = Infinity // How many levels depth do we keep on adding nested attributes
+  nv.addAllAttribsIncludeObjects = false; // Should addAllAttribs include objects
+  nv.addAllAttribsIncludeArrays = false; // Should addAllAttribs include arrays
+
   nv.digitsForText = 2; // How many digits to use for text attributes
 
   // Necessary hack for supporting d3v4 and d3v5
@@ -432,14 +436,16 @@ function navio(selection, _h) {
     updateCallback(nv.getVisible());
   }
 
-  function getAttribsFromObject(obj) {
-    var attr, res = [];
-    for (attr in obj) {
-      if (obj.hasOwnProperty(attr)) {
-        res.push(attr);
-      }
-    }
-    return res;
+
+  // Returns an array of strings or functions to access all the attributes in an object
+  function getAttribsFromObjectAsFn(obj) {
+    const attribs = nv.getAttribsFromObjectRecursive(obj, nv.addAllAttribsRecursionLevel);
+    return attribs
+      .map(attr =>{
+        const fnName = attr.replace(/\./g, "_");
+        const body = `return function ${fnName}(d) { return d.${attr}; };`;
+        return new Function(body)();
+      });
   }
 
   function getAttrib(item, attrib) {
@@ -1429,7 +1435,7 @@ function navio(selection, _h) {
     let i,
       val;
     for ( i = 0; i<nv.howManyItemsShouldSearchForNotNull && i< data.length; i++ ) {
-      val = data[i][attr];
+      val = typeof(attr) === "function" ? attr(data[i]) : data[i][attr];
       if (val !== null &&
         val !== undefined &&
         val !== "") {
@@ -1685,50 +1691,69 @@ function navio(selection, _h) {
   nv.addAllAttribs = function (_attribs) {
     if (!data || !data.length) throw Error("addAllAttribs called without data to guess the attribs. Make sure to call it after setting the data");
 
-    var attribs = _attribs!==undefined ? _attribs : getAttribsFromObject(data[0]);
+    var attribs = _attribs!==undefined ? _attribs : getAttribsFromObjectAsFn(data[0]);
     for (let attr of attribs) {
       if (attr === "__seqId" ||
         attr === "__i" ||
         attr === "selected")
-        return;
+        continue;
 
+      const attrName = typeof(attr)==="function"? attr.name: attr;
       const firstNotNull = findNotNull(data, attr);
+
       if (firstNotNull === null ||
         firstNotNull === undefined ||
         typeof(firstNotNull) === typeof("")) {
+
         const numDistictValues = d3.set(data.slice(0, nv.howManyItemsShouldSearchForNotNull)
           .map(d => d[attr])).values().length;
 
         // How many different elements are there
         if (numDistictValues < nv.maxNumDistictForCategorical) {
-          console.log(`Navio: Adding attr ${attr} as categorical`);
+          console.log(`Navio: Adding attr ${attrName} as categorical`);
           nv.addCategoricalAttrib(attr);
         } else if (numDistictValues < nv.maxNumDistictForOrdered) {
           nv.addOrderedAttrib(attr);
-          console.log(`Navio: Attr ${attr} has more than ${nv.maxNumDistictForCategorical} distinct values (${numDistictValues}) using orderedAttrib`);
+          console.log(`Navio: Attr ${attrName} has more than ${nv.maxNumDistictForCategorical} distinct values (${numDistictValues}) using orderedAttrib`);
         } else {
-          console.log(`Navio: Attr ${attr} has more than ${nv.maxNumDistictForOrdered} distinct values (${numDistictValues}) using textAttrib`);
+          console.log(`Navio: Attr ${attrName} has more than ${nv.maxNumDistictForOrdered} distinct values (${numDistictValues}) using textAttrib`);
           nv.addTextAttrib(attr);
         }
       } else if (typeof(firstNotNull) === typeof(0)) {
         // Numbers
         if (d3.min(data, d=> d[attr]) < 0) {
-          console.log(`Navio: Adding attr ${attr} as diverging`);
+          console.log(`Navio: Adding attr ${attrName} as diverging`);
           nv.addDivergingAttrib(attr);
         } else {
-          console.log(`Navio: Adding attr ${attr} as sequential`);
+          console.log(`Navio: Adding attr ${attrName} as sequential`);
           nv.addSequentialAttrib(attr);
         }
-      } else if (typeof(firstNotNull) === typeof(new Date())) {
-        console.log(`Navio: Adding attr ${attr} as date`);
+      } else if (typeof(firstNotNull) instanceof Date) {
+        console.log(`Navio: Adding attr ${attrName} as date`);
         nv.addDateAttrib(attr);
       } else if (typeof(firstNotNull) === typeof(true)) {
-        console.log(`Navio: Adding attr ${attr} as boolean`);
+        console.log(`Navio: Adding attr ${attrName} as boolean`);
         nv.addBooleanAttrib(attr);
       } else {
         // Default categories
-        console.log(`Navio: Don't know what to do with attr ${attr} adding as categorical (type=${typeof(firstNotNull)})`);
-        nv.addCategoricalAttrib(attr);
+
+        if (Array.isArray(firstNotNull)) {
+          if (nv.addAllAttribsIncludeArrays) {
+            console.log(`Navio: Adding ${attrName} adding as categorical (type=array)`);
+            nv.addCategoricalAttrib(attr);
+          } else {
+            console.log(`Navio: AddAllAttribs detected array ${attrName}, but ignoring it. To include it set nv.addAllAttribsIncludeArrays=true`);
+          }
+        } else {
+          if(nv.addAllAttribsIncludeObjects) {
+            console.log(`Navio: Adding object ${attrName} adding as categorical (type=object)`);
+            nv.addCategoricalAttrib(attr);
+          } else {
+            console.log(`Navio: AddAllAttribs detected object ${attrName}, but ignoring it. To include it set nv.addAllAttribsIncludeObjects=true`);
+          }
+        }
+
+
 
       }
     }
@@ -1851,6 +1876,32 @@ function navio(selection, _h) {
   nv.getAttribs = function() {
     return attribsOrdered;
   };
+
+  // Returns a flat array with all the attributes in an object up to recursionLevel
+  nv.getAttribsFromObjectRecursive = function(obj, recursionLevel) {
+    function helper(obj, recursionCount) {
+      var attr, res = [];
+      for (attr in obj) {
+        if (obj.hasOwnProperty(attr) && attr!=="__i" && attr!=="__seqId" && attr!=="selected") {
+
+          // Recursive call on objects
+          if (recursionCount< recursionLevel &&
+              !Array.isArray(obj[attr]) &&
+              typeof(obj[attr]) === typeof({})) {
+
+            res = res.concat(nv.getAttribsFromObjectRecursive(obj[attr], recursionCount+1).map(a=> `${attr}.${a}`));
+          } else {
+            res.push(attr);
+          }
+        }
+      }
+
+      return res;
+    }
+
+
+    return helper(obj, 0)
+  }
 
 
   init();

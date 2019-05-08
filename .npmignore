@@ -1,11 +1,6 @@
 **/.DS_Store
 imgs
-example
-example_d3v3
-example_industrial
-example_vastChallenge2017
-example_callcenters
-exampleSenate
+example*
 update.sh
 example_vispubdata
 .eslintrc.js
