@@ -3,6 +3,8 @@ import * as d3 from "d3";
 import {interpolateBlues, interpolatePurples, interpolateBrBG, interpolateOranges, interpolateGreys} from "d3-scale-chromatic";
 import {FilterByRange, FilterByValue, FilterByValueDifferent, FilterByRangeNegative} from "./filters.js";
 import {scaleText, scaleOrdered, d3AscendingNull, d3DescendingNull} from "./scales.js";
+import {getAttribsFromObjectRecursive} from "./utils.js";
+
 
 import Popper from "popper.js";
 
@@ -73,7 +75,7 @@ function navio(selection, _h) {
   nv.tooltipMargin = 50; // How much to separate the tooltip from the cursor
   nv.tooltipArrowSize = 10; // How big is the arrow on the tooltip
 
-  nv.addAllAttribsRecursionLevel = Infinity // How many levels depth do we keep on adding nested attributes
+  nv.addAllAttribsRecursionLevel = Infinity; // How many levels depth do we keep on adding nested attributes
   nv.addAllAttribsIncludeObjects = false; // Should addAllAttribs include objects
   nv.addAllAttribsIncludeArrays = false; // Should addAllAttribs include arrays
 
@@ -439,7 +441,7 @@ function navio(selection, _h) {
 
   // Returns an array of strings or functions to access all the attributes in an object
   function getAttribsFromObjectAsFn(obj) {
-    const attribs = nv.getAttribsFromObjectRecursive(obj, nv.addAllAttribsRecursionLevel);
+    const attribs = getAttribsFromObjectRecursive(obj, nv.addAllAttribsRecursionLevel);
     return attribs
       .map(attr =>{
         const fnName = attr.replace(/\./g, "_");
@@ -1705,12 +1707,16 @@ function navio(selection, _h) {
         firstNotNull === undefined ||
         typeof(firstNotNull) === typeof("")) {
 
-        const numDistictValues = d3.set(data.slice(0, nv.howManyItemsShouldSearchForNotNull)
-          .map(d => d[attr])).values().length;
+        const numDistictValues = d3
+          .set(data.slice(0, nv.howManyItemsShouldSearchForNotNull)
+            .map(d => getAttrib(d, attr))
+          )
+          .values()
+          .length;
 
         // How many different elements are there
         if (numDistictValues < nv.maxNumDistictForCategorical) {
-          console.log(`Navio: Adding attr ${attrName} as categorical`);
+          console.log(`Navio: Adding attr ${attrName} as categorical with ${numDistictValues} categories`);
           nv.addCategoricalAttrib(attr);
         } else if (numDistictValues < nv.maxNumDistictForOrdered) {
           nv.addOrderedAttrib(attr);
@@ -1878,31 +1884,7 @@ function navio(selection, _h) {
   };
 
   // Returns a flat array with all the attributes in an object up to recursionLevel
-  nv.getAttribsFromObjectRecursive = function(obj, recursionLevel) {
-    function helper(obj, recursionCount) {
-      var attr, res = [];
-      for (attr in obj) {
-        if (obj.hasOwnProperty(attr) && attr!=="__i" && attr!=="__seqId" && attr!=="selected") {
-
-          // Recursive call on objects
-          if (recursionCount< recursionLevel &&
-              !Array.isArray(obj[attr]) &&
-              typeof(obj[attr]) === typeof({})) {
-
-            res = res.concat(nv.getAttribsFromObjectRecursive(obj[attr], recursionCount+1).map(a=> `${attr}.${a}`));
-          } else {
-            res.push(attr);
-          }
-        }
-      }
-
-      return res;
-    }
-
-
-    return helper(obj, 0)
-  }
-
+  nv.getAttribsFromObjectRecursive = getAttribsFromObjectRecursive;
 
   init();
   return nv;
