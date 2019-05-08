@@ -247,6 +247,20 @@ nv.addAllAttribs();
 nv.updateCallback( data => console.log("The filtered data is ", data));
 ```
 
+## Other methods
+
+<a name="update" href="#update">#</a> <i>nv</i>.<b>update</b>() [<>](https://github.com/john-guerra/navio/blob/master/src/navio.js#L1443 "Source")
+
+Use it to force a redraw of navio after changing the underlying data without losing the filters. Useful in case you modify the data with some other action in your code, e.g. you recomputed clusters in a network chart.
+<a name="getColorScales" href="#getColorScales">#</a> <i>nv</i>.<b>getColorScales</b>(attr
+) [<>](https://github.com/john-guerra/navio/blob/master/src/navio.js#L1737 "Source")
+
+Returns the color scale for a certain attribute, make sure to pass an attribute that has been already added
+
+<a name="getAttribs" href="#getAttribs">#</a> <i>nv</i>.<b>getAttribs</b>(
+) [<>](https://github.com/john-guerra/navio/blob/master/src/navio.js#L1742 "Source")
+
+Returns the ordered list of attributes added to navio
 
 ## License
 
