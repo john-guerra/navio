@@ -1734,7 +1734,7 @@ function navio(selection, _h) {
           console.log(`Navio: Adding attr ${attrName} as sequential`);
           nv.addSequentialAttrib(attr);
         }
-      } else if (typeof(firstNotNull) instanceof Date) {
+      } else if (firstNotNull instanceof Date) {
         console.log(`Navio: Adding attr ${attrName} as date`);
         nv.addDateAttrib(attr);
       } else if (typeof(firstNotNull) === typeof(true)) {
