@@ -1611,7 +1611,7 @@ function navio(selection, _h) {
 
   nv.addSequentialAttrib = function (attr, _scale ) {
     const domain = data!==undefined && data.length>0 ?
-      d3.extent(data, function (d) { return d[attr]; }) :
+      d3.extent(data, function (d) { return getAttrib(d, attr); }) :
       [0, 1];   //if we don"t have data, set the default domain
     const scale = _scale ||
       d3.scaleSequential(nv.defaultColorInterpolator)
@@ -1624,7 +1624,7 @@ function navio(selection, _h) {
   // Same as addSequentialAttrib but with a different color
   nv.addDateAttrib = function (attr, _scale ) {
     const domain = data!==undefined && data.length>0 ?
-      d3.extent(data, function (d) { return d[attr]; }) :
+      d3.extent(data, function (d) { return getAttrib(d, attr); }) :
       [0, 1];
 
     const scale = _scale ||
@@ -1639,7 +1639,7 @@ function navio(selection, _h) {
   // Adds a diverging scale
   nv.addDivergingAttrib = function (attr, _scale ) {
     const domain = data!==undefined && data.length>0 ?
-      d3.extent(data, function (d) { return d[attr]; }) :
+      d3.extent(data, function (d) { return getAttrib(d, attr); }) :
       [-1,  1];
     const scale = _scale ||
       d3.scaleSequential(nv.defaultColorInterpolatorDiverging)
@@ -1727,7 +1727,7 @@ function navio(selection, _h) {
         }
       } else if (typeof(firstNotNull) === typeof(0)) {
         // Numbers
-        if (d3.min(data, d=> d[attr]) < 0) {
+        if (d3.min(data, d=> getAttrib(d, attr)) < 0) {
           console.log(`Navio: Adding attr ${attrName} as diverging`);
           nv.addDivergingAttrib(attr);
         } else {
