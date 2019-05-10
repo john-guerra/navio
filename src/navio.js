@@ -1879,13 +1879,14 @@ function navio(selection, _h) {
     return attribsOrdered;
   };
 
-  // Returns a flat array with all the attributes in an object up to recursionLevel
-  nv.getAttribsFromObjectRecursive = getAttribsFromObjectRecursive;
-  // Returns a flat array with all the attributes in an object up to recursionLevel, for nested attributes returns a function
-  nv.getAttribsFromObjectAsFn = getAttribsFromObjectAsFn;
 
   init();
   return nv;
 }
+
+// Returns a flat array with all the attributes in an object up to recursionLevel
+navio.getAttribsFromObjectRecursive = getAttribsFromObjectRecursive;
+// Returns a flat array with all the attributes in an object up to recursionLevel, for nested attributes returns a function
+navio.getAttribsFromObjectAsFn = getAttribsFromObjectAsFn;
 
 export default navio;
