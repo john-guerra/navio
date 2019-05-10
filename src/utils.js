@@ -1,3 +1,6 @@
+
+
+
 // Returns a flat array with all the attributes in an object up to recursionLevel
 export const getAttribsFromObjectRecursive = function(obj, recursionLevel=Infinity) {
   function helper(obj, recursionCount) {
@@ -20,6 +23,17 @@ export const getAttribsFromObjectRecursive = function(obj, recursionLevel=Infini
     return res;
   }
 
+  return helper(obj, 0);
+};
 
-  return helper(obj, 0)
+
+// Returns an array of strings or functions to access all the attributes in an object
+export function getAttribsFromObjectAsFn(obj, recursionLevel=Infinity) {
+  const attribs = getAttribsFromObjectRecursive(obj, recursionLevel);
+  return attribs
+    .map(attr =>{
+      const fnName = attr.replace(/\./g, "_");
+      const body = `return function ${fnName}(d) { return d.${attr}; };`;
+      return new Function(body)();
+    });
 }

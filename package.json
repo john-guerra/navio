@@ -14,6 +14,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.4.0",
+    "eslint": "^5.16.0",
     "prettier": "^1.16.4",
     "rollup": "^0.65.0",
     "rollup-plugin-ascii": "0.0.3",

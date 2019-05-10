@@ -1,12 +1,15 @@
 // import * as d3 from "./../../node_modules/d3/dist/d3.js"; // Force react to use the es6 module
 import * as d3 from "d3";
 import {interpolateBlues, interpolatePurples, interpolateBrBG, interpolateOranges, interpolateGreys} from "d3-scale-chromatic";
+import Popper from "popper.js";
+
 import {FilterByRange, FilterByValue, FilterByValueDifferent, FilterByRangeNegative} from "./filters.js";
 import {scaleText, scaleOrdered, d3AscendingNull, d3DescendingNull} from "./scales.js";
-import {getAttribsFromObjectRecursive} from "./utils.js";
+import {getAttribsFromObjectRecursive, getAttribsFromObjectAsFn} from "./utils.js";
 
 
-import Popper from "popper.js";
+
+
 
 let DEBUG = false;
 
@@ -439,16 +442,7 @@ function navio(selection, _h) {
   }
 
 
-  // Returns an array of strings or functions to access all the attributes in an object
-  function getAttribsFromObjectAsFn(obj) {
-    const attribs = getAttribsFromObjectRecursive(obj, nv.addAllAttribsRecursionLevel);
-    return attribs
-      .map(attr =>{
-        const fnName = attr.replace(/\./g, "_");
-        const body = `return function ${fnName}(d) { return d.${attr}; };`;
-        return new Function(body)();
-      });
-  }
+
 
   function getAttrib(item, attrib) {
     if (typeof(attrib) === "function") {
@@ -1023,7 +1017,7 @@ function navio(selection, _h) {
             "normal");
         })
         .style("font-family", "sans-serif")
-        .style("font-size", function (d) {
+        .style("font-size", function () {
           // make it grow ?
           // if (dSortBy[d.level]!==undefined &&
           //   dSortBy[d.level].attrib === d.attrib )
@@ -1550,7 +1544,9 @@ function navio(selection, _h) {
   }; // updateData
 
   nv.update = function(opts) {
-    let {recomputeBrushes, levelsToUpdate, shouldDrawBrushes } = opts || {};
+    let {recomputeBrushes,
+      // levelsToUpdate,
+      shouldDrawBrushes } = opts || {};
 
     if (!dataIs.length) return nv;
 
@@ -1693,7 +1689,7 @@ function navio(selection, _h) {
   nv.addAllAttribs = function (_attribs) {
     if (!data || !data.length) throw Error("addAllAttribs called without data to guess the attribs. Make sure to call it after setting the data");
 
-    var attribs = _attribs!==undefined ? _attribs : getAttribsFromObjectAsFn(data[0]);
+    var attribs = _attribs!==undefined ? _attribs : getAttribsFromObjectAsFn(data[0], nv.addAllAttribsRecursionLevel);
     for (let attr of attribs) {
       if (attr === "__seqId" ||
         attr === "__i" ||
@@ -1885,6 +1881,8 @@ function navio(selection, _h) {
 
   // Returns a flat array with all the attributes in an object up to recursionLevel
   nv.getAttribsFromObjectRecursive = getAttribsFromObjectRecursive;
+  // Returns a flat array with all the attributes in an object up to recursionLevel, for nested attributes returns a function
+  nv.getAttribsFromObjectAsFn = getAttribsFromObjectAsFn;
 
   init();
   return nv;
