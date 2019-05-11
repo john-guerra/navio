@@ -572,7 +572,7 @@ function navio(selection, _h) {
 
 
       // OR of positives, AND of negatives
-      return d.selected = posFilters.reduce((p, f) => (p || f.filter(data[d])), false) && negFilters.reduce((p, f) => (p && f.filter(data[d])), true);
+      return data[d].selected = posFilters.reduce((p, f) => (p || f.filter(data[d])), false) && negFilters.reduce((p, f) => (p && f.filter(data[d])), true);
       // // Check if a possitive filter apply
       // for (let filter of posFilters) {
       //   if (filter.filter(data[d])) {
