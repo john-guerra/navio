@@ -32,8 +32,10 @@ export function getAttribsFromObjectAsFn(obj, recursionLevel=Infinity) {
   const attribs = getAttribsFromObjectRecursive(obj, recursionLevel);
   return attribs
     .map(attr =>{
-      const fnName = attr.replace(/\./g, "_");
-      const body = `return function ${fnName}(d) { return d.${attr}; };`;
+      const fnName = attr
+        .replace(/\./g, "_") // change dots to underscore
+        .replace(/[^a-zA-Z _]/g, ""); // remove special characters
+      const body = `return function ${fnName}(d) { return d["${attr}]; };`;
       return new Function(body)();
     });
 }

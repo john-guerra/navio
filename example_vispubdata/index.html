@@ -56,10 +56,12 @@
   <!-- Step 0: Load the libraries -->
   <script src="https://d3js.org/d3.v5.js"></script>
   <script src="https://unpkg.com/popper.js@1.14/dist/umd/popper.min.js"></script>
-<!--   <script src="https://cdn.jsdelivr.net/npm/vega@5.3.2/build/vega.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/vega-lite@3.0.2/build/vega-lite.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/vega-embed@4.0.0-rc1/build/vega-embed.js"></script>
- -->  <script src="https://unpkg.com/navio/dist/navio.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega@5.3.5/build/vega.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-lite@3.2.1/build/vega-lite.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-embed@4.0.0/build/vega-embed.js"></script>
+
+
+  <script src="https://unpkg.com/navio/dist/navio.min.js"></script>
   <!-- <script src="../dist/navio.js"></script> -->
 
 <script>
@@ -71,12 +73,13 @@ var color = d3.scaleOrdinal(d3.schemeSet2);
 var nn = navio(d3.select("#navio"), 400);
 
 // Step 1.5 (Optional) Set parameters
-nn.attribWidth = 12;
-nn.attribFontSize = 10;
+nn.attribWidth = 18;
+nn.attribFontSize = 13;
 nn.y0 = 150;
 
 d3.csv("./IEEE VIS papers 1990-2018 - Main dataset.csv", d3.autoType)
   .then(function (data) {
+
     // Step 2. Load your data!
     nn.data(data);
 
@@ -87,9 +90,9 @@ d3.csv("./IEEE VIS papers 1990-2018 - Main dataset.csv", d3.autoType)
     nn.addAllAttribs();
 
     // Step 4 (optional) add a callback for when updating
-    // nn.updateCallback(populateTableAndVis);
+    nn.updateCallback(populateTableAndVis);
 
-    // populateTableAndVis(data);
+    populateTableAndVis(data);
   });
 
 
