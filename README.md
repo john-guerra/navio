@@ -252,6 +252,16 @@ nv.updateCallback( data => console.log("The filtered data is ", data));
 <a name="update" href="#update">#</a> <i>nv</i>.<b>update</b>() [<>](https://github.com/john-guerra/navio/blob/master/src/navio.js#L1443 "Source")
 
 Use it to force a redraw of navio after changing the underlying data without losing the filters. Useful in case you modify the data with some other action in your code, e.g. you recomputed clusters in a network chart.
+
+<a name="hardUpdate" href="#hardUpdate">#</a> <i>nv</i>.<b>hardUpdate</b>([opts]) [<>](https://github.com/john-guerra/navio/blob/master/src/navio.js#L1443 "Source")
+
+Slower update that recomputes brushes and checks for parameters. Use it if you change any parameters or added new attributes after calling .data. opts can be an object that contains any of the following attributes:
+
+* shouldDrawBrushes (defaults true)
+* shouldUpdateColorDomains (defaults true)
+* recomputeBrushes (defaults true)
+* levelsToUpdate (defaults all levels, should be an array of indices)
+
 <a name="getColorScales" href="#getColorScales">#</a> <i>nv</i>.<b>getColorScales</b>(attr
 ) [<>](https://github.com/john-guerra/navio/blob/master/src/navio.js#L1737 "Source")
 

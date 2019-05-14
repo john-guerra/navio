@@ -1508,7 +1508,7 @@ function navio(selection, _h) {
     var before = performance.now();
 
     if (typeof mDataIs !== typeof []) {
-      console.logor("navio updateData didn't receive an array");
+      console.log("navio updateData didn't receive an array");
       return;
     }
 
@@ -1877,6 +1877,25 @@ function navio(selection, _h) {
   // Returns an array with the list (in order) of attributes used right now
   nv.getAttribs = function() {
     return attribsOrdered;
+  };
+
+
+  // Slower update that recomputes brushes and checks for parameters.
+  // Use it if you change any parameters or added new attributes after calling .data
+  nv.hardUpdate = function (opts = {}) {
+    const
+      shouldDrawBrushes = opts.shouldDrawBrushes!==undefined ? opts.shouldDrawBrushes : true,
+      shouldUpdateColorDomains= opts.shouldUpdateColorDomains!==undefined ? opts.shouldUpdateColorDomains : true,
+      recomputeBrushes = opts.recomputeBrushes!==undefined ? opts.recomputeBrushes : true,
+      levelsToUpdate = opts.levelsToUpdate!==undefined ? opts.levelsToUpdate : d3.range(dataIs.length); // Range is not inclusive so is not length-1;
+
+    // Update all the levels
+    nv.updateData(dataIs, colScales, {
+      shouldDrawBrushes,
+      shouldUpdateColorDomains,
+      recomputeBrushes,
+      levelsToUpdate
+    });
   };
 
 
