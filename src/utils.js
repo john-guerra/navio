@@ -1,4 +1,4 @@
-const DEBUG = true;
+const DEBUG = false;
 
 
 // Returns a flat array with all the attributes in an object up to recursionLevel
@@ -35,7 +35,10 @@ export function getAttribsFromObjectAsFn(obj, recursionLevel=Infinity) {
       const fnName = attr
         .replace(/\./g, "_") // change dots to underscore
         .replace(/[^a-zA-Z _]/g, ""); // remove special characters
-      const body = `return function ${fnName}(d) { return d["${attr}"]; };`;
+
+      const access = attr.split(".").map(a => `["${a}"]` ).join(""); // a.b.c => ["a"]["b"]["c"]
+
+      const body = `return function ${fnName}(d) { return d${access}; };`;
 
       if (DEBUG) { console.log("body",body); }
       return new Function(body)();
