@@ -275,6 +275,25 @@ function navio(selection, _h) {
 
   }
 
+  function changeCursorOnKey() {
+    if (d3.event.key === "Alt") {
+      d3.selectAll(".overlay")
+        .attr("cursor", "url('imgs/cursorSubstract.cur'), zoom-out")
+        .style("cursor", "url('imgs/cursorSubstract.cur'), zoom-out");
+      console.log("Alt!");
+    } else if (d3.event.key === "Shift") {
+      d3.selectAll(".overlay")
+        .attr("cursor", "url('imgs/cursorAdd.cur'), zoom-in")
+        .style("cursor", "url('imgs/cursorAdd.cur'), zoom-in");
+      console.log("Alt!");
+    } else {
+      d3.selectAll(".overlay").style("cursor", "crosshair");
+    }
+
+    if (d3.event.type==="keyup") d3.selectAll(".overlay").style("cursor", "crosshair");
+    console.log("key", d3.event.type);
+  }
+
   function init() {
     // Try to support strings and elements
     selection = typeof(selection) === typeof("") ? d3.select(selection) : selection;
@@ -296,9 +315,16 @@ function navio(selection, _h) {
       .append("svg")
       .style("overflow", "visible")
       .style("position", "absolute")
+      // .style("cursor", "crosshair")
       .style("z-index", 3)
       .style("top", 0)
       .style("left", 0);
+
+
+    // TODO: Try a more localized selection
+    d3.select("body")
+      .on("keydown", changeCursorOnKey)
+      .on("keyup", changeCursorOnKey);
 
 
     svg.append("g")
@@ -695,7 +721,6 @@ function navio(selection, _h) {
       .attr("class", "brush")
       .call(dBrushes[level])
       .selectAll("rect")
-      // .attr("x", -8)
       .attr("width", x(xScale.domain()[xScale.domain().length-1], level) + xScale.bandwidth()*1.1);
 
     _brush.exit().remove();
@@ -886,6 +911,15 @@ function navio(selection, _h) {
       yOnWidget = d3.mouse(d3.event.target)[1],
       clientX = d3.event.clientX,
       clientY = d3.event.clientY;
+
+    // if (d3.event.altKey) {
+    //   d3.selectAll(".overlay").style("cursor", "zoom-out");
+    //   console.log("Alt!");
+    // } else {
+    //   d3.selectAll(".overlay").style("cursor", "crosshair");
+    // }
+    // // console.log("key");
+
 
     if (!overData.data || overData.data.length===0) {
       if (DEBUG) console.log("onMouseOver no data", overData);
@@ -1598,6 +1632,7 @@ function navio(selection, _h) {
     }
     if (dAttribs.has(getAttribName(attr))) {
       console.log(`navio.addAttrib attribute ${attr} already added`);
+      return;
     }
     attribsOrdered.push(attr);
     dAttribs.set(getAttribName(attr), attr);
