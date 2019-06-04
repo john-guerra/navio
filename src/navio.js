@@ -41,7 +41,12 @@ function navio(selection, _h) {
     tooltipElement,
     tooltipCoords = { x: -50, y: -50},
     id = "__seqId",
-    updateCallback = function () {};
+    updateCallback = function () {},
+    cursorSubstractData = "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iMzJweCIgaGVpZ2h0PSIzMnB4IiB2aWV3Qm94PSIwIDAgMzIgMzIiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+CiAgICA8IS0tIEdlbmVyYXRvcjogU2tldGNoIDU0LjEgKDc2NDkwKSAtIGh0dHBzOi8vc2tldGNoYXBwLmNvbSAtLT4KICAgIDx0aXRsZT5jdXJzb3JTdWJzdHJhY3Q8L3RpdGxlPgogICAgPGRlc2M+Q3JlYXRlZCB3aXRoIFNrZXRjaC48L2Rlc2M+CiAgICA8ZyBpZD0iY3Vyc29yU3Vic3RyYWN0IiBzdHJva2U9Im5vbmUiIHN0cm9rZS13aWR0aD0iMSIgZmlsbD0ibm9uZSIgZmlsbC1ydWxlPSJldmVub2RkIj4KICAgICAgICA8cGF0aCBkPSJNOSwwLjUgTDcsMC41IEw3LDcgTDAuNSw3IEwwLjUsOSBMNyw5IEw3LDE1LjUgTDksMTUuNSBMOSw5IEwxNS41LDkgTDE1LjUsNyBMOSw3IEw5LDAuNSBaIiBpZD0iQ29tYmluZWQtU2hhcGUiIHN0cm9rZT0iI0ZGRkZGRiIgZmlsbD0iIzAwMDAwMCI+PC9wYXRoPgogICAgICAgIDxyZWN0IGlkPSJSZWN0YW5nbGUiIGZpbGw9IiMwMDAwMDAiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDE1LjAwMDAwMCwgMTUuMDAwMDAwKSByb3RhdGUoLTI3MC4wMDAwMDApIHRyYW5zbGF0ZSgtMTUuMDAwMDAwLCAtMTUuMDAwMDAwKSAiIHg9IjE0IiB5PSIxMSIgd2lkdGg9IjIiIGhlaWdodD0iOCI+PC9yZWN0PgogICAgPC9nPgo8L3N2Zz4=",
+    cursorAddData = "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iMzJweCIgaGVpZ2h0PSIzMnB4IiB2aWV3Qm94PSIwIDAgMzIgMzIiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+CiAgICA8IS0tIEdlbmVyYXRvcjogU2tldGNoIDU0LjEgKDc2NDkwKSAtIGh0dHBzOi8vc2tldGNoYXBwLmNvbSAtLT4KICAgIDx0aXRsZT5jdXJzb3JBZGQ8L3RpdGxlPgogICAgPGRlc2M+Q3JlYXRlZCB3aXRoIFNrZXRjaC48L2Rlc2M+CiAgICA8ZyBpZD0iY3Vyc29yQWRkIiBzdHJva2U9Im5vbmUiIHN0cm9rZS13aWR0aD0iMSIgZmlsbD0ibm9uZSIgZmlsbC1ydWxlPSJldmVub2RkIj4KICAgICAgICA8cGF0aCBkPSJNOSwwLjUgTDcsMC41IEw3LDcgTDAuNSw3IEwwLjUsOSBMNyw5IEw3LDE1LjUgTDksMTUuNSBMOSw5IEwxNS41LDkgTDE1LjUsNyBMOSw3IEw5LDAuNSBaIiBpZD0iQ29tYmluZWQtU2hhcGUiIHN0cm9rZT0iI0ZGRkZGRiIgZmlsbD0iIzAwMDAwMCI+PC9wYXRoPgogICAgICAgIDxwYXRoIGQ9Ik0xNiwxNCBMMTksMTQgTDE5LDE2IEwxNiwxNiBMMTYsMTkgTDE0LDE5IEwxNCwxNiBMMTEsMTYgTDExLDE0IEwxNCwxNCBMMTQsMTEgTDE2LDExIEwxNiwxNCBaIiBpZD0iQ29tYmluZWQtU2hhcGUiIGZpbGw9IiMwMDAwMDAiPjwvcGF0aD4KICAgIDwvZz4KPC9zdmc+",
+    cursorData = "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iMzJweCIgaGVpZ2h0PSIzMnB4IiB2aWV3Qm94PSIwIDAgMzIgMzIiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+CiAgICA8IS0tIEdlbmVyYXRvcjogU2tldGNoIDU0LjEgKDc2NDkwKSAtIGh0dHBzOi8vc2tldGNoYXBwLmNvbSAtLT4KICAgIDx0aXRsZT5jdXJzb3I8L3RpdGxlPgogICAgPGRlc2M+Q3JlYXRlZCB3aXRoIFNrZXRjaC48L2Rlc2M+CiAgICA8ZyBpZD0iY3Vyc29yIiBzdHJva2U9Im5vbmUiIHN0cm9rZS13aWR0aD0iMSIgZmlsbD0ibm9uZSIgZmlsbC1ydWxlPSJldmVub2RkIj4KICAgICAgICA8cGF0aCBkPSJNOSwwLjUgTDcsMC41IEw3LDcgTDAuNSw3IEwwLjUsOSBMNyw5IEw3LDE1LjUgTDksMTUuNSBMOSw5IEwxNS41LDkgTDE1LjUsNyBMOSw3IEw5LDAuNSBaIiBpZD0iQ29tYmluZWQtU2hhcGUiIHN0cm9rZT0iI0ZGRkZGRiIgZmlsbD0iIzAwMDAwMCI+PC9wYXRoPgogICAgPC9nPgo8L3N2Zz4=";
+
+
 
 
 
@@ -275,22 +280,24 @@ function navio(selection, _h) {
 
   }
 
+
+
   function changeCursorOnKey() {
     if (d3.event.key === "Alt") {
       d3.selectAll(".overlay")
-        .attr("cursor", "url('imgs/cursorSubstract.cur'), zoom-out")
-        .style("cursor", "url('imgs/cursorSubstract.cur'), zoom-out");
+        .attr("cursor", `url(${cursorSubstractData}) 8 8, zoom-out`)
+        .style("cursor", `url(${cursorSubstractData}) 8 8, zoom-out`);
       console.log("Alt!");
     } else if (d3.event.key === "Shift") {
       d3.selectAll(".overlay")
-        .attr("cursor", "url('imgs/cursorAdd.cur'), zoom-in")
-        .style("cursor", "url('imgs/cursorAdd.cur'), zoom-in");
+        .attr("cursor", `url(${cursorAddData}) 8 8, zoom-in`)
+        .style("cursor", `url(${cursorAddData}) 8 8, zoom-in`);
       console.log("Alt!");
     } else {
-      d3.selectAll(".overlay").style("cursor", "crosshair");
+      d3.selectAll(".overlay").style("cursor", `url(${cursorData}) 8 8, crosshair`);
     }
 
-    if (d3.event.type==="keyup") d3.selectAll(".overlay").style("cursor", "crosshair");
+    if (d3.event.type==="keyup") d3.selectAll(".overlay").style("cursor", `url(${cursorData}) 8 8, crosshair`);
     console.log("key", d3.event.type);
   }
 
@@ -315,7 +322,7 @@ function navio(selection, _h) {
       .append("svg")
       .style("overflow", "visible")
       .style("position", "absolute")
-      // .style("cursor", "crosshair")
+      // .style("cursor", `url(${cursorData}) 8 8, crosshair`)
       .style("z-index", 3)
       .style("top", 0)
       .style("left", 0);
@@ -916,7 +923,7 @@ function navio(selection, _h) {
     //   d3.selectAll(".overlay").style("cursor", "zoom-out");
     //   console.log("Alt!");
     // } else {
-    //   d3.selectAll(".overlay").style("cursor", "crosshair");
+    //   d3.selectAll(".overlay").style("cursor", `url(${cursorData}) 8 8, crosshair`);
     // }
     // // console.log("key");
 
