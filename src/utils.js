@@ -36,8 +36,13 @@ export const getAttribsFromObjectRecursive = function(obj, recursionLevel=Infini
 
 
 export function convertAttribToFn(attr) {
+  if (typeof(attr) === "string") {
+    attr = attr.split(".");
+  }
+
   let fnName = attr
-    .replace(/\./g, "_"); // Try to get a better function name
+    .join("_");
+    // .replace(/\./g, "_"); // Try to get a better function name
 
 
   // https://stackoverflow.com/questions/1661197/what-characters-are-valid-for-javascript-variable-names
