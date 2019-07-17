@@ -12,6 +12,7 @@ export const getAttribsFromObjectRecursive = function(obj, recursionLevel=Infini
 
         if (recursionCount< recursionLevel &&
             !Array.isArray(obj[attr]) &&
+            obj[attr]!== null && obj[attr]!==undefined &&
             typeof(obj[attr]) === typeof({})) {
 
           // Recursive call on objects
