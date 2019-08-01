@@ -51,7 +51,7 @@ export function convertAttribToFn(attr) {
 
   const access = attr.map(a => `["${a}"]` ).join(""); // a.b.c => ["a"]["b"]["c"]
 
-  let body = `return function ${fnName}(d) { return d${access}; };`;
+  let body = `return function ${fnName}(d) { try { return d${access} } catch (e) { return undefined }; };`;
 
   if (DEBUG) { console.log("body",body); }
   try {
@@ -59,7 +59,7 @@ export function convertAttribToFn(attr) {
   } catch (e) {
     // Try sanitizing the variable name
     fnName= fnName.replace(/[^a-zA-Z0-9_-]/g, ""); // remove special characters
-    body = `return function ${fnName}(d) { return d${access}; };`;
+    body = `return function ${fnName}(d) { try { return d${access} } catch (e) { return undefined }; };`;
     return new Function(body)();
   }
 
