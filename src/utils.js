@@ -13,6 +13,7 @@ export const getAttribsFromObjectRecursive = function(obj, recursionLevel=Infini
         if (recursionCount< recursionLevel &&
             !Array.isArray(obj[attr]) &&
             obj[attr]!== null && obj[attr]!==undefined &&
+            !(obj[attr] instanceof Date) && // Not a date
             typeof(obj[attr]) === typeof({})) {
 
           // Recursive call on objects

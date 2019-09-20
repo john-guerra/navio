@@ -1,5 +1,7 @@
 // import * as d3 from "./../../node_modules/d3/dist/d3.js"; // Force react to use the es6 module
+
 import * as d3 from "d3";
+
 import {interpolateBlues, interpolatePurples, interpolateBrBG, interpolateOranges, interpolateGreys} from "d3-scale-chromatic";
 import Popper from "popper.js";
 
@@ -287,18 +289,18 @@ function navio(selection, _h) {
       d3.selectAll(".overlay")
         .attr("cursor", `url(${cursorSubstractData}) 8 8, zoom-out`)
         .style("cursor", `url(${cursorSubstractData}) 8 8, zoom-out`);
-      console.log("Alt!");
+      // console.log("Alt!");
     } else if (d3.event.key === "Shift") {
       d3.selectAll(".overlay")
         .attr("cursor", `url(${cursorAddData}) 8 8, zoom-in`)
         .style("cursor", `url(${cursorAddData}) 8 8, zoom-in`);
-      console.log("Alt!");
+      // console.log("Alt!");
     } else {
       d3.selectAll(".overlay").style("cursor", `url(${cursorData}) 8 8, crosshair`);
     }
 
     if (d3.event.type==="keyup") d3.selectAll(".overlay").style("cursor", `url(${cursorData}) 8 8, crosshair`);
-    console.log("key", d3.event.type);
+    // console.log("key", d3.event.type);
   }
 
   function init() {
