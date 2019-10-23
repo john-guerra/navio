@@ -1,157 +1,171 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <title>Navio example: IEEEVIS Publications</title>
-  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css" integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS" crossorigin="anonymous">
-  <style>
-    body {
-      font-family: sans-serif;
-    }
-    table td, table th {
-      padding-right: 10px;
-    }
-    td.title {
-      font-size: 9pt;
-    }
-    #navio {
-      overflow-x: scroll;
-    }
-  </style>
-</head>
-<body>
-  <div class="container-fluid">
-    <h1>IEEEVIS Publications 1990-2018</h1>
+  <head>
+    <title>Navio example: IEEEVIS Publications</title>
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css"
+      integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS"
+      crossorigin="anonymous"
+    />
+    <style>
+      body {
+        font-family: sans-serif;
+      }
+      table td,
+      table th {
+        padding-right: 10px;
+      }
+      td.title {
+        font-size: 9pt;
+      }
+      #navio {
+        overflow-x: scroll;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container-fluid">
+      <h1>IEEEVIS Publications 1990-2018</h1>
 
-    <div>Try this on <a href="https://observablehq.com/@john-guerra/navio">an observable Notebook</a></div>
-    <!-- Placeholder for the widget -->
-    <div class="row">
-      <div class="col-12" id="navio">
-        <h3> Loading 5MB of data, please wait. </h3>
+      <div>
+        Try this on
+        <a href="https://observablehq.com/@john-guerra/navio"
+          >an observable Notebook</a
+        >
+      </div>
+      <!-- Placeholder for the widget -->
+      <div class="row">
+        <div class="col-12" id="navio">
+          <h3>Loading 5MB of data, please wait.</h3>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-9">
+          <h2>Papers Selected</h2>
+          <span id="paperCount"></span>
+          <table>
+            <tr>
+              <th>Title</th>
+              <th>Conference</th>
+              <th>Year</th>
+              <th>XPloreCitationCount_02-2019</th>
+            </tr>
+            <tbody id="papers"></tbody>
+          </table>
+        </div>
+
+        <div class="col-3">
+          <div id="papersByYear"></div>
+          <div id="citationsByYear"></div>
+        </div>
       </div>
     </div>
-    <div class="row">
-      <div class="col-9">
-        <h2>Papers Selected</h2>
-        <span id="paperCount"></span>
-        <table>
-          <tr>
-            <th>Title</th>
-            <th>Conference</th>
-            <th>Year</th>
-            <th>XPloreCitationCount_02-2019</th>
-          </tr>
-          <tbody id="papers">
-          </tbody>
-        </table>
-      </div>
 
-      <div class="col-3">
-        <div id="papersByYear"></div>
-        <div id="citationsByYear"></div>
-      </div>
-    </div>
-  </div>
+    <!-- Step 0: Load the libraries -->
+    <script src="https://d3js.org/d3.v5.js"></script>
+    <script src="https://unpkg.com/popper.js@1.14/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega@5.3.5/build/vega.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-lite@3.2.1/build/vega-lite.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-embed@4.0.0/build/vega-embed.js"></script>
 
+    <script src="https://unpkg.com/navio/dist/navio.min.js"></script>
+    <!-- <script src="../dist/navio.js"></script> -->
 
-  <!-- Step 0: Load the libraries -->
-  <script src="https://d3js.org/d3.v5.js"></script>
-  <script src="https://unpkg.com/popper.js@1.14/dist/umd/popper.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/vega@5.3.5/build/vega.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/vega-lite@3.2.1/build/vega-lite.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/vega-embed@4.0.0/build/vega-embed.js"></script>
+    <script>
+      /* global d3, navio */
 
+      var color = d3.scaleOrdinal(d3.schemeSet2);
 
-  <!-- <script src="https://unpkg.com/navio/dist/navio.min.js"></script> -->
-  <script src="../dist/navio.js"></script>
+      // Step 1.  Create a navio passing the selector to place it and the height
+      var nn = navio(d3.select("#navio"), 400);
 
-<script>
-/* global d3, navio */
+      // Step 1.5 (Optional) Set parameters
+      nn.attribWidth = 18;
+      nn.attribFontSize = 13;
+      nn.y0 = 150;
 
-var color = d3.scaleOrdinal(d3.schemeSet2);
+      d3.csv(
+        "./IEEE VIS papers 1990-2018 - Main dataset.csv",
+        d3.autoType
+      ).then(function(data) {
+        // Step 2. Load your data!
+        nn.data(data);
 
-// Step 1.  Create a navio passing the selector to place it and the height
-var nn = navio(d3.select("#navio"), 400);
+        // Step 3 Let's add Conference manually, so we can use custom color scale shared with vega
+        nn.addCategoricalAttrib("Conference", color);
 
-// Step 1.5 (Optional) Set parameters
-nn.attribWidth = 18;
-nn.attribFontSize = 13;
-nn.y0 = 150;
+        // Step 3.5 Autodetect the remaining attributes
+        nn.addAllAttribs();
 
-d3.csv("./IEEE VIS papers 1990-2018 - Main dataset.csv", d3.autoType)
-  .then(function (data) {
+        // Step 4 (optional) add a callback for when updating
+        nn.updateCallback(populateTableAndVis);
 
-    // Step 2. Load your data!
-    nn.data(data);
+        populateTableAndVis(data);
+      });
 
-    // Step 3 Let's add Conference manually, so we can use custom color scale shared with vega
-    nn.addCategoricalAttrib("Conference", color);
+      function populateTableAndVis(data) {
+        const NumPaperToShow = 20;
+        d3.select("#paperCount").text(
+          `Showing ${NumPaperToShow} out of ${data.length}`
+        );
+        d3.select("#papers")
+          .selectAll("tr")
+          .remove();
+        let trs = d3
+          .select("#papers")
+          .selectAll("tr")
+          .data(data.slice(0, NumPaperToShow))
+          .enter()
+          .append("tr");
 
-    // Step 3.5 Autodetect the remaining attributes
-    nn.addAllAttribs();
+        trs
+          .append("td")
+          .attr("class", "title")
+          .text(d => d.Title);
+        trs.append("td").text(d => d.Conference);
+        trs.append("td").text(d => d.Year);
+        trs.append("td").text(d => d["XPloreCitationCount_02-2019"]);
 
-    // Step 4 (optional) add a callback for when updating
-    nn.updateCallback(populateTableAndVis);
+        var paperByYear = {
+          data: { values: data },
+          mark: "line",
+          title: "Paper counts per year",
+          encoding: {
+            x: { field: "Year", type: "quantitative" },
+            y: { aggregate: "count", type: "quantitative" },
+            color: {
+              field: "Conference",
+              type: "nominal",
+              scale: {
+                domain: color.domain(),
+                range: color.range()
+              }
+            }
+          }
+        };
 
-    populateTableAndVis(data);
-  });
+        var citationsByYear = {
+          data: { values: data },
+          mark: "circle",
+          title: "Paper Year vs Citations",
+          encoding: {
+            x: { field: "Year", type: "quantitative", scale: { zero: false } },
+            y: { field: "XPloreCitationCount_02-2019", type: "quantitative" },
+            color: {
+              field: "Conference",
+              type: "nominal",
+              scale: {
+                domain: color.domain(),
+                range: color.range()
+              }
+            }
+          }
+        };
 
-
-function populateTableAndVis(data) {
-  const NumPaperToShow = 20;
-  d3.select("#paperCount").text(`Showing ${NumPaperToShow} out of ${data.length}`);
-  d3.select("#papers")
-    .selectAll("tr").remove();
-  let trs = d3.select("#papers")
-    .selectAll("tr")
-    .data(data
-      .slice(0,NumPaperToShow))
-    .enter()
-    .append("tr");
-
-  trs.append("td").attr("class", "title").text(d=> d.Title);
-  trs.append("td").text(d=> d.Conference);
-  trs.append("td").text(d=> d.Year);
-  trs.append("td").text(d=> d["XPloreCitationCount_02-2019"]);
-
-
-  var paperByYear = {
-    data : { values: data},
-    mark: "line",
-    title: "Paper counts per year",
-    encoding: {
-      x : { field: "Year", type: "quantitative"},
-      y : { aggregate: "count", type: "quantitative"},
-      color : { field: "Conference", type: "nominal",
-        scale: {
-          domain: color.domain(),
-          range: color.range()
-        }
+        vegaEmbed("#papersByYear", paperByYear);
+        vegaEmbed("#citationsByYear", citationsByYear);
       }
-    }
-  };
-
-  var citationsByYear ={
-    data : { values: data},
-    mark: "circle",
-    title: "Paper Year vs Citations",
-    encoding: {
-      x : { field: "Year", type: "quantitative", scale: {zero:false}},
-      y : { field: "XPloreCitationCount_02-2019", type: "quantitative" },
-      color : { field: "Conference", type: "nominal",
-        scale: {
-          domain: color.domain(),
-          range: color.range()
-        }
-      }
-    }
-  };
-
-  vegaEmbed("#papersByYear", paperByYear);
-  vegaEmbed("#citationsByYear", citationsByYear);
-}
-
-
-
-</script>
-</body>
+    </script>
+  </body>
 </html>
