@@ -338,6 +338,7 @@ function navio(selection, _h) {
       .style("height", height + "px")
       .attr("class", "navio")
       .append("div")
+      .style("overflow-x", "auto")
       .style("position", "relative");
 
     divNavio.append("canvas");
