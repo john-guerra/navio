@@ -91,7 +91,7 @@ function navio(selection, _h) {
   nv.attribFontSize = 13; // Headers font size
   nv.attribFontSizeSelected = 32; // Headers font size when mouse over
 
-  nv.filterFontSize = 10; // Font size of the filters explanations on the bottom
+  nv.filterFontSize = 8; // Font size of the filters explanations on the bottom
 
   nv.tooltipFontSize = 12; // Font size for the tooltip
   nv.tooltipBgColor = "#b2ddf1"; // Font color for tooltip background
@@ -725,9 +725,7 @@ function navio(selection, _h) {
       updateSorting(level + 1);
       if (DEBUG)
         console.log(
-          `ApplyFiltersAndUpdate level ${level} filtered = ${
-            filteredData.length
-          } `
+          `ApplyFiltersAndUpdate level ${level} filtered = ${filteredData.length} `
         );
     }
 
@@ -1082,10 +1080,11 @@ function navio(selection, _h) {
 
     const filterExpTexts = filterExpEnter
       .append("text")
-      .style("font-size", nv.filterFontSize)
+
       .merge(levelOverlay.select(".filterExplanation > text"))
       // .attr("x", function (_, i) {return  levelScale(i); })
       // .attr("y", function (_, i) {return yScales[i].range()[1] + 25; })
+      .style("font-size", nv.filterFontSize + "pt")
       .selectAll("tspan")
       .data((_, i) =>
         filtersByLevel[i]
@@ -1100,7 +1099,7 @@ function navio(selection, _h) {
       .enter()
       .append("tspan")
       .merge(filterExpTexts)
-      .attr("dy", nv.filterFontSize * 1.2)
+      .attr("dy", nv.filterFontSize * 1.2 + 7)
       .attr("x", 0)
       .style("cursor", "not-allowed")
       .text(f => "Ⓧ " + f.toStr())
@@ -1936,15 +1935,11 @@ function navio(selection, _h) {
         } else if (numDistictValues < nv.maxNumDistictForOrdered) {
           nv.addOrderedAttrib(attr);
           console.log(
-            `Navio: Attr ${attrName} has more than ${
-              nv.maxNumDistictForCategorical
-            } distinct values (${numDistictValues}) using orderedAttrib`
+            `Navio: Attr ${attrName} has more than ${nv.maxNumDistictForCategorical} distinct values (${numDistictValues}) using orderedAttrib`
           );
         } else {
           console.log(
-            `Navio: Attr ${attrName} has more than ${
-              nv.maxNumDistictForOrdered
-            } distinct values (${numDistictValues}) using textAttrib`
+            `Navio: Attr ${attrName} has more than ${nv.maxNumDistictForOrdered} distinct values (${numDistictValues}) using textAttrib`
           );
           nv.addTextAttrib(attr);
         }
