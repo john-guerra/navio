@@ -176,6 +176,10 @@ nv.digitsForText = 2; // How many digits to use for text attributes
 
 nv.id("attribName"); // Shows this id on the tooltip, should be unique
 
+nv.addAllAttribsRecursionLevel = Infinity; // How many levels depth do we keep on adding nested attributes
+nv.addAllAttribsIncludeObjects = false; // Should addAllAttribs include objects
+nv.addAllAttribsIncludeArrays = false; // Should addAllAttribs include arrays
+
 // Default colors for values
 nv.nullColor = "#ffedfd"; // Color for null values
 nv.defaultColorInterpolator = d3.interpolateBlues;
