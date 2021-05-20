@@ -7,7 +7,7 @@ import {
   interpolatePurples,
   interpolateBrBG,
   interpolateOranges,
-  interpolateGreys
+  interpolateGreys,
 } from "d3-scale-chromatic";
 import Popper from "popper.js";
 
@@ -15,17 +15,17 @@ import {
   FilterByRange,
   FilterByValue,
   FilterByValueDifferent,
-  FilterByRangeNegative
+  FilterByRangeNegative,
 } from "./filters.js";
 import {
   scaleText,
   scaleOrdered,
   d3AscendingNull,
-  d3DescendingNull
+  d3DescendingNull,
 } from "./scales.js";
 import {
   getAttribsFromObjectRecursive,
-  getAttribsFromObjectAsFn
+  getAttribsFromObjectAsFn,
 } from "./utils.js";
 
 let DEBUG = false;
@@ -58,7 +58,7 @@ function navio(selection, _h) {
     tooltipElement,
     tooltipCoords = { x: -50, y: -50 },
     id = "__seqId",
-    updateCallback = function() {},
+    updateCallback = function () {},
     cursorSubstractData =
       "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iMzJweCIgaGVpZ2h0PSIzMnB4IiB2aWV3Qm94PSIwIDAgMzIgMzIiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+CiAgICA8IS0tIEdlbmVyYXRvcjogU2tldGNoIDU0LjEgKDc2NDkwKSAtIGh0dHBzOi8vc2tldGNoYXBwLmNvbSAtLT4KICAgIDx0aXRsZT5jdXJzb3JTdWJzdHJhY3Q8L3RpdGxlPgogICAgPGRlc2M+Q3JlYXRlZCB3aXRoIFNrZXRjaC48L2Rlc2M+CiAgICA8ZyBpZD0iY3Vyc29yU3Vic3RyYWN0IiBzdHJva2U9Im5vbmUiIHN0cm9rZS13aWR0aD0iMSIgZmlsbD0ibm9uZSIgZmlsbC1ydWxlPSJldmVub2RkIj4KICAgICAgICA8cGF0aCBkPSJNOSwwLjUgTDcsMC41IEw3LDcgTDAuNSw3IEwwLjUsOSBMNyw5IEw3LDE1LjUgTDksMTUuNSBMOSw5IEwxNS41LDkgTDE1LjUsNyBMOSw3IEw5LDAuNSBaIiBpZD0iQ29tYmluZWQtU2hhcGUiIHN0cm9rZT0iI0ZGRkZGRiIgZmlsbD0iIzAwMDAwMCI+PC9wYXRoPgogICAgICAgIDxyZWN0IGlkPSJSZWN0YW5nbGUiIGZpbGw9IiMwMDAwMDAiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDE1LjAwMDAwMCwgMTUuMDAwMDAwKSByb3RhdGUoLTI3MC4wMDAwMDApIHRyYW5zbGF0ZSgtMTUuMDAwMDAwLCAtMTUuMDAwMDAwKSAiIHg9IjE0IiB5PSIxMSIgd2lkdGg9IjIiIGhlaWdodD0iOCI+PC9yZWN0PgogICAgPC9nPgo8L3N2Zz4=",
     cursorAddData =
@@ -127,7 +127,8 @@ function navio(selection, _h) {
   function initTooltipPopper() {
     if (tooltipElement) tooltipElement.remove();
 
-    d3.select("_nv_popover").remove();
+    d3.selectAll("._nv_popover").remove();
+
     tooltipElement = d3
       .select("body")
       .append("div")
@@ -265,11 +266,11 @@ function navio(selection, _h) {
           bottom: tooltipCoords.y + svgBR.top,
           left: tooltipCoords.x + svgBR.left,
           width: 0,
-          height: 0
+          height: 0,
         };
       },
       clientWidth: 0,
-      clientHeight: 0
+      clientHeight: 0,
     };
 
     // const ref= {
@@ -288,7 +289,7 @@ function navio(selection, _h) {
     // };
 
     tooltip = new Popper(ref, tooltipElement.node(), {
-      placement: "right"
+      placement: "right",
       // modifiers: {
       //   preventOverflow: {
       //     boundariesElement: selection.node(),
@@ -351,6 +352,15 @@ function navio(selection, _h) {
       .style("top", 0)
       .style("left", 0);
 
+    divNavio
+      .append("div")
+      .attr("class", "explanations")
+      .style("overflow", "visible")
+      .style("position", "absolute")
+      .style("z-index", 5)
+      .style("top", nv.margin + "px")
+      .style("left", nv.margin + "px");
+
     // TODO: Try a more localized selection
     d3.select("body")
       .on("keydown", changeCursorOnKey)
@@ -367,7 +377,7 @@ function navio(selection, _h) {
       .style("stroke", "black")
       .style("display", "none")
       .append("path")
-      .call(function(sel) {
+      .call(function (sel) {
         var crossSize = 7,
           path = d3.path(); // Draw a cross and a circle
         path.moveTo(0, 0);
@@ -390,7 +400,7 @@ function navio(selection, _h) {
     levelScale = d3.scaleBand().round(true);
     colScales = d3.map();
 
-    x = function(val, level) {
+    x = function (val, level) {
       return levelScale(level) + xScale(val);
     };
 
@@ -426,7 +436,7 @@ function navio(selection, _h) {
   }
 
   function deferEvent(cbk) {
-    return function(d, i, all) {
+    return function (d, i, all) {
       showLoading(this);
       requestAnimationFrame(() => {
         cbk(d, i, all);
@@ -440,10 +450,7 @@ function navio(selection, _h) {
     // custom invert function
     var domain = scale.domain();
     var range = scale.range();
-    var qScale = d3
-      .scaleQuantize()
-      .domain(range)
-      .range(domain);
+    var qScale = d3.scaleQuantize().domain(range).range(domain);
 
     return qScale(x);
   }
@@ -464,7 +471,7 @@ function navio(selection, _h) {
     var before = performance.now();
 
     const sort = dSortBy[levelToUpdate];
-    _dataIs[levelToUpdate].sort(function(a, b) {
+    _dataIs[levelToUpdate].sort(function (a, b) {
       return sort.desc
         ? d3DescendingNull(
             getAttrib(data[a], sort.attrib),
@@ -493,7 +500,7 @@ function navio(selection, _h) {
       desc:
         dSortBy[d.level] !== undefined && dSortBy[d.level].attrib === d.attrib
           ? !dSortBy[d.level].desc
-          : false
+          : false,
     };
 
     deleteObsoleteFiltersFromLevel(d.level + 1);
@@ -502,7 +509,7 @@ function navio(selection, _h) {
     removeBrushOnLevel(d.level);
 
     nv.updateData(dataIs, colScales, {
-      levelsToUpdate: [d.level]
+      levelsToUpdate: [d.level],
     });
 
     updateCallback(nv.getVisible());
@@ -613,7 +620,7 @@ function navio(selection, _h) {
   function deleteObsoleteFiltersFromLevel(level) {
     for (let l = level; l < filtersByLevel.length; l++) {
       filtersByLevel[l] = filtersByLevel[l].filter(
-        f => f.type === "value" || f.type === "negativeValue"
+        (f) => f.type === "value" || f.type === "negativeValue"
       );
     }
   }
@@ -635,13 +642,13 @@ function navio(selection, _h) {
     before = performance.now();
     // Check if each item fits on any filter
     const negFilters = filtersByLevel[level].filter(
-        f => f.type === "negativeValue" || f.type === "negativeRange"
+        (f) => f.type === "negativeValue" || f.type === "negativeRange"
       ),
       posFilters = filtersByLevel[level].filter(
-        f => f.type !== "negativeValue" || f.type !== "negativeRange"
+        (f) => f.type !== "negativeValue" || f.type !== "negativeRange"
       );
 
-    var filteredData = _dataIs[level].filter(d => {
+    var filteredData = _dataIs[level].filter((d) => {
       // OR of positives, AND of negatives
       return (data[d].selected =
         posFilters.reduce((p, f) => p || f.filter(data[d]), false) &&
@@ -699,7 +706,7 @@ function navio(selection, _h) {
         !filtersByLevel[level].length
       ) {
         newData = deleteSubsequentLevels(level + 1, newData, {
-          shouldUpdate: false
+          shouldUpdate: false,
         });
         break;
       }
@@ -732,7 +739,7 @@ function navio(selection, _h) {
     // Update all the levels
     nv.updateData(newData, colScales, {
       shouldDrawBrushes: true,
-      levelsToUpdate: d3.range(fromLevel, newData.length) // Range is not inclusive so is not length-1
+      levelsToUpdate: d3.range(fromLevel, newData.length), // Range is not inclusive so is not length-1
     });
 
     if (DEBUG)
@@ -748,8 +755,8 @@ function navio(selection, _h) {
         [
           x(xScale.domain()[xScale.domain().length - 1], level) +
             xScale.bandwidth() * 1.1,
-          yScales[level].range()[1]
-        ]
+          yScales[level].range()[1],
+        ],
       ])
       .on("brush", brushed)
       .on("end", onSelectByRange);
@@ -759,9 +766,9 @@ function navio(selection, _h) {
       .selectAll(".brush")
       .data([
         {
-          data: d.map(index => data[index]),
-          level: level
-        }
+          data: d.map((index) => data[index]),
+          level: level,
+        },
       ]);
 
     _brush
@@ -843,7 +850,7 @@ function navio(selection, _h) {
           level: level,
           itemAttr: dSortBy[level] ? dSortBy[level].attrib : "__seqId",
           getAttrib,
-          getAttribName
+          getAttribName,
         });
       } else {
         newFilter = new FilterByRange({
@@ -852,7 +859,7 @@ function navio(selection, _h) {
           level: level,
           itemAttr: dSortBy[level] ? dSortBy[level].attrib : "__seqId",
           getAttrib,
-          getAttribName
+          getAttribName,
         });
       }
 
@@ -908,8 +915,9 @@ function navio(selection, _h) {
       let itemAttr = invertOrdinalScale(xScale, clientX - levelScale(level));
       if (itemAttr === undefined) {
         console.log(
-          `navio.selectByValue: error, couldn't find attr in coords ${(clientX,
-          clientY)}`
+          `navio.selectByValue: error, couldn't find attr in coords ${
+            (clientX, clientY)
+          }`
         );
         return;
       }
@@ -922,14 +930,14 @@ function navio(selection, _h) {
           sel,
           itemAttr,
           getAttrib,
-          getAttribName
+          getAttribName,
         });
       } else {
         newFilter = new FilterByValue({
           sel,
           itemAttr,
           getAttrib,
-          getAttribName
+          getAttribName,
         });
       }
       if (d3.event.shiftKey) {
@@ -1036,20 +1044,20 @@ function navio(selection, _h) {
       .attr("class", "numNodesLabel")
       .style("font-family", "sans-serif")
       .style("pointer-events", "none")
-      .attr("y", function(_, i) {
+      .attr("y", function (_, i) {
         return yScales[i].range()[1] + 15;
       })
-      .attr("x", function(_, i) {
+      .attr("x", function (_, i) {
         return levelScale(i);
       })
-      .text(function(d) {
+      .text(function (d) {
         return nv.fmtCounts(d.length);
       });
   }
 
   function drawFilterExplanations(levelOverlay, levelOverlayEnter) {
     const lastAttrib = xScale.domain()[xScale.domain().length - 1],
-      rightBorder = level => x(lastAttrib, level) + xScale.bandwidth() + 2;
+      rightBorder = (level) => x(lastAttrib, level) + xScale.bandwidth() + 2;
 
     const filterExpEnter = levelOverlayEnter
       .append("g")
@@ -1060,8 +1068,9 @@ function navio(selection, _h) {
       .attr(
         "transform",
         (_, i) =>
-          `translate(${rightBorder(i)}, ${yScales[i].range()[1] +
-            nv.filterFontSize * 1.2})`
+          `translate(${rightBorder(i)}, ${
+            yScales[i].range()[1] + nv.filterFontSize * 1.2
+          })`
       );
 
     filterExpEnter
@@ -1080,7 +1089,6 @@ function navio(selection, _h) {
 
     const filterExpTexts = filterExpEnter
       .append("text")
-
       .merge(levelOverlay.select(".filterExplanation > text"))
       // .attr("x", function (_, i) {return  levelScale(i); })
       // .attr("y", function (_, i) {return yScales[i].range()[1] + 25; })
@@ -1088,7 +1096,7 @@ function navio(selection, _h) {
       .selectAll("tspan")
       .data((_, i) =>
         filtersByLevel[i]
-          ? filtersByLevel[i].map(f => {
+          ? filtersByLevel[i].map((f) => {
               f.level = i;
               return f;
             })
@@ -1102,7 +1110,7 @@ function navio(selection, _h) {
       .attr("dy", nv.filterFontSize * 1.2 + 7)
       .attr("x", 0)
       .style("cursor", "not-allowed")
-      .text(f => "Ⓧ " + f.toStr())
+      .text((f) => "Ⓧ " + f.toStr())
       .on("click", (f, i) => {
         console.log("Click remove filter", i, f);
         filtersByLevel[f.level].splice(i, 1);
@@ -1111,6 +1119,66 @@ function navio(selection, _h) {
       });
 
     filterExpTexts.exit().remove();
+  }
+
+  function drawFilterExplanationsHTML(levelOverlay, levelOverlayEnter) {
+    const lastAttrib = xScale.domain()[xScale.domain().length - 1],
+      rightBorder = (level) => x(lastAttrib, level) + xScale.bandwidth() + 2;
+
+    const filterExps = selection
+      .select("div.explanations")
+      .selectAll("div.filterExplanation")
+      .data(dataIs);
+
+    const filterExpEnter = filterExps
+      .enter()
+      .append("div")
+      .attr("class", "filterExplanation")
+      .merge(filterExps)
+      .style("position", "absolute")
+      .style("top", "0")
+      .style("left", "0")
+      .style("min-width", "200px")
+      .style(
+        "transform",
+        (_, i) =>
+          `translate(${rightBorder(i)}px, ${
+            yScales[i].range()[1] + nv.filterFontSize * 1.2
+          }px)`
+      );
+
+    const filterExpTexts = filterExpEnter
+      // .append("div")
+      // .attr("class", "filterExplanationText")
+      .merge(filterExps.select(".filterExplanation"))
+      .style("font-size", nv.filterFontSize + "pt")
+      .selectAll("div")
+      .data((_, i) =>
+        filtersByLevel[i]
+          ? filtersByLevel[i].map((f) => {
+              f.level = i;
+              return f;
+            })
+          : []
+      );
+
+    filterExpTexts
+      .enter()
+      .append("div")
+      .merge(filterExpTexts)
+      // .attr("dy", nv.filterFontSize * 1.2 + 7)
+      // .attr("x", 0)
+      .style("cursor", "not-allowed")
+      .text((f) => "Ⓧ " + f.toStr())
+      .on("click", (f, i) => {
+        console.log("Click remove filter", i, f);
+        filtersByLevel[f.level].splice(i, 1);
+
+        applyFiltersAndUpdate(f.level);
+      });
+
+    filterExpTexts.exit().remove();
+    filterExps.exit().remove();
   }
 
   function drawAttribHeaders(attribOverlay, attribOverlayEnter) {
@@ -1123,7 +1191,7 @@ function navio(selection, _h) {
         .style("-moz-user-select", "none")
         .style("-ms-user-select", "none")
         .style("user-select", "none")
-        .text(function(d) {
+        .text(function (d) {
           return d.attrib === "__seqId"
             ? "sequential Index"
             : d.name +
@@ -1136,14 +1204,14 @@ function navio(selection, _h) {
         })
         .attr("x", xScale.bandwidth() / 2)
         .attr("y", 0)
-        .style("font-weight", function(d) {
+        .style("font-weight", function (d) {
           return dSortBy[d.level] !== undefined &&
             dSortBy[d.level].attrib === d.attrib
             ? "bolder"
             : "normal";
         })
         .style("font-family", "sans-serif")
-        .style("font-size", function() {
+        .style("font-size", function () {
           // make it grow ?
           // if (dSortBy[d.level]!==undefined &&
           //   dSortBy[d.level].attrib === d.attrib )
@@ -1159,13 +1227,13 @@ function navio(selection, _h) {
             .on("drag", attribDragged)
             .on("end", attribDragended)
         )
-        .on("mousemove", function() {
+        .on("mousemove", function () {
           var sel = d3.select(this);
           sel =
             sel.transition !== undefined ? sel.transition().duration(150) : sel;
           sel.style("font-size", nv.attribFontSizeSelected + "px");
         })
-        .on("mouseout", function() {
+        .on("mouseout", function () {
           var sel = d3.select(this);
           sel =
             sel.transition !== undefined ? sel.transition().duration(150) : sel;
@@ -1184,12 +1252,12 @@ function navio(selection, _h) {
     var attribOverlay = levelOverlayEnter
       .merge(levelOverlay)
       .selectAll(".attribOverlay")
-      .data(function(_, i) {
-        return attribs.map(function(a) {
+      .data(function (_, i) {
+        return attribs.map(function (a) {
           return {
             attrib: a,
             name: getAttribName(a),
-            level: i
+            level: i,
           };
         });
       });
@@ -1204,7 +1272,8 @@ function navio(selection, _h) {
       .merge(attribOverlay)
       .attr(
         "transform",
-        d => `translate(${x(d.name, d.level)}, ${yScales[d.level].range()[0]})`
+        (d) =>
+          `translate(${x(d.name, d.level)}, ${yScales[d.level].range()[0]})`
       );
 
     attribOverlayEnter
@@ -1215,10 +1284,10 @@ function navio(selection, _h) {
       // .style("opacity", "0.1")
       .attr("x", 0)
       .attr("y", 0)
-      .attr("width", function() {
+      .attr("width", function () {
         return xScale.bandwidth() * 1.1;
       })
-      .attr("height", function(d) {
+      .attr("height", function (d) {
         return yScales[d.level].range()[1] - yScales[d.level].range()[0];
       });
 
@@ -1235,7 +1304,7 @@ function navio(selection, _h) {
 
     var levelOverlayEnter = levelOverlay.enter().append("g");
 
-    levelOverlayEnter.attr("class", "levelOverlay").attr("id", function(d, i) {
+    levelOverlayEnter.attr("class", "levelOverlay").attr("id", function (d, i) {
       return "level" + i;
     });
 
@@ -1248,7 +1317,8 @@ function navio(selection, _h) {
 
     drawAttributesHolders(levelOverlay, levelOverlayEnter);
     drawCounts(levelOverlay, levelOverlayEnter);
-    drawFilterExplanations(levelOverlay, levelOverlayEnter);
+    // drawFilterExplanations(levelOverlay, levelOverlayEnter);
+    drawFilterExplanationsHTML(levelOverlay, levelOverlayEnter);
 
     levelOverlay.exit().remove();
   } // drawBrushes
@@ -1257,7 +1327,7 @@ function navio(selection, _h) {
     if (!d3.event.sourceEvent.shiftKey) return;
 
     if (DEBUG) console.log("start", d);
-    d3.select(this.parentNode).attr("transform", function(d) {
+    d3.select(this.parentNode).attr("transform", function (d) {
       return (
         "translate(" +
         (d3.event.x + nv.attribFontSize / 2) +
@@ -1271,7 +1341,7 @@ function navio(selection, _h) {
   function attribDragged() {
     if (!d3.event.sourceEvent.shiftKey) return;
 
-    d3.select(this.parentNode).attr("transform", function(d) {
+    d3.select(this.parentNode).attr("transform", function (d) {
       return (
         "translate(" +
         (d3.event.x + nv.attribFontSize / 2) +
@@ -1293,7 +1363,7 @@ function navio(selection, _h) {
     attrDraggedInto = dAttribs.get(attrDraggedInto);
 
     var pos;
-    d3.select(this.parentNode).attr("transform", function(d) {
+    d3.select(this.parentNode).attr("transform", function (d) {
       return (
         "translate(" +
         x(d.name, d.level) +
@@ -1406,11 +1476,11 @@ function navio(selection, _h) {
       // if (DEBUG) console.log(yScales[level-1](data[level-1][iRep][id]));
       var locPrevLevel = {
         x: levelScale(level - 1) + xScale.range()[1],
-        y: yScales[level - 1](data[dataIs[level - 1][iRep]][id])
+        y: yScales[level - 1](data[dataIs[level - 1][iRep]][id]),
       };
       var locLevel = {
         x: levelScale(level),
-        y: yScales[level](data[item][id])
+        y: yScales[level](data[item][id]),
       };
 
       var points = [
@@ -1421,17 +1491,17 @@ function navio(selection, _h) {
         { x: locLevel.x, y: locLevel.y + yScales[level].bandwidth() },
         {
           x: locLevel.x - nv.levelsSeparation * 0.3,
-          y: locLevel.y + yScales[level].bandwidth()
+          y: locLevel.y + yScales[level].bandwidth(),
         },
         {
           x: locPrevLevel.x + nv.levelsSeparation * 0.3,
-          y: locPrevLevel.y + yScales[level - 1].bandwidth()
+          y: locPrevLevel.y + yScales[level - 1].bandwidth(),
         },
         {
           x: locPrevLevel.x,
-          y: locPrevLevel.y + yScales[level - 1].bandwidth()
+          y: locPrevLevel.y + yScales[level - 1].bandwidth(),
         },
-        locPrevLevel
+        locPrevLevel,
       ];
       drawLine(points, 1, nv.levelConnectionsColor);
       drawLine(points, 1, nv.levelConnectionsColor, true);
@@ -1469,21 +1539,21 @@ function navio(selection, _h) {
       if (scale.__type === "seq" || scale.__type === "date") {
         scale.domain(
           d3.extent(
-            dataIs[0].map(function(i) {
+            dataIs[0].map(function (i) {
               return getAttrib(data[i], attrib);
             })
           )
         ); //TODO: make it compute it based on the local range
       } else if (scale.__type === "div") {
         const [min, max] = d3.extent(
-          dataIs[0].map(function(i) {
+          dataIs[0].map(function (i) {
             return getAttrib(data[i], attrib);
           })
         );
         const absMax = Math.max(-min, max); // Assumes diverging point on 0
         scale.domain([-absMax, absMax]);
       } else if (scale.__type === "text" || scale.__type === "ordered") {
-        scale.domain(dataIs[0].map(i => getAttrib(data[i], attrib)));
+        scale.domain(dataIs[0].map((i) => getAttrib(data[i], attrib)));
       }
 
       colScales.set(getAttribName(attrib), scale);
@@ -1518,26 +1588,26 @@ function navio(selection, _h) {
 
       // Update x and y scales
       yScales[levelToUp].domain(
-        representatives.map(function(rep) {
+        representatives.map(function (rep) {
           return data[rep][id];
         })
       );
     }
 
     xScale
-      .domain(attribsOrdered.map(d => getAttribName(d)))
+      .domain(attribsOrdered.map((d) => getAttribName(d)))
       .range([0, nv.attribWidth * dAttribs.keys().length])
       .paddingInner(0.1)
       .paddingOuter(0);
     levelScale
       .domain(
-        dataIs.map(function(d, i) {
+        dataIs.map(function (d, i) {
           return i;
         })
       )
       .range([
         nv.x0 + nv.margin,
-        (xScale.range()[1] + nv.levelsSeparation) * dataIs.length + nv.x0
+        (xScale.range()[1] + nv.levelsSeparation) * dataIs.length + nv.x0,
       ])
       .paddingInner(0)
       .paddingOuter(0);
@@ -1635,7 +1705,7 @@ function navio(selection, _h) {
 
   function recomputeVisibleLinks() {
     if (links.length > 0) {
-      visibleLinks = links.filter(function(d) {
+      visibleLinks = links.filter(function (d) {
         return d.source.selected && d.target.selected;
       });
     }
@@ -1663,7 +1733,7 @@ function navio(selection, _h) {
     svg.attr("width", ctxWidth).attr("height", height);
   }
 
-  nv.initData = function(mData, mColScales) {
+  nv.initData = function (mData, mColScales) {
     var before = performance.now();
 
     // getAttribsFromObject(mData[0][0]);
@@ -1688,12 +1758,12 @@ function navio(selection, _h) {
     if (DEBUG) console.log("Init data " + (after - before) + "ms");
   };
 
-  nv.updateData = function(mDataIs, mColScales, opts) {
+  nv.updateData = function (mDataIs, mColScales, opts) {
     const {
       levelsToUpdate,
       shouldUpdateColorDomains,
       shouldDrawBrushes,
-      recomputeBrushes
+      recomputeBrushes,
     } = opts || {};
 
     if (DEBUG) console.log("updateData");
@@ -1719,7 +1789,7 @@ function navio(selection, _h) {
 
     updateScales({
       levelsToUpdate,
-      shouldUpdateColorDomains
+      shouldUpdateColorDomains,
     });
 
     updateWidthAndHeight();
@@ -1727,18 +1797,18 @@ function navio(selection, _h) {
     nv.update({
       levelsToUpdate,
       shouldDrawBrushes,
-      recomputeBrushes
+      recomputeBrushes,
     });
 
     var after = performance.now();
     if (DEBUG) console.log("Updating data " + (after - before) + "ms");
   }; // updateData
 
-  nv.update = function(opts) {
+  nv.update = function (opts) {
     let {
       recomputeBrushes,
       // levelsToUpdate,
-      shouldDrawBrushes
+      shouldDrawBrushes,
     } = opts || {};
 
     if (!dataIs.length) return nv;
@@ -1787,7 +1857,7 @@ function navio(selection, _h) {
     return nv;
   };
 
-  nv.addAttrib = function(attr, scale) {
+  nv.addAttrib = function (attr, scale) {
     if (scale === undefined) {
       scale = d3.scaleOrdinal(d3.schemeCategory10);
     }
@@ -1801,10 +1871,10 @@ function navio(selection, _h) {
     return nv;
   };
 
-  nv.addSequentialAttrib = function(attr, _scale) {
+  nv.addSequentialAttrib = function (attr, _scale) {
     const domain =
       data !== undefined && data.length > 0
-        ? d3.extent(data, function(d) {
+        ? d3.extent(data, function (d) {
             return getAttrib(d, attr);
           })
         : [0, 1]; //if we don"t have data, set the default domain
@@ -1816,10 +1886,10 @@ function navio(selection, _h) {
   };
 
   // Same as addSequentialAttrib but with a different color
-  nv.addDateAttrib = function(attr, _scale) {
+  nv.addDateAttrib = function (attr, _scale) {
     const domain =
       data !== undefined && data.length > 0
-        ? d3.extent(data, function(d) {
+        ? d3.extent(data, function (d) {
             return getAttrib(d, attr);
           })
         : [0, 1];
@@ -1834,10 +1904,10 @@ function navio(selection, _h) {
   };
 
   // Adds a diverging scale
-  nv.addDivergingAttrib = function(attr, _scale) {
+  nv.addDivergingAttrib = function (attr, _scale) {
     const domain =
       data !== undefined && data.length > 0
-        ? d3.extent(data, function(d) {
+        ? d3.extent(data, function (d) {
             return getAttrib(d, attr);
           })
         : [-1, 1];
@@ -1851,7 +1921,7 @@ function navio(selection, _h) {
     return nv;
   };
 
-  nv.addCategoricalAttrib = function(attr, _scale) {
+  nv.addCategoricalAttrib = function (attr, _scale) {
     const scale = _scale || d3.scaleOrdinal(nv.defaultColorCategorical);
     scale.__type = "cat";
     nv.addAttrib(attr, scale);
@@ -1859,7 +1929,7 @@ function navio(selection, _h) {
     return nv;
   };
 
-  nv.addTextAttrib = function(attr, _scale) {
+  nv.addTextAttrib = function (attr, _scale) {
     const scale =
       _scale ||
       scaleText(
@@ -1873,7 +1943,7 @@ function navio(selection, _h) {
     return nv;
   };
 
-  nv.addOrderedAttrib = function(attr, _scale) {
+  nv.addOrderedAttrib = function (attr, _scale) {
     const scale =
       _scale || scaleOrdered(nv.nullColor, nv.defaultColorInterpolatorOrdered);
 
@@ -1882,7 +1952,7 @@ function navio(selection, _h) {
     return nv;
   };
 
-  nv.addBooleanAttrib = function(attr, _scale) {
+  nv.addBooleanAttrib = function (attr, _scale) {
     const scale =
       _scale ||
       d3
@@ -1897,7 +1967,7 @@ function navio(selection, _h) {
   };
 
   // Adds all the attributes on the data, or all the attributes provided on the list based on their types
-  nv.addAllAttribs = function(_attribs) {
+  nv.addAllAttribs = function (_attribs) {
     if (!data || !data.length)
       throw Error(
         "addAllAttribs called without data to guess the attribs. Make sure to call it after setting the data"
@@ -1922,7 +1992,7 @@ function navio(selection, _h) {
           .set(
             data
               .slice(0, nv.howManyItemsShouldSearchForNotNull)
-              .map(d => getAttrib(d, attr))
+              .map((d) => getAttrib(d, attr))
           )
           .values().length;
 
@@ -1945,7 +2015,7 @@ function navio(selection, _h) {
         }
       } else if (typeof firstNotNull === typeof 0) {
         // Numbers
-        if (d3.min(data, d => getAttrib(d, attr)) < 0) {
+        if (d3.min(data, (d) => getAttrib(d, attr)) < 0) {
           console.log(`Navio: Adding attr ${attrName} as diverging`);
           nv.addDivergingAttrib(attr);
         } else {
@@ -1992,7 +2062,7 @@ function navio(selection, _h) {
     return nv;
   };
 
-  nv.data = function(_) {
+  nv.data = function (_) {
     initTooltipPopper();
 
     if (!colScales.has("selected")) {
@@ -2017,9 +2087,9 @@ function navio(selection, _h) {
         d.selected = true;
       }
       dataIs = [
-        data.map(function(_, i) {
+        data.map(function (_, i) {
           return i;
-        })
+        }),
       ];
 
       nv.initData(dataIs, colScales);
@@ -2035,19 +2105,19 @@ function navio(selection, _h) {
     }
   };
 
-  nv.getSelected = function() {
+  nv.getSelected = function () {
     return dataIs[dataIs.length - 1]
-      .filter(function(d) {
+      .filter(function (d) {
         return data[d].selected;
       })
-      .map(function(d) {
+      .map(function (d) {
         return data[d];
       });
   };
   // Legacy support
   nv.getVisible = nv.getSelected;
 
-  nv.sortBy = function(_attrib, _desc = false, _level = undefined) {
+  nv.sortBy = function (_attrib, _desc = false, _level = undefined) {
     // The default level is the last one
     let level = Math.max(
       0,
@@ -2062,7 +2132,7 @@ function navio(selection, _h) {
       // }
       dSortBy[level] = {
         attrib: _attrib,
-        desc: _desc
+        desc: _desc,
       };
       return nv.update();
     } else {
@@ -2070,11 +2140,11 @@ function navio(selection, _h) {
     }
   };
 
-  nv.updateCallback = function(_) {
+  nv.updateCallback = function (_) {
     return arguments.length ? ((updateCallback = _), nv) : updateCallback;
   };
 
-  nv.selectedColorRange = function(_) {
+  nv.selectedColorRange = function (_) {
     return arguments.length
       ? ((nv.defaultColorRangeSelected = _), nv)
       : nv.defaultColorRangeSelected;
@@ -2084,11 +2154,11 @@ function navio(selection, _h) {
   //   return arguments.length ? (nv.defaultColorInterpolator = _, nv) : nv.defaultColorInterpolator;
   // };
 
-  nv.id = function(_) {
+  nv.id = function (_) {
     return arguments.length ? ((id = _), nv) : id;
   };
 
-  nv.links = function(_) {
+  nv.links = function (_) {
     if (arguments.length) {
       links = _;
       recomputeVisibleLinks();
@@ -2100,18 +2170,18 @@ function navio(selection, _h) {
 
   // Returns a d3.scale used for coloring the corresponding attrib
   // check scale.__type for finding out the type of attribute (if undefined, navio doesn't know the type)
-  nv.getColorScale = function(attrib) {
+  nv.getColorScale = function (attrib) {
     return colScales.get(attrib);
   };
 
   // Returns an array with the list (in order) of attributes used right now
-  nv.getAttribs = function() {
+  nv.getAttribs = function () {
     return attribsOrdered;
   };
 
   // Slower update that recomputes brushes and checks for parameters.
   // Use it if you change any parameters or added new attributes after calling .data
-  nv.hardUpdate = function(opts = {}) {
+  nv.hardUpdate = function (opts = {}) {
     const shouldDrawBrushes =
         opts.shouldDrawBrushes !== undefined ? opts.shouldDrawBrushes : true,
       shouldUpdateColorDomains =
@@ -2130,7 +2200,7 @@ function navio(selection, _h) {
       shouldDrawBrushes,
       shouldUpdateColorDomains,
       recomputeBrushes,
-      levelsToUpdate
+      levelsToUpdate,
     });
   };
 
