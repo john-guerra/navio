@@ -128,7 +128,6 @@ function navio(selection, _h) {
     if (tooltipElement) tooltipElement.remove();
 
     d3.selectAll("._nv_popover").remove();
-
     tooltipElement = d3
       .select("body")
       .append("div")

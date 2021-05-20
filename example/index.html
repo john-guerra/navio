@@ -1,20 +1,19 @@
 <!DOCTYPE html>
-<meta charset="utf-8">
+<meta charset="utf-8" />
 <style>
-#nv {
-  float:left;
-}
+  #nv {
+    float: left;
+  }
 
-.links line {
-  stroke: #999;
-  stroke-opacity: 0.6;
-}
+  .links line {
+    stroke: #999;
+    stroke-opacity: 0.6;
+  }
 
-.nodes circle {
-  stroke: #fff;
-  stroke-width: 1.5px;
-}
-
+  .nodes circle {
+    stroke: #fff;
+    stroke-width: 1.5px;
+  }
 </style>
 <div id="nv"></div>
 <svg width="400" height="600"></svg>
@@ -24,137 +23,156 @@
 <!-- <script src="../dist/navio.js"></script> -->
 <script src="https://unpkg.com/navio/dist/navio.min.js"></script>
 <script>
-/* global d3, navio */
+  /* global d3, navio */
 
-var svg = d3.select("svg"),
-  width = +svg.attr("width"),
-  height = +svg.attr("height");
-var linksG = svg.append("g")
-  .attr("class", "links");
+  var svg = d3.select("svg"),
+    width = +svg.attr("width"),
+    height = +svg.attr("height");
+  var linksG = svg.append("g").attr("class", "links");
 
-var nodesG = svg.append("g")
-  .attr("class", "nodes");
+  var nodesG = svg.append("g").attr("class", "nodes");
 
-var color = d3.scaleOrdinal(d3.schemeCategory10);
+  var color = d3.scaleOrdinal(d3.schemeCategory10);
 
-var simulation = d3.forceSimulation()
-  .force("link", d3.forceLink().id(function(d) { return d.id; }))
-  .force("charge", d3.forceManyBody())
-  .force("center", d3.forceCenter(width / 2, height / 2));
+  var simulation = d3
+    .forceSimulation()
+    .force(
+      "link",
+      d3.forceLink().id(function (d) {
+        return d.id;
+      })
+    )
+    .force("charge", d3.forceManyBody())
+    .force("center", d3.forceCenter(width / 2, height / 2));
 
-var nv = new navio(d3.select("#nv"), height);
-nv.id("id");
-nv.addCategoricalAttrib("group", color);
+  var nv = new navio(d3.select("#nv"), height);
+  nv.id("id");
+  nv.addCategoricalAttrib("group", color);
 
-// d3 v4
-// d3.json("miserables.json", function(error, graph) {
-d3.json("miserables.json").then(function(graph) {
-  // if (error) throw error;
-  var dNodes = {};
-  graph.nodes.forEach(function (d) { dNodes[d.id] = d;});
-  graph.links.forEach(function (d) {
-    d.source = dNodes[d.source];
-    d.target = dNodes[d.target];
-  });
-
-  nv.data(graph.nodes);
-  nv.updateCallback(function (nodes) {
-    update({
-      nodes:nodes,
-      links:graph.links
+  // d3 v4
+  // d3.json("miserables.json", function(error, graph) {
+  d3.json("miserables.json").then(function (graph) {
+    // if (error) throw error;
+    var dNodes = {};
+    graph.nodes.forEach(function (d) {
+      dNodes[d.id] = d;
     });
+    graph.links.forEach(function (d) {
+      d.source = dNodes[d.source];
+      d.target = dNodes[d.target];
+    });
+
+    nv.data(graph.nodes);
+    nv.updateCallback(function (nodes) {
+      update({
+        nodes: nodes,
+        links: graph.links,
+      });
+    });
+
+    nv.links(graph.links); // If you set the links after the data, you should trigger update on your own
+    nv.update();
+
+    update(graph);
   });
 
-  nv.links(graph.links); // If you set the links after the data, you should trigger update on your own
-  nv.update();
+  function update(graph) {
+    simulation.stop();
 
-  update(graph);
+    var dVisibleNodes = {};
+    graph.nodes.map(function (n) {
+      return (dVisibleNodes[n.id] = true);
+    });
+    var visibleLinks = graph.links.filter(function (d) {
+      return dVisibleNodes[d.source.id] && dVisibleNodes[d.target.id];
+    });
 
-});
+    var link = linksG.selectAll("line").data(visibleLinks);
 
-function update(graph) {
-  simulation.stop();
+    var linkEnter = link
+      .enter()
+      .append("line")
+      .attr("stroke-width", function (d) {
+        return Math.sqrt(d.value);
+      });
+    link.exit().remove();
 
-  var dVisibleNodes = {};
-  graph.nodes.map(function (n) {
-    return dVisibleNodes[n.id] = true;
-  });
-  var visibleLinks = graph.links.filter(function (d) {
-    return dVisibleNodes[d.source.id]&&
-      dVisibleNodes[d.target.id];
-  });
+    var node = nodesG.selectAll("circle").data(graph.nodes, function (d) {
+      return d.id;
+    });
 
-  var link = linksG
-    .selectAll("line")
-    .data(visibleLinks);
-
-  var linkEnter = link
-    .enter().append("line")
-    .attr("stroke-width", function(d) { return Math.sqrt(d.value); });
-  link.exit().remove();
-
-  var node = nodesG
-    .selectAll("circle")
-    .data(graph.nodes, function (d) { return d.id; });
-
-  var nodeEnter = node
-    .enter().append("circle");
-
-  nodeEnter
-    .merge(node)
-      .attr("r", 5)
-      .attr("fill", function(d) { return color(d.group); })
-      .on("click", function (d) { console.log(d); })
-      .call(d3.drag()
-          .on("start", dragstarted)
-          .on("drag", dragged)
-          .on("end", dragended));
-
-  node.exit().remove();
-
-  node.append("title")
-      .text(function(d) { return d.id; });
-
-  simulation
-      .nodes(graph.nodes)
-      .on("tick", ticked);
-
-  simulation.force("link")
-      .links(visibleLinks.slice()); // a copy to avoid overriding the original info
-
-  simulation.alphaTarget(0.3).restart();
-
-  function ticked() {
-    linkEnter.merge(link)
-        .attr("x1", function(d) { return d.source.x; })
-        .attr("y1", function(d) { return d.source.y; })
-        .attr("x2", function(d) { return d.target.x; })
-        .attr("y2", function(d) { return d.target.y; });
+    var nodeEnter = node.enter().append("circle");
 
     nodeEnter
       .merge(node)
-        .attr("cx", function(d) { return d.x; })
-        .attr("cy", function(d) { return d.y; });
+      .attr("r", 5)
+      .attr("fill", function (d) {
+        return color(d.group);
+      })
+      .on("click", function (d) {
+        console.log(d);
+      })
+      .call(
+        d3
+          .drag()
+          .on("start", dragstarted)
+          .on("drag", dragged)
+          .on("end", dragended)
+      );
+
+    node.exit().remove();
+
+    node.append("title").text(function (d) {
+      return d.id;
+    });
+
+    simulation.nodes(graph.nodes).on("tick", ticked);
+
+    simulation.force("link").links(visibleLinks.slice()); // a copy to avoid overriding the original info
+
+    simulation.alphaTarget(0.3).restart();
+
+    function ticked() {
+      linkEnter
+        .merge(link)
+        .attr("x1", function (d) {
+          return d.source.x;
+        })
+        .attr("y1", function (d) {
+          return d.source.y;
+        })
+        .attr("x2", function (d) {
+          return d.target.x;
+        })
+        .attr("y2", function (d) {
+          return d.target.y;
+        });
+
+      nodeEnter
+        .merge(node)
+        .attr("cx", function (d) {
+          return d.x;
+        })
+        .attr("cy", function (d) {
+          return d.y;
+        });
+    }
   }
 
+  function dragstarted(d) {
+    if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+    d.fx = d.x;
+    d.fy = d.y;
+  }
 
-}
+  function dragged(d) {
+    d.fx = d3.event.x;
+    d.fy = d3.event.y;
+  }
 
-function dragstarted(d) {
-  if (!d3.event.active) simulation.alphaTarget(0.3).restart();
-  d.fx = d.x;
-  d.fy = d.y;
-}
-
-function dragged(d) {
-  d.fx = d3.event.x;
-  d.fy = d3.event.y;
-}
-
-function dragended(d) {
-  if (!d3.event.active) simulation.alphaTarget(0);
-  d.fx = null;
-  d.fy = null;
-}
-
+  function dragended(d) {
+    if (!d3.event.active) simulation.alphaTarget(0);
+    d.fx = null;
+    d.fy = null;
+  }
 </script>
