@@ -1,11 +1,21 @@
+import {readFileSync} from "fs";
 import ascii from "rollup-plugin-ascii";
-import node from "rollup-plugin-node-resolve";
+import node from "@rollup/plugin-node-resolve";
 import commonjs from "rollup-plugin-commonjs";
-import {terser} from "rollup-plugin-terser";
+import terser from "@rollup/plugin-terser";
 // import babel from "rollup-plugin-babel";
-import * as meta from "./package.json";
+import * as meta from "./package.json" assert { type: "json" };;
 
-const copyright = `// ${meta.homepage} v${meta.version} Copyright ${(new Date).getFullYear()} ${meta.author.name}`;
+// const copyright = `// ${meta.homepage} v${
+//   meta.version
+// } Copyright ${new Date().getFullYear()} ${meta.author.name}`;
+
+// Extract copyrights from the LICENSE.
+const copyright = readFileSync("./LICENSE", "utf-8")
+  .split(/\n/g)
+  .filter(line => /^Copyright\s+/.test(line))
+  .map(line => line.replace(/^Copyright\s+/, ""))
+  .join(", ");
 
 export default [
   {
@@ -17,29 +27,24 @@ export default [
       node({
         jsxnext: true,
         main: true,
-        browser: true
+        browser: true,
       }),
-      ascii()
+      ascii(),
     ],
-    external: [
-      "d3",
-      "d3-scale-chromatic",
-      "popper.js"
-    ],
+    external: ["d3", "popper.js"],
     output: {
-      extend: true,
-      banner: copyright,
       file: "dist/navio.js",
+      name: "navio",
+      extend: true,
       format: "umd",
       indent: false,
-      name: "navio",
       // sourcemap: true,
+      banner: `// ${meta.homepage} v${meta.version} Copyright ${copyright}`,
       globals: {
-        d3:"d3",
-        "d3-scale-chromatic":"d3ScaleChromatic",
-        "popper.js":"Popper"
-      }
-    }
+        d3: "d3",
+        "popper.js": "Popper",
+      },
+    },
   },
   {
     input: "src/index.js",
@@ -48,30 +53,25 @@ export default [
       //   exclude: "node_modules/**"
       // }),
       node({
-        jsxnext: true
+        jsxnext: true,
       }),
       ascii(),
-      commonjs()
+      commonjs(),
     ],
-    external: [
-      "d3",
-      "d3-scale-chromatic",
-      "popper.js"
-    ],
+    external: ["d3", "popper.js"],
     output: {
+      file: "dist/navio.esm.js",
+      name: "navio",
       extend: true,
-      banner: copyright,
-      file: meta.module,
       format: "esm",
       indent: false,
-      // sourcemap: true,
-      name: "navio",
+      sourcemap: true,
+      banner: `// ${meta.homepage} v${meta.version} Copyright ${copyright}`,
       globals: {
-        d3:"d3",
-        "d3-scale-chromatic":"d3ScaleChromatic",
-        "popper.js":"Popper"
-      }
-    }
+        d3: "d3",
+        "popper.js": "Popper",
+      },
+    },
   },
   {
     input: "src/index.js",
@@ -79,26 +79,22 @@ export default [
       node({
         jsxnext: true,
         main: true,
-        browser: true
+        browser: true,
       }),
       ascii(),
-      terser({output: {preamble: copyright}})
+      terser({ output: { preamble: copyright } }),
     ],
-    external: ["d3",
-      "d3-scale-chromatic",
-      "popper.js"
-    ],
+    external: ["d3", "popper.js"],
     output: {
-      extend: true,
       file: "dist/navio.min.js",
+      name: "navio",
+      extend: true,
       format: "umd",
       indent: false,
-      name: "navio",
       globals: {
-        d3:"d3",
-        "d3-scale-chromatic":"d3ScaleChromatic",
-        "popper.js":"Popper"
-      }
-    }
-  }
+        d3: "d3",
+        "popper.js": "Popper",
+      },
+    },
+  },
 ];

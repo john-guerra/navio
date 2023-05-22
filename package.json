@@ -2,28 +2,27 @@
   "name": "navio",
   "version": "0.0.67",
   "description": "A visualization widget for summarizing and exploring data",
+  "type": "module",
   "main": "dist/navio.min.js",
   "module": "dist/navio.esm.js",
   "browser": "dist/navio.min.js",
   "unpkg": "dist/navio.min.js",
   "jsdelivr": "dist/navio.min.js",
   "dependencies": {
-    "d3": "^4.13.0",
-    "d3-scale-chromatic": "^1.5.0",
-    "d3-selection": "^1.4.0",
-    "popper.js": "^1.16.0"
+    "d3": "^7.8.4",
+    "popper.js": "^1.16.1"
   },
   "devDependencies": {
-    "@babel/core": "^7.6.4",
+    "@babel/core": "^7.21.8",
+    "@rollup/plugin-babel": "^6.0.3",
+    "@rollup/plugin-node-resolve": "^15.0.2",
+    "@rollup/plugin-terser": "^0.4.3",
     "eslint": "^5.16.0",
-    "eslint-config-prettier": "^6.5.0",
+    "eslint-config-prettier": "^6.15.0",
     "prettier": "^1.19.1",
-    "rollup": "^0.65.0",
-    "rollup-plugin-ascii": "0.0.3",
-    "rollup-plugin-babel": "^4.3.3",
-    "rollup-plugin-commonjs": "^9.3.4",
-    "rollup-plugin-node-resolve": "^3.4.0",
-    "rollup-plugin-terser": "^2.0.2"
+    "rollup": "^3.23.0",
+    "rollup-plugin-ascii": "^0.0.3",
+    "rollup-plugin-commonjs": "^10.1.0"
   },
   "scripts": {
     "build": "rollup -c",
