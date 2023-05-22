@@ -4,7 +4,7 @@ import node from "@rollup/plugin-node-resolve";
 import commonjs from "rollup-plugin-commonjs";
 import terser from "@rollup/plugin-terser";
 // import babel from "rollup-plugin-babel";
-import * as meta from "./package.json" assert { type: "json" };;
+import meta from "./package.json" assert { type: "json" };
 
 // const copyright = `// ${meta.homepage} v${
 //   meta.version
@@ -65,7 +65,7 @@ export default [
       extend: true,
       format: "esm",
       indent: false,
-      sourcemap: true,
+      // sourcemap: true,
       banner: `// ${meta.homepage} v${meta.version} Copyright ${copyright}`,
       globals: {
         d3: "d3",
@@ -82,7 +82,7 @@ export default [
         browser: true,
       }),
       ascii(),
-      terser({ output: { preamble: copyright } }),
+      terser({ output: { preamble: `// ${meta.homepage} v${meta.version} Copyright ${copyright}` } }),
     ],
     external: ["d3", "popper.js"],
     output: {

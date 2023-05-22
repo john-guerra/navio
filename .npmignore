@@ -3,10 +3,11 @@ imgs
 example*
 update.sh
 example_vispubdata
-.eslintrc.js
+.eslintrc.json
 index.html
 navio_bug.html
 CNAME
 src/NavioComponent.jsx
 .babelrc
 .git
+extras/**
