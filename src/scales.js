@@ -48,8 +48,8 @@ export function scaleText(nullColor, digits = 1, defaultColorInterpolator) {
 
   // const defaultColorInterpolator = "interpolateGreys" in d3 ? d3.interpolateGreys : interpolateGreys; // Hack to keep it working with d3.v4
   let scale = d3.scaleSequential(defaultColorInterpolator),
-    dRepresentativesCounts = d3.map(), // Contains the counts for each letter/substrg
-    dRepresentativesIndexes = d3.map();
+    dRepresentativesCounts = new Map(), // Contains the counts for each letter/substrg
+    dRepresentativesIndexes = new Map();
 
   // Computes the actual value, based on the index of the first digits in the domain
   function compute(d) {
@@ -72,7 +72,7 @@ export function scaleText(nullColor, digits = 1, defaultColorInterpolator) {
   }
 
   function computeRepresentatives(data, doIndex = true) {
-    dRepresentativesCounts = d3.map();
+    dRepresentativesCounts = new Map();
     for (let v of data) {
       //Initialize
       if (!dRepresentativesCounts.has(v)) dRepresentativesCounts.set(v, 0);
@@ -82,7 +82,7 @@ export function scaleText(nullColor, digits = 1, defaultColorInterpolator) {
     }
     if (DEBUG)
       console.log(
-        `scaleText Compute representatives found ${dRepresentativesCounts.keys().length} categories `
+        `scaleText Compute representatives found ${Array.from(dRepresentativesCounts.keys()).length} categories `
       );
     const ret = {
       counts: dRepresentativesCounts
@@ -90,9 +90,9 @@ export function scaleText(nullColor, digits = 1, defaultColorInterpolator) {
 
     if (doIndex) {
       // Compute the indexes of each representative
-      dRepresentativesIndexes = d3.map();
+      dRepresentativesIndexes = new Map();
       let i = 0;
-      for (let r of dRepresentativesCounts.keys().sort()) {
+      for (let r of Array.from(dRepresentativesCounts.keys()).sort()) {
         dRepresentativesIndexes.set(r, i++);
       }
       ret.indexes = dRepresentativesIndexes;
@@ -118,8 +118,8 @@ export function scaleText(nullColor, digits = 1, defaultColorInterpolator) {
           // .filter(d => typeof(d) === typeof(""))
           .map(d => (""+d).slice(0, digits))
       );
-      if (DEBUG) console.log(`scaleText domain reps.length=${dRepresentativesCounts.keys().length}`);
-      scale.domain([0, dRepresentativesCounts.keys().length]);
+      if (DEBUG) console.log(`scaleText domain reps.length=${Array.from(dRepresentativesCounts.keys()).length}`);
+      scale.domain([0, Array.from(dRepresentativesCounts.keys()).length]);
       return compute;
     } else {
       return scale.domain();
@@ -140,8 +140,8 @@ export function scaleOrdered(nullColor, defaultColorInterpolator) {
   const DEBUG = false;
 
   let scale = d3.scaleOrdinal();
-  // dRepresentativesCounts = d3.map(), // Contains the counts for each letter/substrg
-  // dRepresentativesIndexes = d3.map();
+  // dRepresentativesCounts = new Map(), // Contains the counts for each letter/substrg
+  // dRepresentativesIndexes = new Map();
 
   // Computes the actual value, based on the index of the first digits in the domain
   function compute(d) {
@@ -151,7 +151,7 @@ export function scaleOrdered(nullColor, defaultColorInterpolator) {
 
   function computeRepresentatives(data) {
     // Sorting with d3 set converts to strings :(
-    // return d3.set(data).values().sort((a,b) => d3AscendingNull(a,b));
+    // return new Set(data).values().sort((a,b) => d3AscendingNull(a,b));
 
     // Also convert to strings :(
     // dValues = {};
