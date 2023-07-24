@@ -1112,8 +1112,8 @@ function navio(selection, _h) {
       .attr("x", 0)
       .style("cursor", "not-allowed")
       .text((f) => "Ⓧ " + f.toStr())
-      .on("click", (f, i) => {
-        console.log("Click remove filter", i, f);
+      .on("click", (event, f, i) => {
+        if (DEBUG) console.log("Click remove filter", i, f);
         filtersByLevel[f.level].splice(i, 1);
 
         applyFiltersAndUpdate(f.level);
@@ -1171,8 +1171,8 @@ function navio(selection, _h) {
       // .attr("x", 0)
       .style("cursor", "not-allowed")
       .text((f) => "Ⓧ " + f.toStr())
-      .on("click", (f, i) => {
-        console.log("Click remove filter", i, f);
+      .on("click", (event, f, i) => {
+        if (DEBUG) console.log("Click remove filter", i, f);
         filtersByLevel[f.level].splice(i, 1);
 
         applyFiltersAndUpdate(f.level);
