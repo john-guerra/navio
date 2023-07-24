@@ -1,12 +1,22 @@
-<h1 align="center">
-  <br>
-  <a href="https://observablehq.com/@john-guerra/navio-load"><img src="imgs/navio_thumb_v4.gif" alt="Moma Explorer" max-height="300"></a>
-  Navio
-  <br>
-</h1>
-<h4 align="center">A visualization widget to understand and navigate your data</h4>
 
-You can use it to summarize hundreds of thousands of records a dozens of columns, explore and navigate them with three simple interactions:
+
+
+
+<!-- Place this tag where you want the button to render. -->
+<a class="github-button" href="https://github.com/john-guerra/navio" data-icon="octicon-star" data-size="large" aria-label="Star john-guerra/navio on GitHub">Star</a>
+
+
+<div align="center">
+  <h1>
+    <a href="https://observablehq.com/@john-guerra/navio-load"><img src="imgs/navio_thumb_v4.gif" alt="Moma Explorer" max-height="300"></a>
+    Navio:
+    <small><div style="font-style: italic; margin-bottom: 1.3em" align="center">A visualization widget to understand and navigate your data</div></small>
+  </h1>
+</div>
+
+
+
+Use it to <strong>summarize<strong>, <strong>explore</strong> and <strong>navigate</strong> your data using three simple interactions:
 
 | Sort | Filter a Range | Filter By Value|
 | -----| --- | ---|
@@ -276,3 +286,6 @@ Returns the ordered list of attributes added to navio
 ## License
 
 Navio.js is licensed under the MIT license. (http://opensource.org/licenses/MIT)
+
+<!-- Place this tag in your head or just before your close body tag. -->
+<script async defer src="https://buttons.github.io/buttons.js"></script>
