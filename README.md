@@ -1,5 +1,5 @@
 <!-- Place this tag where you want the button to render. -->
-<a class="github-button" href="https://github.com/john-guerra/navio" data-icon="octicon-star" data-size="large" aria-label="Star john-guerra/navio on GitHub">Star</a>
+<a style="text-align: right" class="github-button" href="https://github.com/john-guerra/navio" data-icon="octicon-star" data-size="large" aria-label="Star john-guerra/navio on GitHub">Star</a>
 
 <div align="center">
   <h1>
@@ -11,7 +11,7 @@
 
 
 
-Use it to <strong>summarize<strong>, <strong>explore</strong> and <strong>navigate</strong> your multivariate data using three simple interactions:
+Use it to <strong>summarize</strong>, <strong>explore</strong> and <strong>navigate</strong> your multivariate data using three simple interactions:
 
 | Sort | Filter a Range | Filter By Value|
 | -----| --- | ---|
