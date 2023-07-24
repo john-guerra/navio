@@ -79,8 +79,7 @@ TLDR
   <div id="navio"></div>
 
   <!-- NAVIO Step 0: Load the libraries -->
-  <script type="text/javascript" src="https://d3js.org/d3.v4.min.js"></script>
-  <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+  <script type="text/javascript" src="https://d3js.org/d3.v6.min.js"></script>
   <script src="https://unpkg.com/popper.js@1.14/dist/umd/popper.min.js"></script>
   <script type="text/javascript" src="https://unpkg.com/navio/dist/navio.min.js"></script>
 
@@ -88,9 +87,7 @@ TLDR
   // NAVIO  Step 1.  Create a Navio passing a d3 selection to place it and an optional height
   var nv = navio(d3.select("#navio"), 600);
 
-  d3.csv(YOUR_DATA, function (err, data) {
-    if (err) throw err;
-
+  d3.csv(YOUR_DATA).then(data) => {
     // NAVIO Step 2. Load your data!
     nv.data(data);
 
@@ -126,8 +123,8 @@ TLDR
 ```
 2. **Import Navio**. Create and import a new JavaScript file below the scripts (d3 and Navio) or right in the html like in the example below.
 ```html
-<script src="https://d3js.org/d3.v4.min.js"></script>
-<script type="text/javascript" src="https://john-guerra.github.io/navio/Navio.js"></script>
+<script src="https://d3js.org/d3.v6.min.js"></script>
+<script type="text/javascript" src="https://unpkg.com/navio/dist/navio.min.js"></script>
 <script type="text/javascript">
   //   YOUR_JS_CODE_HERE
 </script>
