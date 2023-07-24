@@ -66,12 +66,12 @@ Or use it from unpkg
 
 ```html
   <script type="text/javascript" src="https://d3js.org/d3.v4.min.js"></script>
-  <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+  
   <script src="https://unpkg.com/popper.js@1.14/dist/umd/popper.min.js"></script>
   <script type="text/javascript" src="https://unpkg.com/navio/dist/navio.min.js"></script>
 ```
 
-Requires [^popper.js@0.14](https://github.com/FezVrasta/popper.js/), [^d3@4.13](http://d3js.org) and [d3-scale-chromatic](https://github.com/d3/d3-scale-chromatic) (unless you use d3.v5).
+Requires [^popper.js@0.14](https://github.com/FezVrasta/popper.js/), [^d3@4.13](http://d3js.org). If you want to use d3@4 use navio@0.0.67
 
 # Usage
 
