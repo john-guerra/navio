@@ -1,22 +1,17 @@
-
-
-
-
 <!-- Place this tag where you want the button to render. -->
 <a class="github-button" href="https://github.com/john-guerra/navio" data-icon="octicon-star" data-size="large" aria-label="Star john-guerra/navio on GitHub">Star</a>
-
 
 <div align="center">
   <h1>
     <a href="https://observablehq.com/@john-guerra/navio-load"><img src="imgs/navio_thumb_v4.gif" alt="Moma Explorer" max-height="300"></a>
     Navio:
-    <small><div style="font-style: italic; margin-bottom: 1.3em" align="center">A visualization widget to understand and navigate your data</div></small>
+    <small><div style="font-style: italic; margin-bottom: 1.3em" align="center">A visualization widget to understand and explore your data</div></small>
   </h1>
 </div>
 
 
 
-Use it to <strong>summarize<strong>, <strong>explore</strong> and <strong>navigate</strong> your data using three simple interactions:
+Use it to <strong>summarize<strong>, <strong>explore</strong> and <strong>navigate</strong> your multivariate data using three simple interactions:
 
 | Sort | Filter a Range | Filter By Value|
 | -----| --- | ---|
