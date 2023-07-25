@@ -2102,7 +2102,7 @@ function navio(selection, _h) {
       // Has the user added attributes already? then update
       if (
         attribsOrdered.length >
-        (nv.showSelectedAttrib ? 1 : 0 + nv.showSequenceIDAttrib ? 1 : 0)
+        (nv.showSelectedAttrib ? 1 : 0) + (nv.showSequenceIDAttrib ? 1 : 0)
       ) {
         nv.updateData(dataIs, colScales, { shouldUpdateColorDomains: true });
       }
