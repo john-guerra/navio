@@ -385,7 +385,7 @@ function navio(selection, _h) {
         path.arc(crossSize / 2, crossSize / 2, crossSize * 1.2, 0, Math.PI * 2);
         sel.attr("d", path.toString());
       })
-      .on("click", () => deleteSubsequentLevels()); //delete last level
+      .on("click pointerup", () => deleteSubsequentLevels()); //delete last level
 
     xScale = d3
       .scaleBand()
@@ -778,7 +778,7 @@ function navio(selection, _h) {
       .merge(_brush)
       .append("g")
       .on("mousemove", onMouseOver)
-      .on("click", onSelectByValue)
+      .on("click pointerup", onSelectByValue)
       .on("mouseout", onMouseOut)
       .attr("class", "brush")
       .call(dBrushes[level])
@@ -1114,7 +1114,7 @@ function navio(selection, _h) {
       .attr("x", 0)
       .style("cursor", "not-allowed")
       .text((f) => "Ⓧ " + f.toStr())
-      .on("click", (event, f, i) => {
+      .on("click pointerup", (event, f, i) => {
         if (DEBUG) console.log("Click remove filter", i, f);
         filtersByLevel[f.level].splice(i, 1);
 
@@ -1173,7 +1173,7 @@ function navio(selection, _h) {
       // .attr("x", 0)
       .style("cursor", "not-allowed")
       .text((f) => "Ⓧ " + f.toStr())
-      .on("click", (event, f, i) => {
+      .on("click pointerup", (event, f, i) => {
         if (DEBUG) console.log("Click remove filter", i, f);
         filtersByLevel[f.level].splice(i, 1);
 
