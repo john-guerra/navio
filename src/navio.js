@@ -117,10 +117,10 @@ function navio(selection, _h) {
   nv.showSelectedAttrib = true; // Display the attribute that shows if a row is selected
   nv.showSequenceIDAttrib = true; // Display the attribute with the sequence ID
 
-  function nozoom(event) {
-    if (DEBUG) console.log("nozoom");
-    event.preventDefault();
-  }
+  // function nozoom(event) {
+  //   if (DEBUG) console.log("nozoom");
+  //   event.preventDefault();
+  // }
 
   function initTooltipPopper() {
     if (tooltipElement) tooltipElement.remove();
@@ -331,8 +331,8 @@ function navio(selection, _h) {
     selection.selectAll("*").remove();
 
     const divNavio = selection
-      .on("touchstart", nozoom)
-      .on("touchmove", nozoom)
+      // .on("touchstart", nozoom)
+      // .on("touchmove", nozoom)
       .style("height", height + "px")
       .attr("class", "navio")
       .append("div")
@@ -494,8 +494,11 @@ function navio(selection, _h) {
   }
 
   function onSortLevel(event, d) {
-    if (event && event.defaultPrevented) return; // dragged
     if (DEBUG) console.log("click " + d);
+    if (event && event.defaultPrevented) {
+      if (DEBUG) console.log("clicked, defaultPrevented");
+      return; // dragged
+    }
 
     dSortBy[d.level] = {
       attrib: d.attrib,
@@ -777,11 +780,11 @@ function navio(selection, _h) {
       .enter()
       .merge(_brush)
       .append("g")
+      .call(dBrushes[level]) // brush event must be before click (?) https://observablehq.com/@d3/click-vs-drag?collection=@d3/d3-drag
       .on("mousemove", onMouseOver)
-      .on("click pointerup", onSelectByValue)
+      .on("click", onSelectByValue)
       .on("mouseout", onMouseOut)
-      .attr("class", "brush")
-      .call(dBrushes[level])
+      .attr("class", "brush")      
       .selectAll("rect")
       .attr(
         "width",
@@ -792,11 +795,10 @@ function navio(selection, _h) {
     _brush.exit().remove();
 
     function brushed(event) {
-      if (!event.sourceEvent) return; // Only transition after input.
       if (!event.selection) {
         if (DEBUG)
           console.log(
-            "Empty selection brushing level",
+            "🖌️ Brushed",
             level,
             event.selection,
             event.type,
@@ -807,6 +809,8 @@ function navio(selection, _h) {
         // onSelectByValueFromCoords(event.sourceEvent.clientX, event.sourceEvent.clientY);
         return; // Ignore empty selections.
       }
+
+      if (!event.sourceEvent) return; // Only transition after input.
 
       // TODO do I need d3.pointer here
       const clientX = event.sourceEvent.clientX,
@@ -895,7 +899,15 @@ function navio(selection, _h) {
     } // onSelectByRange
 
     function onSelectByValue(event) {
-      if (DEBUG) console.log("click", event, d3.pointer(event));
+      if (DEBUG)
+        console.log("👉🏼 Select by value click", event, d3.pointer(event));
+      if (event.defaultPrevented) {
+        if (DEBUG)
+          console.log(
+            "Select by value click default prevented, assuming drag. return"
+          );
+        return;
+      }
       showLoading(this);
       let clientY = d3.pointer(event)[1],
         clientX = d3.pointer(event)[0];
@@ -1221,7 +1233,6 @@ function navio(selection, _h) {
           // d3.select(this).dispatch("mousemove");
           return Math.min(nv.attribFontSize, nv.attribWidth) + "px";
         })
-        .on("click", deferEvent(onSortLevel))
         .call(
           d3
             .drag()
@@ -1230,6 +1241,8 @@ function navio(selection, _h) {
             .on("drag", attribDragged)
             .on("end", attribDragended)
         )
+        .on("click", deferEvent(onSortLevel))
+        // .on("click", onSortLevel)
         .on("mousemove", function () {
           let sel = d3.select(this);
           sel =
@@ -1327,9 +1340,9 @@ function navio(selection, _h) {
   } // drawBrushes
 
   function attribDragstarted(event, d) {
+    if (DEBUG) console.log("attrib drag start", d);
     if (!event.sourceEvent.shiftKey) return;
 
-    if (DEBUG) console.log("drag start", d);
     d3.select(this.parentNode).attr("transform", function (d) {
       return (
         "translate(" +
@@ -1356,8 +1369,8 @@ function navio(selection, _h) {
   }
 
   function attribDragended(event, d) {
+    if (DEBUG) console.log("attrib drag end", d);
     if (!event.sourceEvent.shiftKey) return;
-    if (DEBUG) console.log("end", d);
 
     let attrDraggedInto = invertOrdinalScale(
       xScale,
