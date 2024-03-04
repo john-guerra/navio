@@ -15,7 +15,7 @@ Use it to <strong>summarize</strong>, <strong>explore</strong> and <strong>navig
 
 | Sort | Filter a Range | Filter By Value|
 | -----| --- | ---|
-| Click on a header to sort <br> <a href="https://navio.dev/example_vispubdata"><img src="imgs/navio_sort.gif" alt="Navio sort on les miserables network" width="300"></a> | Drag to select a range <br> <a href="http://infovis.co/momaExplorer/"><img src="imgs/navio_range.gif" alt="Moma Explorer" width="300"></a> | Click on a value to select all instances <br> <a href="https://navio.dev/example_vispubdata"> <img src="imgs/navio_value.gif" alt="Navio select a value with the vispubdata" width="300"></a> |
+| Click on a header to sort <br> <a href="https://navio.dev/example_vispubdata"><img src="imgs/navio_sort.gif" alt="Navio sort on les miserables network" width="300"></a> | Drag to select a range <br> <a href="https://john-guerra.github.io/momaExplorer"><img src="imgs/navio_range.gif" alt="Moma Explorer" width="300"></a> | Click on a value to select all instances <br> <a href="https://navio.dev/example_vispubdata"> <img src="imgs/navio_value.gif" alt="Navio select a value with the vispubdata" width="300"></a> |
 
 ## Try it!
 
