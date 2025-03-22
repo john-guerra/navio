@@ -1,6 +1,6 @@
 {
   "name": "navio",
-  "version": "0.0.70",
+  "version": "0.0.74",
   "description": "A visualization widget for summarizing and exploring data",
   "type": "module",
   "main": "dist/navio.min.js",
@@ -9,11 +9,11 @@
   "unpkg": "dist/navio.min.js",
   "jsdelivr": "dist/navio.min.js",
   "dependencies": {
-    "d3": "^7.8.4",
+    "d3": "^7.8.5",
     "popper.js": "^1.16.1"
   },
   "devDependencies": {
-    "@babel/core": "^7.21.8",
+    "@babel/core": "^7.23.2",
     "@rollup/plugin-babel": "^6.0.3",
     "@rollup/plugin-node-resolve": "^15.0.2",
     "@rollup/plugin-terser": "^0.4.3",

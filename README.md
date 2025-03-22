@@ -1,16 +1,21 @@
-<h1 align="center">
-  <br>
-  <a href="https://observablehq.com/@john-guerra/navio-load"><img src="imgs/navio_thumb_v4.gif" alt="Moma Explorer" max-height="300"></a>
-  Navio
-  <br>
-</h1>
-<h4 align="center">A visualization widget to understand and navigate your data</h4>
+<!-- Place this tag where you want the button to render. -->
+<a style="text-align: right" class="github-button" href="https://github.com/john-guerra/navio" data-icon="octicon-star" data-size="large" aria-label="Star john-guerra/navio on GitHub">Star</a>
 
-You can use it to summarize hundreds of thousands of records a dozens of columns, explore and navigate them with three simple interactions:
+<div align="center">
+  <h1>
+    <a href="https://observablehq.com/@john-guerra/navio-load"><img src="imgs/navio_thumb_v4.gif" alt="Moma Explorer" max-height="300"></a>
+    Navio:
+    <small><div style="font-style: italic; margin-bottom: 1.3em" align="center">A visualization widget to understand and explore your data</div></small>
+  </h1>
+</div>
+
+
+
+Use it to <strong>summarize</strong>, <strong>explore</strong> and <strong>navigate</strong> your multivariate data using three simple interactions:
 
 | Sort | Filter a Range | Filter By Value|
 | -----| --- | ---|
-| Click on a header to sort <br> <a href="https://navio.dev/example_vispubdata"><img src="imgs/navio_sort.gif" alt="Navio sort on les miserables network" width="300"></a> | Drag to select a range <br> <a href="http://infovis.co/momaExplorer/"><img src="imgs/navio_range.gif" alt="Moma Explorer" width="300"></a> | Click on a value to select all instances <br> <a href="https://navio.dev/example_vispubdata"> <img src="imgs/navio_value.gif" alt="Navio select a value with the vispubdata" width="300"></a> |
+| Click on a header to sort <br> <a href="https://navio.dev/example_vispubdata"><img src="imgs/navio_sort.gif" alt="Navio sort on les miserables network" width="300"></a> | Drag to select a range <br> <a href="https://john-guerra.github.io/momaExplorer"><img src="imgs/navio_range.gif" alt="Moma Explorer" width="300"></a> | Click on a value to select all instances <br> <a href="https://navio.dev/example_vispubdata"> <img src="imgs/navio_value.gif" alt="Navio select a value with the vispubdata" width="300"></a> |
 
 ## Try it!
 
@@ -61,12 +66,12 @@ Or use it from unpkg
 
 ```html
   <script type="text/javascript" src="https://d3js.org/d3.v4.min.js"></script>
-  <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+  
   <script src="https://unpkg.com/popper.js@1.14/dist/umd/popper.min.js"></script>
   <script type="text/javascript" src="https://unpkg.com/navio/dist/navio.min.js"></script>
 ```
 
-Requires [^popper.js@0.14](https://github.com/FezVrasta/popper.js/), [^d3@4.13](http://d3js.org) and [d3-scale-chromatic](https://github.com/d3/d3-scale-chromatic) (unless you use d3.v5).
+Requires [^popper.js@0.14](https://github.com/FezVrasta/popper.js/), [^d3@4.13](http://d3js.org). If you want to use d3@4 use navio@0.0.67
 
 # Usage
 
@@ -79,8 +84,7 @@ TLDR
   <div id="navio"></div>
 
   <!-- NAVIO Step 0: Load the libraries -->
-  <script type="text/javascript" src="https://d3js.org/d3.v4.min.js"></script>
-  <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+  <script type="text/javascript" src="https://d3js.org/d3.v6.min.js"></script>
   <script src="https://unpkg.com/popper.js@1.14/dist/umd/popper.min.js"></script>
   <script type="text/javascript" src="https://unpkg.com/navio/dist/navio.min.js"></script>
 
@@ -88,9 +92,7 @@ TLDR
   // NAVIO  Step 1.  Create a Navio passing a d3 selection to place it and an optional height
   var nv = navio(d3.select("#navio"), 600);
 
-  d3.csv(YOUR_DATA, function (err, data) {
-    if (err) throw err;
-
+  d3.csv(YOUR_DATA).then(data) => {
     // NAVIO Step 2. Load your data!
     nv.data(data);
 
@@ -126,8 +128,8 @@ TLDR
 ```
 2. **Import Navio**. Create and import a new JavaScript file below the scripts (d3 and Navio) or right in the html like in the example below.
 ```html
-<script src="https://d3js.org/d3.v4.min.js"></script>
-<script type="text/javascript" src="https://john-guerra.github.io/navio/Navio.js"></script>
+<script src="https://d3js.org/d3.v6.min.js"></script>
+<script type="text/javascript" src="https://unpkg.com/navio/dist/navio.min.js"></script>
 <script type="text/javascript">
   //   YOUR_JS_CODE_HERE
 </script>
@@ -279,3 +281,6 @@ Returns the ordered list of attributes added to navio
 ## License
 
 Navio.js is licensed under the MIT license. (http://opensource.org/licenses/MIT)
+
+<!-- Place this tag in your head or just before your close body tag. -->
+<script async defer src="https://buttons.github.io/buttons.js"></script>

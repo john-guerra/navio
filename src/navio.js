@@ -40,7 +40,6 @@ function navio(selection, _h) {
     links = [],
     visibleLinks = [],
     dData = new Map(), // A hash for the data
-    // dAttribs = new Map(),
     attribsOrdered = [],
     dAttribs = new Map(),
     dSortBy = [], //contains which attribute to sort by on each column
@@ -115,10 +114,13 @@ function navio(selection, _h) {
   nv.defaultColorRangeSelected = ["white", "#b5cf6b"];
   nv.defaultColorCategorical = d3.schemeCategory10;
 
-  function nozoom(event) {
-    if (DEBUG) console.log("nozoom");
-    event.preventDefault();
-  }
+  nv.showSelectedAttrib = true; // Display the attribute that shows if a row is selected
+  nv.showSequenceIDAttrib = true; // Display the attribute with the sequence ID
+
+  // function nozoom(event) {
+  //   if (DEBUG) console.log("nozoom");
+  //   event.preventDefault();
+  // }
 
   function initTooltipPopper() {
     if (tooltipElement) tooltipElement.remove();
@@ -329,8 +331,8 @@ function navio(selection, _h) {
     selection.selectAll("*").remove();
 
     const divNavio = selection
-      .on("touchstart", nozoom)
-      .on("touchmove", nozoom)
+      // .on("touchstart", nozoom)
+      // .on("touchmove", nozoom)
       .style("height", height + "px")
       .attr("class", "navio")
       .append("div")
@@ -373,7 +375,7 @@ function navio(selection, _h) {
       .style("display", "none")
       .append("path")
       .call(function (sel) {
-        var crossSize = 7,
+        let crossSize = 7,
           path = d3.path(); // Draw a cross and a circle
         path.moveTo(0, 0);
         path.lineTo(crossSize, crossSize);
@@ -383,7 +385,7 @@ function navio(selection, _h) {
         path.arc(crossSize / 2, crossSize / 2, crossSize * 1.2, 0, Math.PI * 2);
         sel.attr("d", path.toString());
       })
-      .on("click", () => deleteSubsequentLevels()); //delete last level
+      .on("click pointerup", () => deleteSubsequentLevels()); //delete last level
 
     xScale = d3
       .scaleBand()
@@ -448,9 +450,9 @@ function navio(selection, _h) {
   function invertOrdinalScale(scale, x) {
     // Taken from https://bl.ocks.org/shimizu/808e0f5cadb6a63f28bb00082dc8fe3f
     // custom invert function
-    var domain = scale.domain();
-    var range = scale.range();
-    var qScale = d3.scaleQuantize().domain(range).range(domain);
+    let domain = scale.domain();
+    let range = scale.range();
+    let qScale = d3.scaleQuantize().domain(range).range(domain);
 
     return qScale(x);
   }
@@ -468,7 +470,7 @@ function navio(selection, _h) {
 
     _dataIs = _dataIs !== undefined ? _dataIs : dataIs;
 
-    var before = performance.now();
+    let before = performance.now();
 
     const sort = dSortBy[levelToUpdate];
     _dataIs[levelToUpdate].sort(function (a, b) {
@@ -484,7 +486,7 @@ function navio(selection, _h) {
     });
     assignIndexes(_dataIs[levelToUpdate], levelToUpdate);
 
-    var after = performance.now();
+    let after = performance.now();
     if (DEBUG)
       console.log(
         "Sorting level " + levelToUpdate + " " + (after - before) + "ms"
@@ -492,8 +494,11 @@ function navio(selection, _h) {
   }
 
   function onSortLevel(event, d) {
-    if (event && event.defaultPrevented) return; // dragged
     if (DEBUG) console.log("click " + d);
+    if (event && event.defaultPrevented) {
+      if (DEBUG) console.log("clicked, defaultPrevented");
+      return; // dragged
+    }
 
     dSortBy[d.level] = {
       attrib: d.attrib,
@@ -537,7 +542,7 @@ function navio(selection, _h) {
   }
 
   function drawItem(item, level) {
-    var attrib, i, y;
+    let attrib, i, y;
 
     context.save();
     for (i = 0; i < attribsOrdered.length; i++) {
@@ -564,7 +569,7 @@ function navio(selection, _h) {
       // TODO get this out
       //If the range bands are tick enough draw divisions
       if (yScales[level].bandwidth() > nv.divisionsThreshold * 2) {
-        var yLine = Math.round(yScales[level](item[id]));
+        let yLine = Math.round(yScales[level](item[id]));
         // y = yScales[level](item[id])+yScales[level].bandwidth()/2;
         context.beginPath();
         context.moveTo(x(attribName, level), yLine);
@@ -601,7 +606,7 @@ function navio(selection, _h) {
   }
 
   function removeAllBrushesBut(but) {
-    for (var lev = 0; lev < dataIs.length; lev += 1) {
+    for (let lev = 0; lev < dataIs.length; lev += 1) {
       if (lev === but) continue;
       removeBrushOnLevel(lev);
     }
@@ -610,7 +615,7 @@ function navio(selection, _h) {
   // Assigns the indexes on the new level data
   function assignIndexes(dataIsToUpdate, level) {
     if (DEBUG) console.log("Assiging indexes ", level);
-    for (var j = 0; j < dataIsToUpdate.length; j++) {
+    for (let j = 0; j < dataIsToUpdate.length; j++) {
       data[dataIsToUpdate[j]].__i[level] = j;
     }
   }
@@ -648,7 +653,7 @@ function navio(selection, _h) {
         (f) => f.type !== "negativeValue" || f.type !== "negativeRange"
       );
 
-    var filteredData = _dataIs[level].filter((d) => {
+    let filteredData = _dataIs[level].filter((d) => {
       // OR of positives, AND of negatives
       return (data[d].selected =
         posFilters.reduce((p, f) => p || f.filter(data[d]), false) &&
@@ -672,7 +677,7 @@ function navio(selection, _h) {
       // return true;
     });
 
-    // var filteredData = filtersByLevel[level].reduce(reduceFilters, dataIs[level]);
+    // let filteredData = filtersByLevel[level].reduce(reduceFilters, dataIs[level]);
     after = performance.now();
     if (DEBUG) console.log("Applying filters " + (after - before) + "ms");
 
@@ -761,7 +766,7 @@ function navio(selection, _h) {
       .on("brush", brushed)
       .on("end", onSelectByRange);
 
-    var _brush = d3
+    let _brush = d3
       .select(this)
       .selectAll(".brush")
       .data([
@@ -775,11 +780,11 @@ function navio(selection, _h) {
       .enter()
       .merge(_brush)
       .append("g")
+      .call(dBrushes[level]) // brush event must be before click (?) https://observablehq.com/@d3/click-vs-drag?collection=@d3/d3-drag
       .on("mousemove", onMouseOver)
       .on("click", onSelectByValue)
       .on("mouseout", onMouseOut)
-      .attr("class", "brush")
-      .call(dBrushes[level])
+      .attr("class", "brush")      
       .selectAll("rect")
       .attr(
         "width",
@@ -790,11 +795,10 @@ function navio(selection, _h) {
     _brush.exit().remove();
 
     function brushed(event) {
-      if (!event.sourceEvent) return; // Only transition after input.
       if (!event.selection) {
         if (DEBUG)
           console.log(
-            "Empty selection brushing level",
+            "🖌️ Brushed",
             level,
             event.selection,
             event.type,
@@ -805,6 +809,8 @@ function navio(selection, _h) {
         // onSelectByValueFromCoords(event.sourceEvent.clientX, event.sourceEvent.clientY);
         return; // Ignore empty selections.
       }
+
+      if (!event.sourceEvent) return; // Only transition after input.
 
       // TODO do I need d3.pointer here
       const clientX = event.sourceEvent.clientX,
@@ -835,10 +841,10 @@ function navio(selection, _h) {
       showLoading(this);
       removeAllBrushesBut(level);
 
-      var before = performance.now();
-      var brushed = event.selection;
+      let before = performance.now();
+      let brushed = event.selection;
 
-      var // first = dData.get(invertOrdinalScale(yScales[level], brushed[0] -yScales[level].bandwidth())),
+      let // first = dData.get(invertOrdinalScale(yScales[level], brushed[0] -yScales[level].bandwidth())),
         first = dData.get(invertOrdinalScale(yScales[level], brushed[0])),
         // last = dData.get(invertOrdinalScale(yScales[level], brushed[1] -yScales[level].bandwidth()))
         last = dData.get(invertOrdinalScale(yScales[level], brushed[1]));
@@ -866,7 +872,7 @@ function navio(selection, _h) {
 
       if (event.sourceEvent.shiftKey) {
         // First filter, create the list
-        if (!filtersByLevel.hasOwnProperty(level)) {
+        if (!(level in filtersByLevel)) {
           filtersByLevel[level] = [];
         }
         // Append the filter
@@ -881,7 +887,7 @@ function navio(selection, _h) {
 
       applyFiltersAndUpdate(level);
 
-      var after = performance.now();
+      let after = performance.now();
       if (DEBUG)
         console.log(
           "selectByRange filtering " + (after - before) + "ms",
@@ -893,9 +899,17 @@ function navio(selection, _h) {
     } // onSelectByRange
 
     function onSelectByValue(event) {
-      if (DEBUG) console.log("click", event, d3.pointer(event));
+      if (DEBUG)
+        console.log("👉🏼 Select by value click", event, d3.pointer(event));
+      if (event.defaultPrevented) {
+        if (DEBUG)
+          console.log(
+            "Select by value click default prevented, assuming drag. return"
+          );
+        return;
+      }
       showLoading(this);
-      var clientY = d3.pointer(event)[1],
+      let clientY = d3.pointer(event)[1],
         clientX = d3.pointer(event)[0];
 
       onSelectByValueFromCoords(event, clientX, clientY);
@@ -1112,8 +1126,8 @@ function navio(selection, _h) {
       .attr("x", 0)
       .style("cursor", "not-allowed")
       .text((f) => "Ⓧ " + f.toStr())
-      .on("click", (f, i) => {
-        console.log("Click remove filter", i, f);
+      .on("click pointerup", (event, f, i) => {
+        if (DEBUG) console.log("Click remove filter", i, f);
         filtersByLevel[f.level].splice(i, 1);
 
         applyFiltersAndUpdate(f.level);
@@ -1171,8 +1185,8 @@ function navio(selection, _h) {
       // .attr("x", 0)
       .style("cursor", "not-allowed")
       .text((f) => "Ⓧ " + f.toStr())
-      .on("click", (f, i) => {
-        console.log("Click remove filter", i, f);
+      .on("click pointerup", (event, f, i) => {
+        if (DEBUG) console.log("Click remove filter", i, f);
         filtersByLevel[f.level].splice(i, 1);
 
         applyFiltersAndUpdate(f.level);
@@ -1219,7 +1233,6 @@ function navio(selection, _h) {
           // d3.select(this).dispatch("mousemove");
           return Math.min(nv.attribFontSize, nv.attribWidth) + "px";
         })
-        .on("click", deferEvent(onSortLevel))
         .call(
           d3
             .drag()
@@ -1228,14 +1241,16 @@ function navio(selection, _h) {
             .on("drag", attribDragged)
             .on("end", attribDragended)
         )
+        .on("click", deferEvent(onSortLevel))
+        // .on("click", onSortLevel)
         .on("mousemove", function () {
-          var sel = d3.select(this);
+          let sel = d3.select(this);
           sel =
             sel.transition !== undefined ? sel.transition().duration(150) : sel;
           sel.style("font-size", nv.attribFontSizeSelected + "px");
         })
         .on("mouseout", function () {
-          var sel = d3.select(this);
+          let sel = d3.select(this);
           sel =
             sel.transition !== undefined ? sel.transition().duration(150) : sel;
           sel.style(
@@ -1248,9 +1263,9 @@ function navio(selection, _h) {
   }
 
   function drawAttributesHolders(levelOverlay, levelOverlayEnter) {
-    var attribs = attribsOrdered;
+    let attribs = attribsOrdered;
 
-    var attribOverlay = levelOverlayEnter
+    let attribOverlay = levelOverlayEnter
       .merge(levelOverlay)
       .selectAll(".attribOverlay")
       .data(function (_, i) {
@@ -1263,7 +1278,7 @@ function navio(selection, _h) {
         });
       });
 
-    var attribOverlayEnter = attribOverlay
+    let attribOverlayEnter = attribOverlay
       .enter()
       .append("g")
       .attr("class", "attribOverlay")
@@ -1298,12 +1313,12 @@ function navio(selection, _h) {
   }
 
   function drawBrushes(recomputeBrushes) {
-    var levelOverlay = svg
+    let levelOverlay = svg
       .select(".attribs")
       .selectAll(".levelOverlay")
       .data(dataIs);
 
-    var levelOverlayEnter = levelOverlay.enter().append("g");
+    let levelOverlayEnter = levelOverlay.enter().append("g");
 
     levelOverlayEnter.attr("class", "levelOverlay").attr("id", function (d, i) {
       return "level" + i;
@@ -1325,9 +1340,9 @@ function navio(selection, _h) {
   } // drawBrushes
 
   function attribDragstarted(event, d) {
+    if (DEBUG) console.log("attrib drag start", d);
     if (!event.sourceEvent.shiftKey) return;
 
-    if (DEBUG) console.log("drag start", d);
     d3.select(this.parentNode).attr("transform", function (d) {
       return (
         "translate(" +
@@ -1354,8 +1369,8 @@ function navio(selection, _h) {
   }
 
   function attribDragended(event, d) {
+    if (DEBUG) console.log("attrib drag end", d);
     if (!event.sourceEvent.shiftKey) return;
-    if (DEBUG) console.log("end", d);
 
     let attrDraggedInto = invertOrdinalScale(
       xScale,
@@ -1363,7 +1378,7 @@ function navio(selection, _h) {
     );
     attrDraggedInto = dAttribs.get(attrDraggedInto);
 
-    var pos;
+    let pos;
     d3.select(this.parentNode).attr("transform", function (d) {
       return (
         "translate(" +
@@ -1382,7 +1397,7 @@ function navio(selection, _h) {
   }
 
   function drawCloseButton() {
-    var maxLevel = dataIs.length - 1;
+    let maxLevel = dataIs.length - 1;
     svg
       .select("#closeButton")
       .style("display", dataIs.length === 1 ? "none" : "block")
@@ -1401,7 +1416,7 @@ function navio(selection, _h) {
 
   // Links between nodes
   function drawLink(link) {
-    var lastAttrib = xScale.domain()[xScale.domain().length - 1],
+    let lastAttrib = xScale.domain()[xScale.domain().length - 1],
       rightBorder = x(lastAttrib, dataIs.length - 1) + xScale.bandwidth() + 2,
       ys =
         yScales[dataIs.length - 1](link.source[id]) +
@@ -1468,23 +1483,23 @@ function navio(selection, _h) {
     }
     for (let item of dataIs[level].representatives) {
       // Compute the yPrev by calculating the index of the corresponding representative
-      var iOnPrev = dData.get(data[item][id]).__i[level - 1];
-      var iRep = Math.floor(
+      let iOnPrev = dData.get(data[item][id]).__i[level - 1];
+      let iRep = Math.floor(
         iOnPrev - (iOnPrev % dataIs[level - 1].itemsPerpixel)
       );
       // if (DEBUG) console.log("i rep = "+ iRep);
       // if (DEBUG) console.log(data[level-1][iRep]);
       // if (DEBUG) console.log(yScales[level-1](data[level-1][iRep][id]));
-      var locPrevLevel = {
+      let locPrevLevel = {
         x: levelScale(level - 1) + xScale.range()[1],
         y: yScales[level - 1](data[dataIs[level - 1][iRep]][id]),
       };
-      var locLevel = {
+      let locLevel = {
         x: levelScale(level),
         y: yScales[level](data[item][id]),
       };
 
-      var points = [
+      let points = [
         locPrevLevel,
         { x: locPrevLevel.x + nv.levelsSeparation * 0.3, y: locPrevLevel.y },
         { x: locLevel.x - nv.levelsSeparation * 0.3, y: locLevel.y },
@@ -1536,7 +1551,7 @@ function navio(selection, _h) {
     for (let attrib of attribsOrdered) {
       if (attrib === "selected") continue;
 
-      var scale = colScales.get(attrib);
+      let scale = colScales.get(attrib);
       if (scale.__type === "seq" || scale.__type === "date") {
         scale.domain(
           d3.extent(
@@ -1671,7 +1686,7 @@ function navio(selection, _h) {
   }
 
   function moveAttrToPos(attr, pos) {
-    var i = attribsOrdered.indexOf(attr);
+    let i = attribsOrdered.indexOf(attr);
     if (i === -1) {
       console.log("moveAttrToPos attr not found", attr);
       return;
@@ -1739,7 +1754,7 @@ function navio(selection, _h) {
   }
 
   nv.initData = function (mData, mColScales) {
-    var before = performance.now();
+    let before = performance.now();
 
     // getAttribsFromObject(mData[0][0]);
     colScales = mColScales;
@@ -1759,7 +1774,7 @@ function navio(selection, _h) {
     filtersByLevel[0] = []; // Initialice filters as empty for lev 0
     // nv.updateData(mData, mColScales, mSortByAttr);
 
-    var after = performance.now();
+    let after = performance.now();
     if (DEBUG) console.log("Init data " + (after - before) + "ms");
   };
 
@@ -1772,7 +1787,7 @@ function navio(selection, _h) {
     } = opts || {};
 
     if (DEBUG) console.log("updateData");
-    var before = performance.now();
+    let before = performance.now();
 
     if (typeof mDataIs !== typeof []) {
       console.log("navio updateData didn't receive an array");
@@ -1805,7 +1820,7 @@ function navio(selection, _h) {
       recomputeBrushes,
     });
 
-    var after = performance.now();
+    let after = performance.now();
     if (DEBUG) console.log("Updating data " + (after - before) + "ms");
   }; // updateData
 
@@ -1823,9 +1838,9 @@ function navio(selection, _h) {
     shouldDrawBrushes =
       shouldDrawBrushes !== undefined ? shouldDrawBrushes : true;
 
-    var before = performance.now();
+    let before = performance.now();
 
-    var w = levelScale.range()[1] + nv.margin + nv.x0;
+    let w = levelScale.range()[1] + nv.margin + nv.x0;
 
     // If updating all levels erase everything
     // if (levelsToUpdate===undefined) {
@@ -1857,7 +1872,7 @@ function navio(selection, _h) {
       drawCloseButton();
     }
 
-    var after = performance.now();
+    let after = performance.now();
     if (DEBUG) console.log("Redrawing " + (after - before) + "ms");
     return nv;
   };
@@ -1978,7 +1993,7 @@ function navio(selection, _h) {
         "addAllAttribs called without data to guess the attribs. Make sure to call it after setting the data"
       );
 
-    var attribs =
+    let attribs =
       _attribs !== undefined
         ? _attribs
         : getAttribsFromObjectAsFn(data[0], nv.addAllAttribsRecursionLevel);
@@ -2068,7 +2083,7 @@ function navio(selection, _h) {
   nv.data = function (_) {
     initTooltipPopper();
 
-    if (!colScales.has("selected")) {
+    if (nv.showSelectedAttrib && !colScales.has("selected")) {
       nv.addAttrib(
         "selected",
         d3
@@ -2079,7 +2094,7 @@ function navio(selection, _h) {
       );
       moveAttrToPos("selected", 0);
     }
-    if (!colScales.has("__seqId")) {
+    if (nv.showSequenceIDAttrib && !colScales.has("__seqId")) {
       nv.addSequentialAttrib("__seqId");
       moveAttrToPos("__seqId", 1);
     }
@@ -2098,7 +2113,10 @@ function navio(selection, _h) {
       nv.initData(dataIs, colScales);
 
       // Has the user added attributes already? then update
-      if (attribsOrdered.length > 2) {
+      if (
+        attribsOrdered.length >
+        (nv.showSelectedAttrib ? 1 : 0) + (nv.showSequenceIDAttrib ? 1 : 0)
+      ) {
         nv.updateData(dataIs, colScales, { shouldUpdateColorDomains: true });
       }
 
