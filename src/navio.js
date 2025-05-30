@@ -795,6 +795,7 @@ function navio(selection, _h) {
     _brush.exit().remove();
 
     function brushed(event) {
+      console.log('dn', event)
       if (!event.selection) {
         if (DEBUG)
           console.log(
@@ -811,6 +812,8 @@ function navio(selection, _h) {
       }
 
       if (!event.sourceEvent) return; // Only transition after input.
+      console.log('dn2', event)
+      onSelectByRange(event);
 
       // TODO do I need d3.pointer here
       const clientX = event.sourceEvent.clientX,
