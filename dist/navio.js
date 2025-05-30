@@ -1114,8 +1114,7 @@ function navio(selection, _h) {
           yScales[level].range()[1],
         ],
       ])
-      .on("brush", brushed)
-      .on("end", onSelectByRange);
+      .on("brush", brushed);
 
     let _brush = d3__namespace
       .select(this)
