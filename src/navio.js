@@ -29,7 +29,7 @@ import {
   getAttribsFromObjectAsFn,
 } from "./utils.js";
 
-let DEBUG = true;
+let DEBUG = false;
 
 //eleId must be the ID of a context element where everything is going to be drawn
 function navio(selection, _h) {
