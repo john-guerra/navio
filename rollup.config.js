@@ -4,7 +4,11 @@ import node from "@rollup/plugin-node-resolve";
 import commonjs from "rollup-plugin-commonjs";
 import terser from "@rollup/plugin-terser";
 // import babel from "rollup-plugin-babel";
-import meta from "./package.json" assert { type: "json" };
+
+
+//import meta from "./package.json" assert { type: "json" };
+const meta = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf-8"));
+
 
 // const copyright = `// ${meta.homepage} v${
 //   meta.version
