@@ -25,6 +25,7 @@
     "rollup-plugin-commonjs": "^10.1.0"
   },
   "scripts": {
+    "serve": "npx http-server -c-1 ./dist -p 5323",
     "build": "rollup -c",
     "dev": "rollup -c -w",
     "test": "node test/test.js",
