@@ -1,3 +1,5 @@
+# DN NOTE: use `serve` and `build` scripts in dev
+
 <!-- Place this tag where you want the button to render. -->
 <a style="text-align: right" class="github-button" href="https://github.com/john-guerra/navio" data-icon="octicon-star" data-size="large" aria-label="Star john-guerra/navio on GitHub">Star</a>
 
