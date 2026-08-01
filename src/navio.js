@@ -29,7 +29,6 @@ import {
   getAttribsFromObjectAsFn,
 } from "./utils.js";
 
-let DEBUG = false;
 let navioInstanceCount = 0;
 
 //selection should be a d3 selection or a string with the id of the element
@@ -121,15 +120,16 @@ function navio(selection, _h) {
 
   nv.showSelectedAttrib = true; // Display the attribute that shows if a row is selected
   nv.showSequenceIDAttrib = true; // Display the attribute with the sequence ID
+  nv.DEBUG = false; // Set to true to trace Navio's internals to the console
   nv.stringify = JSON.stringify; // function to use to stringify the data, for speeding up use d => d
 
   // function nozoom(event) {
-  //   if (DEBUG) console.log("nozoom");
+  //   if (nv.DEBUG) console.log("nozoom");
   //   event.preventDefault();
   // }
 
   function initTooltipPopper() {
-    if (DEBUG)
+    if (nv.DEBUG)
       console.log("initTooltipPopper, selection", selection, selection.node());
     if (tooltipElement) tooltipElement.remove();
 
@@ -455,7 +455,7 @@ function navio(selection, _h) {
 
   function updateSorting(levelToUpdate, _dataIs) {
     if (!Object.prototype.hasOwnProperty.call(dSortBy, levelToUpdate)) {
-      if (DEBUG)
+      if (nv.DEBUG)
         console.log(
           "UpdateSorting called without attrib in dSortBy",
           levelToUpdate,
@@ -483,16 +483,16 @@ function navio(selection, _h) {
     assignIndexes(_dataIs[levelToUpdate], levelToUpdate);
 
     let after = performance.now();
-    if (DEBUG)
+    if (nv.DEBUG)
       console.log(
         "Sorting level " + levelToUpdate + " " + (after - before) + "ms"
       );
   }
 
   function onSortLevel(event, d) {
-    if (DEBUG) console.log("click " + d);
+    if (nv.DEBUG) console.log("click " + d);
     if (event && event.defaultPrevented) {
-      if (DEBUG) console.log("clicked, defaultPrevented");
+      if (nv.DEBUG) console.log("clicked, defaultPrevented");
       return; // dragged
     }
 
@@ -521,7 +521,7 @@ function navio(selection, _h) {
       try {
         return attrib(item);
       } catch (e) {
-        if (DEBUG)
+        if (nv.DEBUG)
           console.log(
             "navio error getting attrib with item ",
             item,
@@ -618,7 +618,7 @@ function navio(selection, _h) {
 
   // Assigns the indexes on the new level data
   function assignIndexes(dataIsToUpdate, level) {
-    if (DEBUG) console.log("Assiging indexes ", level);
+    if (nv.DEBUG) console.log("Assiging indexes ", level);
     for (let j = 0; j < dataIsToUpdate.length; j++) {
       data[dataIsToUpdate[j]].__i[level] = j;
     }
@@ -640,7 +640,7 @@ function navio(selection, _h) {
 
     _dataIs = _dataIs !== undefined ? _dataIs : dataIs;
 
-    if (DEBUG)
+    if (nv.DEBUG)
       console.log(
         "applyFilters level=",
         level,
@@ -683,7 +683,7 @@ function navio(selection, _h) {
 
     // let filteredData = filtersByLevel[level].reduce(reduceFilters, dataIs[level]);
     after = performance.now();
-    if (DEBUG) console.log("Applying filters " + (after - before) + "ms");
+    if (nv.DEBUG) console.log("Applying filters " + (after - before) + "ms");
 
     return filteredData;
   }
@@ -701,7 +701,7 @@ function navio(selection, _h) {
   }
 
   function applyFiltersAndUpdate(fromLevel) {
-    if (DEBUG) console.log("applyFiltersAndUpdate ", fromLevel);
+    if (nv.DEBUG) console.log("applyFiltersAndUpdate ", fromLevel);
 
     const lastLevel = getLastLevelFromFilters();
 
@@ -727,7 +727,7 @@ function navio(selection, _h) {
       assignIndexes(filteredData, level + 1);
 
       if (filteredData.length === 0) {
-        if (DEBUG) console.log("Empty filteredData!");
+        if (nv.DEBUG) console.log("Empty filteredData!");
         //   return;
       }
       // newData = dataIs.slice(0,level+1);
@@ -739,7 +739,7 @@ function navio(selection, _h) {
 
       // Update sortings of the next level
       updateSorting(level + 1);
-      if (DEBUG)
+      if (nv.DEBUG)
         console.log(
           `ApplyFiltersAndUpdate level ${level} filtered = ${filteredData.length} `
         );
@@ -751,7 +751,7 @@ function navio(selection, _h) {
       levelsToUpdate: d3.range(fromLevel, newData.length), // Range is not inclusive so is not length-1
     });
 
-    if (DEBUG)
+    if (nv.DEBUG)
       console.log("All filters applied calling updateCallback", dataIs);
     updateCallback(nv.getVisible());
   }
@@ -800,7 +800,7 @@ function navio(selection, _h) {
 
     function brushed(event) {
       if (!event.selection) {
-        if (DEBUG)
+        if (nv.DEBUG)
           console.log(
             "🖌️ Brushed",
             level,
@@ -828,7 +828,7 @@ function navio(selection, _h) {
     function onSelectByRange(event) {
       if (!event.sourceEvent) return; // Only transition after input.
       if (!event.selection) {
-        if (DEBUG)
+        if (nv.DEBUG)
           console.log(
             "Empty selection level",
             level,
@@ -892,7 +892,7 @@ function navio(selection, _h) {
       applyFiltersAndUpdate(level);
 
       let after = performance.now();
-      if (DEBUG)
+      if (nv.DEBUG)
         console.log(
           "selectByRange filtering " + (after - before) + "ms",
           first,
@@ -903,10 +903,10 @@ function navio(selection, _h) {
     } // onSelectByRange
 
     function onSelectByValue(event) {
-      if (DEBUG)
+      if (nv.DEBUG)
         console.log("👉🏼 Select by value click", event, d3.pointer(event));
       if (event.defaultPrevented) {
-        if (DEBUG)
+        if (nv.DEBUG)
           console.log(
             "Select by value click default prevented, assuming drag. return"
           );
@@ -922,22 +922,24 @@ function navio(selection, _h) {
     }
 
     function onSelectByValueFromCoords(event, clientX, clientY) {
-      if (DEBUG) console.log("onSelectByValueFromCoords", clientX, clientY);
+      if (nv.DEBUG) console.log("onSelectByValueFromCoords", clientX, clientY);
 
       removeAllBrushesBut(-1); // Remove all brushes
 
       const before = performance.now();
       const itemId = invertOrdinalScale(yScales[level], clientY);
       const after = performance.now();
-      if (DEBUG) console.log("invertOrdinalScale " + (after - before) + "ms");
+      if (nv.DEBUG)
+        console.log("invertOrdinalScale " + (after - before) + "ms");
 
       let itemAttr = invertOrdinalScale(xScale, clientX - levelScale(level));
       if (itemAttr === undefined) {
-        console.log(
-          `navio.selectByValue: error, couldn't find attr in coords ${
-            (clientX, clientY)
-          }`
-        );
+        if (nv.DEBUG)
+          console.log(
+            `navio.selectByValue: error, couldn't find attr in coords ${
+              (clientX, clientY)
+            }`
+          );
         return;
       }
       itemAttr = dAttribs.get(itemAttr);
@@ -976,7 +978,7 @@ function navio(selection, _h) {
 
       applyFiltersAndUpdate(level);
 
-      if (DEBUG)
+      if (nv.DEBUG)
         console.log(
           "Selected " + nv.getVisible().length + " calling updateCallback"
         );
@@ -988,7 +990,7 @@ function navio(selection, _h) {
     try {
       itemId = invertOrdinalScale(yScales[level], yOnWidget);
     } catch (e) {
-      DEBUG && console.log("Navio.showTooltip Error inverting scale", e);
+      nv.DEBUG && console.log("Navio.showTooltip Error inverting scale", e);
       return;
     }
 
@@ -998,7 +1000,10 @@ function navio(selection, _h) {
     itemAttr = dAttribs.get(itemAttr);
 
     if (!d || d === undefined) {
-      console.log("Couldn't find datum for tooltip y", yOnWidget, d);
+      // Fires whenever the pointer is over a gap; trace only, and this runs on
+      // every mousemove.
+      if (nv.DEBUG)
+        console.log("Couldn't find datum for tooltip y", yOnWidget, d);
       return;
     }
 
@@ -1015,7 +1020,7 @@ function navio(selection, _h) {
 
     tooltip.scheduleUpdate();
 
-    // if ( DEBUG ) console.log("Mouse over", d);
+    // if ( nv.DEBUG ) console.log("Mouse over", d);
   }
 
   function onMouseOver(event, overData) {
@@ -1024,7 +1029,7 @@ function navio(selection, _h) {
       clientX = event.clientX,
       clientY = event.clientY;
 
-    DEBUG &&
+    nv.DEBUG &&
       console.log(
         "🐁 navio.onMouseOver",
         xOnWidget,
@@ -1043,11 +1048,11 @@ function navio(selection, _h) {
     // // console.log("key");
 
     if (!overData.data || overData.data.length === 0) {
-      if (DEBUG) console.log("onMouseOver no data", overData);
+      if (nv.DEBUG) console.log("onMouseOver no data", overData);
       return;
     }
 
-    // if (DEBUG) console.log("onMouseOver", xOnWidget, yOnWidget, clientY, event.pageY, event.offsetY, event);
+    // if (nv.DEBUG) console.log("onMouseOver", xOnWidget, yOnWidget, clientY, event.pageY, event.offsetY, event);
     showTooptip(xOnWidget, yOnWidget, clientX, clientY, overData.level);
   }
 
@@ -1142,7 +1147,7 @@ function navio(selection, _h) {
       .on("click", (event, f) => {
         const levelFilters = filtersByLevel[f.level];
         const i = levelFilters.indexOf(f);
-        if (DEBUG) console.log("Click remove filter", i, f);
+        if (nv.DEBUG) console.log("Click remove filter", i, f);
         if (i === -1) return; // Already removed (e.g. a stale/duplicate event).
         levelFilters.splice(i, 1);
 
@@ -1296,7 +1301,7 @@ function navio(selection, _h) {
   } // drawBrushes
 
   function attribDragstarted(event, d) {
-    if (DEBUG) console.log("attrib drag start", d);
+    if (nv.DEBUG) console.log("attrib drag start", d);
     if (!event.sourceEvent.shiftKey) return;
 
     d3.select(this.parentNode).attr("transform", function (d) {
@@ -1325,7 +1330,7 @@ function navio(selection, _h) {
   }
 
   function attribDragended(event, d) {
-    if (DEBUG) console.log("attrib drag end", d);
+    if (nv.DEBUG) console.log("attrib drag end", d);
     if (!event.sourceEvent.shiftKey) return;
 
     let attrDraggedInto = invertOrdinalScale(
@@ -1394,7 +1399,7 @@ function navio(selection, _h) {
 
   function drawLinks() {
     if (!links.length) return;
-    if (DEBUG)
+    if (nv.DEBUG)
       console.log("Draw links ", links[links.length - 1].length, links);
     context.save();
     context.beginPath();
@@ -1443,9 +1448,9 @@ function navio(selection, _h) {
       let iRep = Math.floor(
         iOnPrev - (iOnPrev % dataIs[level - 1].itemsPerpixel)
       );
-      // if (DEBUG) console.log("i rep = "+ iRep);
-      // if (DEBUG) console.log(data[level-1][iRep]);
-      // if (DEBUG) console.log(yScales[level-1](data[level-1][iRep][id]));
+      // if (nv.DEBUG) console.log("i rep = "+ iRep);
+      // if (nv.DEBUG) console.log(data[level-1][iRep]);
+      // if (nv.DEBUG) console.log(yScales[level-1](data[level-1][iRep][id]));
       let locPrevLevel = {
         x: levelScale(level - 1) + xScale.range()[1],
         y: yScales[level - 1](data[dataIs[level - 1][iRep]][id]),
@@ -1481,14 +1486,14 @@ function navio(selection, _h) {
   }
 
   function computeRepresentatives(levelToUpdate) {
-    if (DEBUG) console.log("Compute representatives levels", levelToUpdate);
+    if (nv.DEBUG) console.log("Compute representatives levels", levelToUpdate);
     let representatives = [];
     if (dataIs[levelToUpdate].length > height) {
       const itemsPerpixel = Math.max(
         Math.floor(dataIs[levelToUpdate].length / (height * 2)),
         1
       );
-      if (DEBUG) console.log("itemsPerpixel", itemsPerpixel);
+      if (nv.DEBUG) console.log("itemsPerpixel", itemsPerpixel);
       dataIs[levelToUpdate].itemsPerpixel = itemsPerpixel;
       for (let i = 0; i < dataIs[levelToUpdate].length; i += itemsPerpixel) {
         representatives.push(dataIs[levelToUpdate][i]);
@@ -1502,7 +1507,7 @@ function navio(selection, _h) {
   }
 
   function updateColorDomains() {
-    if (DEBUG) console.log("Update color scale domains");
+    if (nv.DEBUG) console.log("Update color scale domains");
     // colScales = new Map();
     for (let attrib of attribsOrdered) {
       if (attrib === "selected") continue;
@@ -1534,7 +1539,7 @@ function navio(selection, _h) {
 
   function updateScales(opts) {
     let { levelsToUpdate, shouldUpdateColorDomains } = opts || {};
-    if (DEBUG) console.log("Update scales");
+    if (nv.DEBUG) console.log("Update scales");
 
     const before = performance.now();
 
@@ -1545,7 +1550,7 @@ function navio(selection, _h) {
       shouldUpdateColorDomains !== undefined ? shouldUpdateColorDomains : false;
 
     // Delete unvecessary scales
-    if (DEBUG) console.log("Delete unvecessary scales");
+    if (nv.DEBUG) console.log("Delete unvecessary scales");
     yScales.splice(lastLevel + 1, yScales.length);
 
     for (let levelToUp of levelsToUpdate) {
@@ -1590,7 +1595,7 @@ function navio(selection, _h) {
     }
 
     const after = performance.now();
-    if (DEBUG) console.log("Updating Scales " + (after - before) + "ms");
+    if (nv.DEBUG) console.log("Updating Scales " + (after - before) + "ms");
   }
 
   // Deletes the last level by default, or all the subsequent levels of _level on _dataIs
@@ -1604,13 +1609,13 @@ function navio(selection, _h) {
     shouldUpdate = shouldUpdate !== undefined ? shouldUpdate : true;
 
     if (!Object.prototype.hasOwnProperty.call(_dataIs, level)) {
-      if (DEBUG)
+      if (nv.DEBUG)
         console.log("Asked to delete a level that doens't exist ", level);
       return _dataIs;
     }
 
     showLoading(this);
-    if (DEBUG) console.log("Delete one level", level);
+    if (nv.DEBUG) console.log("Delete one level", level);
     if (level > 0) {
       removeBrushOnLevel(level - 1);
 
@@ -1644,12 +1649,12 @@ function navio(selection, _h) {
   function moveAttrToPos(attr, pos) {
     let i = attribsOrdered.indexOf(attr);
     if (i === -1) {
-      console.log("moveAttrToPos attr not found", attr);
+      console.warn("navio.moveAttrToPos: attribute not found", attr);
       return;
     }
     if (pos > attribsOrdered.length || pos < 0) {
-      console.log(
-        "moveAttrToPos pos out of bounds",
+      console.warn(
+        "navio.moveAttrToPos: position out of bounds",
         pos,
         attribsOrdered.length
       );
@@ -1694,7 +1699,7 @@ function navio(selection, _h) {
 
   function updateWidthAndHeight() {
     const ctxWidth = levelScale.range()[1] + nv.margin + nv.x0;
-    DEBUG && console.log("updateWidthAndHeight: ", ctxWidth, height);
+    nv.DEBUG && console.log("updateWidthAndHeight: ", ctxWidth, height);
     const scale = window.devicePixelRatio || 1;
     d3.select(canvas)
       .attr("width", ctxWidth * scale)
@@ -1731,7 +1736,7 @@ function navio(selection, _h) {
     // nv.updateData(mData, mColScales, mSortByAttr);
 
     let after = performance.now();
-    if (DEBUG) console.log("Init data " + (after - before) + "ms");
+    if (nv.DEBUG) console.log("Init data " + (after - before) + "ms");
   };
 
   nv.updateData = function (mDataIs, mColScales, opts) {
@@ -1742,11 +1747,11 @@ function navio(selection, _h) {
       recomputeBrushes,
     } = opts || {};
 
-    if (DEBUG) console.log("updateData");
+    if (nv.DEBUG) console.log("updateData");
     let before = performance.now();
 
     if (typeof mDataIs !== typeof []) {
-      console.log("navio updateData didn't receive an array");
+      console.warn("navio.updateData: expected an array, got", typeof mDataIs);
       return;
     }
 
@@ -1777,7 +1782,7 @@ function navio(selection, _h) {
     });
 
     let after = performance.now();
-    if (DEBUG) console.log("Updating data " + (after - before) + "ms");
+    if (nv.DEBUG) console.log("Updating data " + (after - before) + "ms");
   }; // updateData
 
   nv.update = function (opts) {
@@ -1817,7 +1822,7 @@ function navio(selection, _h) {
     //     if (! dataIs.length.hasOwnProperty(levelToUp)) {
     //       updateLevel(dataIs[levelToUp], levelToUp);
     //     } else {
-    //       if (DEBUG) console.log("Asked to update a level that doesn't exist, ignoring. Level=" , levelToUp, " levs to update" levelsToUpdate);
+    //       if (nv.DEBUG) console.log("Asked to update a level that doesn't exist, ignoring. Level=" , levelToUp, " levs to update" levelsToUpdate);
     //     }
 
     //   });
@@ -1829,7 +1834,7 @@ function navio(selection, _h) {
     }
 
     let after = performance.now();
-    if (DEBUG) console.log("Redrawing " + (after - before) + "ms");
+    if (nv.DEBUG) console.log("Redrawing " + (after - before) + "ms");
     return nv;
   };
 
@@ -1838,7 +1843,7 @@ function navio(selection, _h) {
       scale = d3.scaleOrdinal(d3.schemeCategory10);
     }
     if (dAttribs.has(getAttribName(attr))) {
-      console.log(`navio.addAttrib attribute ${attr} already added`);
+      console.warn(`navio.addAttrib: attribute ${attr} already added`);
       return;
     }
     attribsOrdered.push(attr);
@@ -1984,6 +1989,11 @@ function navio(selection, _h) {
       _attribs !== undefined
         ? _attribs
         : getAttribsFromObjectAsFn(data[0], nv.addAllAttribsRecursionLevel);
+    // Attributes we skip are reported once at the end rather than one console
+    // line per column, so the message stays readable on wide datasets.
+    const skippedArrays = [],
+      skippedObjects = [];
+
     for (let attr of attribs) {
       if (attr === "__seqId" || attr === "__i" || attr === "selected") continue;
 
@@ -2003,66 +2013,80 @@ function navio(selection, _h) {
 
         // How many different elements are there
         if (numDistictValues < nv.maxNumDistictForCategorical) {
-          console.log(
-            `Navio: Adding attr ${attrName} as categorical with ${numDistictValues} categories`
-          );
+          nv.DEBUG &&
+            console.log(
+              `Navio: Adding attr ${attrName} as categorical with ${numDistictValues} categories`
+            );
           nv.addCategoricalAttrib(attr);
         } else if (numDistictValues < nv.maxNumDistictForOrdered) {
           nv.addOrderedAttrib(attr);
-          console.log(
-            `Navio: Attr ${attrName} has more than ${nv.maxNumDistictForCategorical} distinct values (${numDistictValues}) using orderedAttrib`
-          );
+          nv.DEBUG &&
+            console.log(
+              `Navio: Attr ${attrName} has more than ${nv.maxNumDistictForCategorical} distinct values (${numDistictValues}) using orderedAttrib`
+            );
         } else {
-          console.log(
-            `Navio: Attr ${attrName} has more than ${nv.maxNumDistictForOrdered} distinct values (${numDistictValues}) using textAttrib`
-          );
+          nv.DEBUG &&
+            console.log(
+              `Navio: Attr ${attrName} has more than ${nv.maxNumDistictForOrdered} distinct values (${numDistictValues}) using textAttrib`
+            );
           nv.addTextAttrib(attr);
         }
       } else if (typeof firstNotNull === typeof 0) {
         // Numbers
         if (d3.min(data, (d) => getAttrib(d, attr)) < 0) {
-          console.log(`Navio: Adding attr ${attrName} as diverging`);
+          nv.DEBUG &&
+            console.log(`Navio: Adding attr ${attrName} as diverging`);
           nv.addDivergingAttrib(attr);
         } else {
-          console.log(`Navio: Adding attr ${attrName} as sequential`);
+          nv.DEBUG &&
+            console.log(`Navio: Adding attr ${attrName} as sequential`);
           nv.addSequentialAttrib(attr);
         }
       } else if (firstNotNull instanceof Date) {
-        console.log(`Navio: Adding attr ${attrName} as date`);
+        nv.DEBUG && console.log(`Navio: Adding attr ${attrName} as date`);
         nv.addDateAttrib(attr);
       } else if (typeof firstNotNull === typeof true) {
-        console.log(`Navio: Adding attr ${attrName} as boolean`);
+        nv.DEBUG && console.log(`Navio: Adding attr ${attrName} as boolean`);
         nv.addBooleanAttrib(attr);
       } else {
         // Default categories
 
         if (Array.isArray(firstNotNull)) {
           if (nv.addAllAttribsIncludeArrays) {
-            console.log(
-              `Navio: Adding ${attrName} adding as Object (type=array)`
-            );
+            nv.DEBUG &&
+              console.log(
+                `Navio: Adding ${attrName} adding as Object (type=array)`
+              );
             // nv.addCategoricalAttrib(attr);
             nv.addObjectAttrib(attr);
           } else {
-            console.log(
-              `Navio: AddAllAttribs detected array ${attrName}, but ignoring it. To include it set nv.addAllAttribsIncludeArrays=true`
-            );
+            skippedArrays.push(attrName);
           }
         } else {
           if (nv.addAllAttribsIncludeObjects) {
-            console.log(
-              `Navio: Adding object ${attrName} adding as Object (type=object)`
-            );
+            nv.DEBUG &&
+              console.log(
+                `Navio: Adding object ${attrName} adding as Object (type=object)`
+              );
             // nv.addCategoricalAttrib(attr);
             nv.addObjectAttrib(attr);
           } else {
-            console.log(
-              `Navio: AddAllAttribs detected object ${attrName}, but ignoring it. To include it set nv.addAllAttribsIncludeObjects=true`
-            );
+            skippedObjects.push(attrName);
           }
         }
       }
     }
+
+    // Skipping data silently would hide columns the caller expects to see, so
+    // this warns unconditionally - but only once, and it says how to opt in.
+    if (skippedArrays.length)
+      console.warn(
+        `navio.addAllAttribs: ignored ${skippedArrays.length} array attribute(s) [${skippedArrays.join(", ")}]. Set nv.addAllAttribsIncludeArrays = true to include them.`
+      );
+    if (skippedObjects.length)
+      console.warn(
+        `navio.addAllAttribs: ignored ${skippedObjects.length} object attribute(s) [${skippedObjects.join(", ")}]. Set nv.addAllAttribsIncludeObjects = true to include them.`
+      );
 
     nv.data(data);
     // drawBrushes(true); // updates brushes width

@@ -182,6 +182,10 @@ nv.addAllAttribsRecursionLevel = Infinity; // How many levels depth do we keep o
 nv.addAllAttribsIncludeObjects = false; // Should addAllAttribs include objects
 nv.addAllAttribsIncludeArrays = false; // Should addAllAttribs include arrays
 
+nv.DEBUG = false; // Set to true to trace Navio's internals to the console. Navio is
+// silent by default; genuine problems (bad arguments, skipped
+// attributes) are always reported via console.warn regardless.
+
 // Default colors for values
 nv.nullColor = "#ffedfd"; // Color for null values
 nv.defaultColorInterpolator = d3.interpolateBlues;
