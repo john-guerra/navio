@@ -72,6 +72,6 @@ export function convertAttribToFn(attr) {
 export function getAttribsFromObjectAsFn(obj, recursionLevel = Infinity) {
   const attribs = getAttribsFromObjectRecursive(obj, recursionLevel);
   return attribs.map(attr =>
-    attr.length > 1 ? convertAttribToFn(attr) : attr
+    attr.length > 1 ? convertAttribToFn(attr) : attr[0]
   );
 }
