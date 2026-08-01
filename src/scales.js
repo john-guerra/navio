@@ -50,7 +50,7 @@ export function d3DescendingNull(a, b) {
 // A fake scale that uses only the first digits of a text to compute the color.
 // Creates a list of all the possible first digits and uses a sequential scale to color based on such index
 export function scaleText(nullColor, digits = 1, defaultColorInterpolator) {
-  const DEBUG = true;
+  const DEBUG = false;
 
   // const defaultColorInterpolator = "interpolateGreys" in d3 ? d3.interpolateGreys : interpolateGreys; // Hack to keep it working with d3.v4
   let scale = d3.scaleSequential(defaultColorInterpolator),
