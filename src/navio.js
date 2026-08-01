@@ -30,10 +30,12 @@ import {
 } from "./utils.js";
 
 let DEBUG = false;
+let navioInstanceCount = 0;
 
 //eleId must be the ID of a context element where everything is going to be drawn
 function navio(selection, _h) {
   "use strict";
+  const instanceId = ++navioInstanceCount;
   let nv = this || {},
     data = [], //Contains the original data attributes
     dataIs = [], //Contains only the indices to the data, is an array of arrays, one for each level
@@ -125,9 +127,11 @@ function navio(selection, _h) {
   function initTooltipPopper() {
     if (tooltipElement) tooltipElement.remove();
 
-    d3.selectAll("._nv_popover").remove();
-    tooltipElement = d3
-      .select("body")
+    // Scoped to this instance's own container: a page-wide selector plus a
+    // body-level append meant a second Navio instance's init() deleted the
+    // first instance's tooltip node out from under it.
+    selection.selectAll("._nv_popover").remove();
+    tooltipElement = selection
       .append("div")
       .attr("class", "_nv_popover")
       // .style("text-shadow", "0 1px 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, -1px 0 0 #fff")
@@ -296,28 +300,30 @@ function navio(selection, _h) {
   }
 
   function changeCursorOnKey(event) {
+    // Scoped to this instance's own container so multiple Navio instances on
+    // the same page don't repaint each other's brush-overlay cursors.
     if (event.key === "Alt") {
-      d3.selectAll(".overlay")
+      selection
+        .selectAll(".overlay")
         .attr("cursor", `url(${cursorSubstractData}) 8 8, zoom-out`)
         .style("cursor", `url(${cursorSubstractData}) 8 8, zoom-out`);
       // console.log("Alt!");
     } else if (event.key === "Shift") {
-      d3.selectAll(".overlay")
+      selection
+        .selectAll(".overlay")
         .attr("cursor", `url(${cursorAddData}) 8 8, zoom-in`)
         .style("cursor", `url(${cursorAddData}) 8 8, zoom-in`);
       // console.log("Alt!");
     } else {
-      d3.selectAll(".overlay").style(
-        "cursor",
-        `url(${cursorData}) 8 8, crosshair`
-      );
+      selection
+        .selectAll(".overlay")
+        .style("cursor", `url(${cursorData}) 8 8, crosshair`);
     }
 
     if (event.type === "keyup")
-      d3.selectAll(".overlay").style(
-        "cursor",
-        `url(${cursorData}) 8 8, crosshair`
-      );
+      selection
+        .selectAll(".overlay")
+        .style("cursor", `url(${cursorData}) 8 8, crosshair`);
     // console.log("key", event.type);
   }
 
@@ -358,10 +364,12 @@ function navio(selection, _h) {
       .style("top", nv.margin + "px")
       .style("left", nv.margin + "px");
 
-    // TODO: Try a more localized selection
+    // Namespaced per instance so multiple Navio instances on the same page
+    // don't overwrite each other's keydown/keyup listener on `body` (d3's
+    // .on() replaces same-type-same-namespace listeners on the same node).
     d3.select("body")
-      .on("keydown", changeCursorOnKey)
-      .on("keyup", changeCursorOnKey);
+      .on(`keydown.navio-${instanceId}`, changeCursorOnKey)
+      .on(`keyup.navio-${instanceId}`, changeCursorOnKey);
 
     svg.append("g").attr("class", "attribs");
 
@@ -650,7 +658,7 @@ function navio(selection, _h) {
         (f) => f.type === "negativeValue" || f.type === "negativeRange"
       ),
       posFilters = filtersByLevel[level].filter(
-        (f) => f.type !== "negativeValue" || f.type !== "negativeRange"
+        (f) => f.type !== "negativeValue" && f.type !== "negativeRange"
       );
 
     let filteredData = _dataIs[level].filter((d) => {
@@ -1126,9 +1134,15 @@ function navio(selection, _h) {
       .attr("x", 0)
       .style("cursor", "not-allowed")
       .text((f) => "Ⓧ " + f.toStr())
-      .on("click pointerup", (event, f, i) => {
+      .on("click", (event, f) => {
+        // Remove by identity: d3 v6+ passes (event, datum) only, so the old
+        // positional `i` argument was always undefined and splice(undefined, 1)
+        // silently removed index 0 instead of the chip actually clicked.
+        const levelFilters = filtersByLevel[f.level];
+        const i = levelFilters.indexOf(f);
         if (DEBUG) console.log("Click remove filter", i, f);
-        filtersByLevel[f.level].splice(i, 1);
+        if (i === -1) return; // Already removed (e.g. a stale/duplicate event).
+        levelFilters.splice(i, 1);
 
         applyFiltersAndUpdate(f.level);
       });
@@ -1185,9 +1199,15 @@ function navio(selection, _h) {
       // .attr("x", 0)
       .style("cursor", "not-allowed")
       .text((f) => "Ⓧ " + f.toStr())
-      .on("click pointerup", (event, f, i) => {
+      .on("click", (event, f) => {
+        // Remove by identity: d3 v6+ passes (event, datum) only, so the old
+        // positional `i` argument was always undefined and splice(undefined, 1)
+        // silently removed index 0 instead of the chip actually clicked.
+        const levelFilters = filtersByLevel[f.level];
+        const i = levelFilters.indexOf(f);
         if (DEBUG) console.log("Click remove filter", i, f);
-        filtersByLevel[f.level].splice(i, 1);
+        if (i === -1) return; // Already removed (e.g. a stale/duplicate event).
+        levelFilters.splice(i, 1);
 
         applyFiltersAndUpdate(f.level);
       });
