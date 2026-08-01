@@ -1,1 +1,32 @@
 **/.DS_Store
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Test tooling artifacts
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+coverage/
+
+# Ad-hoc scratch demo directories (not linked from README, not part of the package)
+example_bid/
+example_callcenters/
+example_dump/
+example_fifa/
+example_followers/
+example_mooc/
+example_spotify/
+example_tarifa/
+example_tweets/
+
+# Large binaries / personal working files
+extras/
+*.sketch
+
+# Personal/machine-local scripts and notes
+update.sh

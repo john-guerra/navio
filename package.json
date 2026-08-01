@@ -14,21 +14,29 @@
   },
   "devDependencies": {
     "@babel/core": "^7.23.2",
+    "@babel/preset-env": "^7.29.7",
+    "@eslint/js": "^9.25.1",
+    "@playwright/test": "^1.62.1",
     "@rollup/plugin-babel": "^6.0.3",
     "@rollup/plugin-node-resolve": "^15.0.2",
     "@rollup/plugin-terser": "^0.4.3",
-    "eslint": "^8.42.0",
-    "eslint-config-prettier": "^8.8.0",
-    "prettier": "^2.8.8",
+    "eslint": "^9.25.1",
+    "eslint-config-prettier": "^10.1.2",
+    "eslint-plugin-jest": "^28.11.0",
+    "globals": "^16.0.0",
+    "http-server": "^14.1.1",
+    "prettier": "^3.5.3",
     "rollup": "^3.25.1",
     "rollup-plugin-ascii": "^0.0.3",
-    "rollup-plugin-commonjs": "^10.1.0"
+    "rollup-plugin-commonjs": "^10.1.0",
+    "vitest": "^4.1.10"
   },
   "scripts": {
     "build": "rollup -c",
     "dev": "rollup -c -w",
-    "test": "node test/test.js",
-    "pretest": "npm run build"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "npm run build && playwright test"
   },
   "repository": {
     "type": "git",

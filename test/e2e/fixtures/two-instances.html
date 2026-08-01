@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<meta charset="utf-8" />
+<div id="nv1"></div>
+<div id="nv2"></div>
+
+<script src="/node_modules/d3/dist/d3.js"></script>
+<script src="/node_modules/popper.js/dist/umd/popper.js"></script>
+<script src="/dist/navio.js"></script>
+<script>
+  /* global d3, navio */
+  var data = [
+    { id: 1, category: "a", value: 10 },
+    { id: 2, category: "b", value: 20 },
+    { id: 3, category: "a", value: 30 },
+    { id: 4, category: "c", value: 15 },
+    { id: 5, category: "b", value: 25 },
+  ];
+
+  window.nv1 = new navio(d3.select("#nv1"), 400);
+  window.nv1.data(data);
+  window.nv1.addAllAttribs();
+
+  window.nv2 = new navio(d3.select("#nv2"), 400);
+  window.nv2.data(data);
+  window.nv2.addAllAttribs();
+</script>
