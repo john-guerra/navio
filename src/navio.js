@@ -32,7 +32,7 @@ import {
 let DEBUG = false;
 let navioInstanceCount = 0;
 
-//eleId must be the ID of a context element where everything is going to be drawn
+//selection should be a d3 selection or a string with the id of the element
 function navio(selection, _h) {
   "use strict";
   const instanceId = ++navioInstanceCount;
@@ -105,12 +105,15 @@ function navio(selection, _h) {
   nv.addAllAttribsIncludeArrays = false; // Should addAllAttribs include arrays
 
   nv.digitsForText = 2; // How many digits to use for text attributes
+  nv.digitsForObjects = Infinity; // How many digits to use for Arrays and Objects attributes
 
   nv.defaultColorInterpolator = d3.interpolateBlues;
   nv.defaultColorInterpolatorDate = d3.interpolatePurples;
   nv.defaultColorInterpolatorDiverging = d3.interpolateBrBG;
   nv.defaultColorInterpolatorOrdered = d3.interpolateOranges;
   nv.defaultColorInterpolatorText = d3.interpolateGreys;
+  nv.defaultColorInterpolatorObject = d3.interpolateGreens;
+  // nv.defaultColorInterpolatorObject = t => d3.interpolateTurbo(t*.95+0.05);
 
   nv.defaultColorRangeBoolean = ["#a1d76a", "#e9a3c9", "white"]; //true false null
   nv.defaultColorRangeSelected = ["white", "#b5cf6b"];
@@ -118,6 +121,7 @@ function navio(selection, _h) {
 
   nv.showSelectedAttrib = true; // Display the attribute that shows if a row is selected
   nv.showSequenceIDAttrib = true; // Display the attribute with the sequence ID
+  nv.stringify = JSON.stringify; // function to use to stringify the data, for speeding up use d => d
 
   // function nozoom(event) {
   //   if (DEBUG) console.log("nozoom");
@@ -125,11 +129,10 @@ function navio(selection, _h) {
   // }
 
   function initTooltipPopper() {
+    if (DEBUG)
+      console.log("initTooltipPopper, selection", selection, selection.node());
     if (tooltipElement) tooltipElement.remove();
 
-    // Scoped to this instance's own container: a page-wide selector plus a
-    // body-level append meant a second Navio instance's init() deleted the
-    // first instance's tooltip node out from under it.
     selection.selectAll("._nv_popover").remove();
     tooltipElement = selection
       .append("div")
@@ -273,21 +276,6 @@ function navio(selection, _h) {
       clientWidth: 0,
       clientHeight: 0,
     };
-
-    // const ref= {
-    //   getBoundingClientRect: () => {
-    //     return {
-    //       top: tooltipCoords.y,
-    //       right: tooltipCoords.x,
-    //       bottom: tooltipCoords.y,
-    //       left: tooltipCoords.x,
-    //       width: 0,
-    //       height: 0,
-    //     };
-    //   },
-    //   clientWidth: 0,
-    //   clientHeight: 0,
-    // };
 
     tooltip = new Popper(ref, tooltipElement.node(), {
       placement: "right",
@@ -533,7 +521,15 @@ function navio(selection, _h) {
       try {
         return attrib(item);
       } catch (e) {
-        // console.log("navio error getting attrib with item ", item, " attrib ", attrib, "error", e);
+        if (DEBUG)
+          console.log(
+            "navio error getting attrib with item ",
+            item,
+            " attrib ",
+            attrib,
+            "error",
+            e
+          );
         return undefined;
       }
     } else {
@@ -792,7 +788,7 @@ function navio(selection, _h) {
       .on("mousemove", onMouseOver)
       .on("click", onSelectByValue)
       .on("mouseout", onMouseOut)
-      .attr("class", "brush")      
+      .attr("class", "brush")
       .selectAll("rect")
       .attr(
         "width",
@@ -992,6 +988,7 @@ function navio(selection, _h) {
     try {
       itemId = invertOrdinalScale(yScales[level], yOnWidget);
     } catch (e) {
+      DEBUG && console.log("Navio.showTooltip Error inverting scale", e);
       return;
     }
 
@@ -1010,7 +1007,9 @@ function navio(selection, _h) {
 
     tooltipElement.select(".tool_id").text(itemId);
     tooltipElement.select(".tool_value_name").text(getAttribName(itemAttr));
-    tooltipElement.select(".tool_value_val").text(getAttrib(d, itemAttr));
+    tooltipElement
+      .select(".tool_value_val")
+      .text(nv.stringify(getAttrib(d, itemAttr)));
 
     tooltipElement.style("display", "initial");
 
@@ -1024,6 +1023,16 @@ function navio(selection, _h) {
       yOnWidget = d3.pointer(event)[1],
       clientX = event.clientX,
       clientY = event.clientY;
+
+    DEBUG &&
+      console.log(
+        "🐁 navio.onMouseOver",
+        xOnWidget,
+        yOnWidget,
+        clientX,
+        clientY,
+        event
+      );
 
     // if (event.altKey) {
     //   d3.selectAll(".overlay").style("cursor", "zoom-out");
@@ -1135,9 +1144,6 @@ function navio(selection, _h) {
       .style("cursor", "not-allowed")
       .text((f) => "Ⓧ " + f.toStr())
       .on("click", (event, f) => {
-        // Remove by identity: d3 v6+ passes (event, datum) only, so the old
-        // positional `i` argument was always undefined and splice(undefined, 1)
-        // silently removed index 0 instead of the chip actually clicked.
         const levelFilters = filtersByLevel[f.level];
         const i = levelFilters.indexOf(f);
         if (DEBUG) console.log("Click remove filter", i, f);
@@ -1200,9 +1206,6 @@ function navio(selection, _h) {
       .style("cursor", "not-allowed")
       .text((f) => "Ⓧ " + f.toStr())
       .on("click", (event, f) => {
-        // Remove by identity: d3 v6+ passes (event, datum) only, so the old
-        // positional `i` argument was always undefined and splice(undefined, 1)
-        // silently removed index 0 instead of the chip actually clicked.
         const levelFilters = filtersByLevel[f.level];
         const i = levelFilters.indexOf(f);
         if (DEBUG) console.log("Click remove filter", i, f);
@@ -2006,6 +2009,37 @@ function navio(selection, _h) {
     return nv;
   };
 
+  // Adds a more complex attribute with a wrapper to convert it into JSON
+  nv.addObjectAttrib = function (attr, _scale) {
+    const scale =
+      _scale ||
+      scaleText(
+        nv.nullColor,
+        nv.digitsForObjects, // nv.digitsForText,
+        nv.defaultColorInterpolatorObject
+      );
+
+    let stringifiedAttr;
+    if (typeof attr === "function") {
+      stringifiedAttr = (d) => JSON.stringify(attr(d));
+    } else {
+      stringifiedAttr = (d) => {
+        try {
+          return d[attr] ? JSON.stringify(d[attr]) : d[attr];
+        } catch (_e) {
+          return undefined;
+        }
+      };
+      // Navio derives a column's label from fn.name (see getAttribName), so
+      // set it directly rather than baking the attribute name into evaluated
+      // source the way convertAttribToFn still does - that pattern lets a
+      // crafted key in user-supplied data execute arbitrary code (see #71).
+      Object.defineProperty(stringifiedAttr, "name", { value: String(attr) });
+    }
+    nv.addAttrib(stringifiedAttr, scale);
+    return nv;
+  };
+
   // Adds all the attributes on the data, or all the attributes provided on the list based on their types
   nv.addAllAttribs = function (_attribs) {
     if (!data || !data.length)
@@ -2072,9 +2106,10 @@ function navio(selection, _h) {
         if (Array.isArray(firstNotNull)) {
           if (nv.addAllAttribsIncludeArrays) {
             console.log(
-              `Navio: Adding ${attrName} adding as categorical (type=array)`
+              `Navio: Adding ${attrName} adding as Object (type=array)`
             );
-            nv.addCategoricalAttrib(attr);
+            // nv.addCategoricalAttrib(attr);
+            nv.addObjectAttrib(attr);
           } else {
             console.log(
               `Navio: AddAllAttribs detected array ${attrName}, but ignoring it. To include it set nv.addAllAttribsIncludeArrays=true`
@@ -2083,9 +2118,10 @@ function navio(selection, _h) {
         } else {
           if (nv.addAllAttribsIncludeObjects) {
             console.log(
-              `Navio: Adding object ${attrName} adding as categorical (type=object)`
+              `Navio: Adding object ${attrName} adding as Object (type=object)`
             );
-            nv.addCategoricalAttrib(attr);
+            // nv.addCategoricalAttrib(attr);
+            nv.addObjectAttrib(attr);
           } else {
             console.log(
               `Navio: AddAllAttribs detected object ${attrName}, but ignoring it. To include it set nv.addAllAttribsIncludeObjects=true`
