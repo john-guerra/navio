@@ -168,8 +168,8 @@ function navio(selection, _h) {
 
         ._nv_popover[x-placement="left"] [x-arrow] {
           border-width: ${nv.tooltipArrowSize}px 0 ${nv.tooltipArrowSize}px ${
-      nv.tooltipArrowSize
-    }px;
+            nv.tooltipArrowSize
+          }px;
           border-top-color: transparent;
           border-right-color: transparent;
           border-bottom-color: transparent;
@@ -185,8 +185,8 @@ function navio(selection, _h) {
 
         ._nv_popover[x-placement="right"] [x-arrow] {
           border-width: ${nv.tooltipArrowSize}px ${nv.tooltipArrowSize}px ${
-      nv.tooltipArrowSize
-    }px 0;
+            nv.tooltipArrowSize
+          }px 0;
           border-left-color: transparent;
           border-top-color: transparent;
           border-bottom-color: transparent;
@@ -202,8 +202,8 @@ function navio(selection, _h) {
 
         ._nv_popover[x-placement="bottom"] [x-arrow] {
           border-width: 0 ${nv.tooltipArrowSize}px ${nv.tooltipArrowSize}px ${
-      nv.tooltipArrowSize
-    }px;
+            nv.tooltipArrowSize
+          }px;
           border-left-color: transparent;
           border-right-color: transparent;
           border-top-color: transparent;
@@ -219,8 +219,8 @@ function navio(selection, _h) {
 
         ._nv_popover[x-placement="top"] [x-arrow] {
           border-width: ${nv.tooltipArrowSize}px ${nv.tooltipArrowSize}px 0 ${
-      nv.tooltipArrowSize
-    }px;
+            nv.tooltipArrowSize
+          }px;
           border-left-color: transparent;
           border-right-color: transparent;
           border-bottom-color: transparent;
@@ -454,7 +454,7 @@ function navio(selection, _h) {
   }
 
   function updateSorting(levelToUpdate, _dataIs) {
-    if (!dSortBy.hasOwnProperty(levelToUpdate)) {
+    if (!Object.prototype.hasOwnProperty.call(dSortBy, levelToUpdate)) {
       if (DEBUG)
         console.log(
           "UpdateSorting called without attrib in dSortBy",
@@ -711,7 +711,7 @@ function navio(selection, _h) {
     for (let level = fromLevel; level <= lastLevel; level++) {
       // We don't have filters for this level, delete subsequent levels
       if (
-        !filtersByLevel.hasOwnProperty(level) ||
+        !Object.prototype.hasOwnProperty.call(filtersByLevel, level) ||
         !filtersByLevel[level].length
       ) {
         newData = deleteSubsequentLevels(level + 1, newData, {
@@ -961,7 +961,7 @@ function navio(selection, _h) {
       }
       if (event.shiftKey) {
         // First filter, create the list
-        if (!filtersByLevel.hasOwnProperty(level)) {
+        if (!Object.prototype.hasOwnProperty.call(filtersByLevel, level)) {
           filtersByLevel[level] = [];
         }
         // Append the filter
@@ -1087,76 +1087,10 @@ function navio(selection, _h) {
       });
   }
 
-  function drawFilterExplanations(levelOverlay, levelOverlayEnter) {
-    const lastAttrib = xScale.domain()[xScale.domain().length - 1],
-      rightBorder = (level) => x(lastAttrib, level) + xScale.bandwidth() + 2;
-
-    const filterExpEnter = levelOverlayEnter
-      .append("g")
-      .attr("class", "filterExplanation");
-
-    filterExpEnter
-      .merge(levelOverlay.select(".filterExplanation"))
-      .attr(
-        "transform",
-        (_, i) =>
-          `translate(${rightBorder(i)}, ${
-            yScales[i].range()[1] + nv.filterFontSize * 1.2
-          })`
-      );
-
-    filterExpEnter
-      .append("rect")
-      .merge(levelOverlay.select("rect.bgExplanation"))
-      .attr("class", "bgExplanation")
-      .style("fill", "white")
-      .attr("x", 0)
-      .attr("y", nv.filterFontSize * 0.3)
-      .attr("width", levelScale.bandwidth())
-      .attr("height", (_, i) =>
-        filtersByLevel[i]
-          ? filtersByLevel[i].length * nv.filterFontSize * 1.3
-          : 0
-      );
-
-    const filterExpTexts = filterExpEnter
-      .append("text")
-      .merge(levelOverlay.select(".filterExplanation > text"))
-      // .attr("x", function (_, i) {return  levelScale(i); })
-      // .attr("y", function (_, i) {return yScales[i].range()[1] + 25; })
-      .style("font-size", nv.filterFontSize + "pt")
-      .selectAll("tspan")
-      .data((_, i) =>
-        filtersByLevel[i]
-          ? filtersByLevel[i].map((f) => {
-              f.level = i;
-              return f;
-            })
-          : []
-      );
-
-    filterExpTexts
-      .enter()
-      .append("tspan")
-      .merge(filterExpTexts)
-      .attr("dy", nv.filterFontSize * 1.2 + 7)
-      .attr("x", 0)
-      .style("cursor", "not-allowed")
-      .text((f) => "Ⓧ " + f.toStr())
-      .on("click", (event, f) => {
-        const levelFilters = filtersByLevel[f.level];
-        const i = levelFilters.indexOf(f);
-        if (DEBUG) console.log("Click remove filter", i, f);
-        if (i === -1) return; // Already removed (e.g. a stale/duplicate event).
-        levelFilters.splice(i, 1);
-
-        applyFiltersAndUpdate(f.level);
-      });
-
-    filterExpTexts.exit().remove();
-  }
-
-  function drawFilterExplanationsHTML(levelOverlay, levelOverlayEnter) {
+  // Renders the filter chips as HTML under div.explanations. It reads
+  // `selection`/`dataIs` from the closure rather than taking the level-overlay
+  // selections the other draw* helpers do, so it needs no arguments.
+  function drawFilterExplanationsHTML() {
     const lastAttrib = xScale.domain()[xScale.domain().length - 1],
       rightBorder = (level) => x(lastAttrib, level) + xScale.bandwidth() + 2;
 
@@ -1356,8 +1290,7 @@ function navio(selection, _h) {
 
     drawAttributesHolders(levelOverlay, levelOverlayEnter);
     drawCounts(levelOverlay, levelOverlayEnter);
-    // drawFilterExplanations(levelOverlay, levelOverlayEnter);
-    drawFilterExplanationsHTML(levelOverlay, levelOverlayEnter);
+    drawFilterExplanationsHTML();
 
     levelOverlay.exit().remove();
   } // drawBrushes
@@ -1670,7 +1603,7 @@ function navio(selection, _h) {
     _dataIs = _dataIs !== undefined ? _dataIs : dataIs;
     shouldUpdate = shouldUpdate !== undefined ? shouldUpdate : true;
 
-    if (!_dataIs.hasOwnProperty(level)) {
+    if (!Object.prototype.hasOwnProperty.call(_dataIs, level)) {
       if (DEBUG)
         console.log("Asked to delete a level that doens't exist ", level);
       return _dataIs;
@@ -1686,7 +1619,7 @@ function navio(selection, _h) {
       }
 
       if (
-        filtersByLevel.hasOwnProperty(level - 1) &&
+        Object.prototype.hasOwnProperty.call(filtersByLevel, level - 1) &&
         filtersByLevel[level - 1].length
       ) {
         // Cleanup filters from the previous level
