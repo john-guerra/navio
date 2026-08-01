@@ -65,7 +65,7 @@ npm install navio
 Or use it from unpkg
 
 ```html
-  <script type="text/javascript" src="https://d3js.org/d3.v4.min.js"></script>
+  <script type="text/javascript" src="https://d3js.org/d3.v6.min.js"></script>
   
   <script src="https://unpkg.com/popper.js@1.14/dist/umd/popper.min.js"></script>
   <script type="text/javascript" src="https://unpkg.com/navio/dist/navio.min.js"></script>
