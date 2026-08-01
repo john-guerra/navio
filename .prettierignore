@@ -1,0 +1,17 @@
+# Prose is hand-formatted (README embeds raw HTML/tables); keep Prettier to code.
+*.md
+
+dist/
+node_modules/
+coverage/
+test-results/
+playwright-report/
+blob-report/
+package-lock.json
+
+# Legacy/scratch demo pages - not part of the shipped package.
+example/
+example_*/
+exampleSenate/
+extras/
+imgs/

@@ -12,11 +12,17 @@ async function attribColumnCenterX(page, canvasBox, attribLabel, attribWidth) {
       const m = /translate\(([-\d.]+),\s*([-\d.]+)\)/.exec(
         g.getAttribute("transform") || ""
       );
-      return { label: text ? text.textContent : null, x: m ? parseFloat(m[1]) : null };
+      return {
+        label: text ? text.textContent : null,
+        x: m ? parseFloat(m[1]) : null,
+      };
     })
   );
   const col = columns.find((c) => c.label === attribLabel);
-  if (!col) throw new Error(`Column "${attribLabel}" not found among ${JSON.stringify(columns)}`);
+  if (!col)
+    throw new Error(
+      `Column "${attribLabel}" not found among ${JSON.stringify(columns)}`
+    );
   return canvasBox.x + col.x + attribWidth / 2;
 }
 
@@ -25,7 +31,9 @@ function rowCenterY(canvasBox, y0, margin, height, rowCount, rowIndex) {
   return canvasBox.y + y0 + rowSpan * rowIndex + rowSpan / 2;
 }
 
-test("closing one filter chip removes only that filter, not another one", async ({ page }) => {
+test("closing one filter chip removes only that filter, not another one", async ({
+  page,
+}) => {
   const errors = [];
   page.on("pageerror", (err) => errors.push(err.message));
 
@@ -37,7 +45,12 @@ test("closing one filter chip removes only that filter, not another one", async 
     margin: window.nv.margin,
     attribWidth: window.nv.attribWidth,
   }));
-  const x = await attribColumnCenterX(page, canvasBox, "category", geometry.attribWidth);
+  const x = await attribColumnCenterX(
+    page,
+    canvasBox,
+    "category",
+    geometry.attribWidth
+  );
 
   // Row 0 -> id:1, category:"a". Row 1 -> id:2, category:"b" (see fixture data).
   const yRow0 = rowCenterY(canvasBox, geometry.y0, geometry.margin, 400, 5, 0);
@@ -45,7 +58,9 @@ test("closing one filter chip removes only that filter, not another one", async 
 
   // Plain click: filter by category == a
   await page.mouse.click(x, yRow0);
-  await expect(page.locator(".filterExplanation div")).toHaveText(["Ⓧ category == a"]);
+  await expect(page.locator(".filterExplanation div")).toHaveText([
+    "Ⓧ category == a",
+  ]);
 
   // Shift-click: append a second filter, category == b
   // (page.mouse.click has no `modifiers` option - that's a locator.click()-only
@@ -59,8 +74,12 @@ test("closing one filter chip removes only that filter, not another one", async 
   ]);
 
   // Close the SECOND chip ("category == b") - only that one should go away.
-  await page.locator(".filterExplanation div", { hasText: "category == b" }).click();
+  await page
+    .locator(".filterExplanation div", { hasText: "category == b" })
+    .click();
 
-  await expect(page.locator(".filterExplanation div")).toHaveText(["Ⓧ category == a"]);
+  await expect(page.locator(".filterExplanation div")).toHaveText([
+    "Ⓧ category == a",
+  ]);
   expect(errors).toEqual([]);
 });

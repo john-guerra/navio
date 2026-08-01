@@ -57,7 +57,7 @@ export function scaleText(nullColor, digits = 1, defaultColorInterpolator) {
     dRepresentativesCounts = new Map(), // Contains the counts for each letter/substrg
     dRepresentativesIndexes = new Map();
 
-  const stringify = d => d + "";
+  const stringify = (d) => d + "";
   // const stringify = JSON.stringify;
 
   // Computes the actual value, based on the index of the first digits in the domain

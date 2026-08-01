@@ -1,64 +1,96 @@
 import globals from "globals";
-import pluginJs from "@eslint/js";
-import eslintConfigPrettier from "eslint-config-prettier";
-import pluginJest from "eslint-plugin-jest";
+import js from "@eslint/js";
+import vitest from "@vitest/eslint-plugin";
+import playwright from "eslint-plugin-playwright";
+import prettier from "eslint-config-prettier";
 
-// import eslintPluginSvelte from "eslint-plugin-svelte";
-
+// Flat ESM config. Division of labour:
+//   ESLint   -> correctness (unused vars, unsafe patterns, real bugs)
+//   Prettier -> formatting (indent, quotes, semicolons, line width)
+// `prettier` MUST stay last so it can switch off every stylistic rule that
+// would otherwise fight the formatter. Do not re-add formatting rules below
+// it - that misordering is what produced 26 bogus `indent` errors previously.
 export default [
   {
-    // update this to match your test files
-    files: ["**/*.spec.js", "**/*.test.js"],
-    plugins: { jest: pluginJest },
-    languageOptions: {
-      globals: pluginJest.environments.globals.globals,
-    },
-    rules: {
-      "jest/no-disabled-tests": "warn",
-      "jest/no-focused-tests": "error",
-      "jest/no-identical-title": "error",
-      "jest/prefer-to-have-length": "warn",
-      "jest/valid-expect": "error",
-    },
+    ignores: [
+      "dist/**",
+      "node_modules/**",
+      "coverage/**",
+      "test-results/**",
+      "playwright-report/**",
+      "blob-report/**",
+      // Legacy/scratch demo pages - not part of the shipped package.
+      "example/**",
+      "example_*/**",
+      "exampleSenate/**",
+      "extras/**",
+      // Dead and currently unbuildable: imports react/prop-types (not
+      // dependencies) through a self-referential node_modules/navio path, and
+      // its import in src/index.js is commented out. Tracked by #20.
+      "src/NavioComponent.jsx",
+    ],
   },
-  {
-    languageOptions: {
-      globals: { ...globals.browser, ...globals.node },
-    },
-  },
-  pluginJs.configs.recommended,
-  eslintConfigPrettier,
-  // ...eslintPluginSvelte.configs.recommended,
-  {
-    languageOptions: {
-      globals: {
-        ...globals.browser,
-        ...globals.node,
-      },
 
+  js.configs.recommended,
+
+  // Library source: runs in the browser, bundled by rollup.
+  {
+    files: ["src/**/*.{js,jsx}"],
+    languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
-
-      parserOptions: {
-        ecmaFeatures: {
-          jsx: true,
-        },
-      },
+      globals: { ...globals.browser },
+      parserOptions: { ecmaFeatures: { jsx: true } },
     },
-
     rules: {
-      indent: [
+      "no-console": "off", // Navio logs diagnostics deliberately; see #58.
+      // `_`-prefixed names are intentional throwaways. Note the bundle is
+      // parsed by rollup-plugin-ascii's very old acorn, which rejects ES2019
+      // optional catch binding (`catch {}`) - so unused catch params must be
+      // named `_e` rather than omitted, or `npm run build` fails.
+      "no-unused-vars": [
         "error",
-        2,
         {
-          SwitchCase: 1,
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
         },
       ],
-
-      "linebreak-style": ["error", "unix"],
-      quotes: ["error", "double"],
-      semi: ["error", "always"],
-      "no-console": 0,
     },
   },
+
+  // Build/tooling configs: run in Node.
+  {
+    files: ["*.config.js", "rollup.config.js"],
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "module",
+      globals: { ...globals.node },
+    },
+  },
+
+  // Unit tests (Vitest).
+  {
+    files: ["test/unit/**/*.test.js"],
+    plugins: { vitest },
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "module",
+      globals: { ...globals.node, ...vitest.environments.env.globals },
+    },
+    rules: { ...vitest.configs.recommended.rules },
+  },
+
+  // End-to-end tests (Playwright).
+  {
+    ...playwright.configs["flat/recommended"],
+    files: ["test/e2e/**/*.spec.js"],
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "module",
+      globals: { ...globals.node, ...globals.browser },
+    },
+  },
+
+  prettier,
 ];

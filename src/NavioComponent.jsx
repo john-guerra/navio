@@ -20,7 +20,7 @@ class NavioComponent extends Component {
     this.prevOpts = this.props.options;
 
     for (let opt in this.props.options) {
-      this.nv[opt]= this.props.options[opt];
+      this.nv[opt] = this.props.options[opt];
     }
   }
 
@@ -28,14 +28,18 @@ class NavioComponent extends Component {
     this.setOptions();
 
     // Have we received data?
-    if (this.prevData !== this.props.data ||
-      this.prevData.length !== this.props.data.length) {
+    if (
+      this.prevData !== this.props.data ||
+      this.prevData.length !== this.props.data.length
+    ) {
       console.log("Got new data, updating Navio", this.props.data.length);
       this.nv.data(this.props.data);
       this.prevData = this.props.data;
 
-      if (this.props.onFilter &&
-        this.nv.updateCallback() !== this.props.onFilter)
+      if (
+        this.props.onFilter &&
+        this.nv.updateCallback() !== this.props.onFilter
+      )
         this.nv.updateCallback(this.props.onFilter);
     }
 
@@ -60,26 +64,25 @@ class NavioComponent extends Component {
   }
 
   render() {
-    return <div
-      style={{overflowX:"scroll"}}
-      ref={me => (this.holder = me)}
-    />;
+    return (
+      <div style={{ overflowX: "scroll" }} ref={(me) => (this.holder = me)} />
+    );
   }
 }
 
 NavioComponent.propTypes = {
   data: PropTypes.arrayOf(PropTypes.object).isRequired,
   attributes: PropTypes.arrayOf(PropTypes.string),
-  options : PropTypes.object,
+  options: PropTypes.object,
   autodetect: PropTypes.bool,
   onFilter: PropTypes.func,
-  height : PropTypes.number
+  height: PropTypes.number,
 };
 
 NavioComponent.defaultProps = {
   autodetect: true,
   data: [],
-  height: 600
+  height: 600,
 };
 
 export default NavioComponent;

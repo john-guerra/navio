@@ -1,6 +1,8 @@
 import { test, expect } from "@playwright/test";
 
-test("mounts a single Navio instance without console errors and draws a canvas", async ({ page }) => {
+test("mounts a single Navio instance without console errors and draws a canvas", async ({
+  page,
+}) => {
   const errors = [];
   page.on("pageerror", (err) => errors.push(err.message));
   page.on("console", (msg) => {
@@ -13,7 +15,9 @@ test("mounts a single Navio instance without console errors and draws a canvas",
   expect(errors).toEqual([]);
 });
 
-test("mounts two Navio instances on the same page without console errors", async ({ page }) => {
+test("mounts two Navio instances on the same page without console errors", async ({
+  page,
+}) => {
   const errors = [];
   page.on("pageerror", (err) => errors.push(err.message));
   page.on("console", (msg) => {

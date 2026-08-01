@@ -7,7 +7,9 @@ import { test, expect } from "@playwright/test";
 // silently deleted the first instance's tooltip and overwrote its keydown
 // listener.
 
-test("each instance keeps its own tooltip element after a second instance mounts", async ({ page }) => {
+test("each instance keeps its own tooltip element after a second instance mounts", async ({
+  page,
+}) => {
   const errors = [];
   page.on("pageerror", (err) => errors.push(err.message));
 
@@ -18,7 +20,9 @@ test("each instance keeps its own tooltip element after a second instance mounts
   expect(errors).toEqual([]);
 });
 
-test("each instance keeps its own keydown/keyup listener on body after a second instance mounts", async ({ page }) => {
+test("each instance keeps its own keydown/keyup listener on body after a second instance mounts", async ({
+  page,
+}) => {
   await page.goto("/test/e2e/fixtures/two-instances.html");
 
   const listeners = await page.evaluate(() => {

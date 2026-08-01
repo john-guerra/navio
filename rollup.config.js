@@ -1,4 +1,4 @@
-import {readFileSync} from "fs";
+import { readFileSync } from "fs";
 import ascii from "rollup-plugin-ascii";
 import node from "@rollup/plugin-node-resolve";
 import commonjs from "rollup-plugin-commonjs";
@@ -13,8 +13,8 @@ import meta from "./package.json" with { type: "json" };
 // Extract copyrights from the LICENSE.
 const copyright = readFileSync("./LICENSE", "utf-8")
   .split(/\n/g)
-  .filter(line => /^Copyright\s+/.test(line))
-  .map(line => line.replace(/^Copyright\s+/, ""))
+  .filter((line) => /^Copyright\s+/.test(line))
+  .map((line) => line.replace(/^Copyright\s+/, ""))
   .join(", ");
 
 export default [
@@ -82,7 +82,11 @@ export default [
         browser: true,
       }),
       ascii(),
-      terser({ output: { preamble: `// ${meta.homepage} v${meta.version} Copyright ${copyright}` } }),
+      terser({
+        output: {
+          preamble: `// ${meta.homepage} v${meta.version} Copyright ${copyright}`,
+        },
+      }),
     ],
     external: ["d3", "popper.js"],
     output: {
