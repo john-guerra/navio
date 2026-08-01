@@ -282,6 +282,21 @@ Returns the color scale for a certain attribute, make sure to pass an attribute 
 
 Returns the ordered list of attributes added to navio
 
+<a name="destroy" href="#destroy">#</a> <i>nv</i>.<b>destroy</b>()
+
+Tears the instance down: removes its tooltip, detaches the listeners it added to `document.body`, empties its container, and drops its reference to your data.
+
+Call this whenever you unmount a Navio in a single-page app (React, Vue, Svelte, Observable). Without it, the listeners on `body` keep the whole instance — including the dataset — reachable, so the memory is never reclaimed. Other Navio instances on the page are unaffected, and calling it twice is safe.
+
+```javascript
+// React
+useEffect(() => {
+  const nv = new navio(d3.select(ref.current), 600);
+  nv.data(myData);
+  return () => nv.destroy();
+}, []);
+```
+
 ## License
 
 Navio.js is licensed under the MIT license. (http://opensource.org/licenses/MIT)

@@ -2238,6 +2238,47 @@ function navio(selection, _h) {
     });
   };
 
+  // Tears down everything this instance attached outside its own container,
+  // and releases the data it holds. Without this, unmounting a Navio in a SPA
+  // leaves listeners on `body` that keep the whole closure - dataset included -
+  // reachable forever. Safe to call more than once.
+  nv.destroy = function () {
+    // Only this instance's namespaced listeners; other Navios keep theirs.
+    d3.select("body")
+      .on(`keydown.navio-${instanceId}`, null)
+      .on(`keyup.navio-${instanceId}`, null);
+
+    if (tooltip && typeof tooltip.destroy === "function") tooltip.destroy();
+    tooltip = null;
+
+    if (tooltipElement) {
+      tooltipElement.remove();
+      tooltipElement = null;
+    }
+
+    // Everything else Navio rendered lives under the container it was given.
+    if (selection && selection.selectAll) selection.selectAll("*").remove();
+
+    svg = canvas = context = undefined;
+
+    // Drop references to the data so the closure stops pinning it in memory.
+    data = [];
+    dataIs = [];
+    links = [];
+    visibleLinks = [];
+    dData = new Map();
+    attribsOrdered = [];
+    dAttribs = new Map();
+    dSortBy = [];
+    dBrushes = [];
+    filtersByLevel = [];
+    yScales = [];
+    colScales = new Map();
+    updateCallback = function () {};
+
+    return nv;
+  };
+
   init();
   return nv;
 }

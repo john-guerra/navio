@@ -63,6 +63,12 @@ class NavioComponent extends Component {
     this.updateFromProps();
   }
 
+  componentWillUnmount() {
+    // Without this the listeners Navio adds to document.body keep the whole
+    // instance - dataset included - reachable after the component is gone.
+    if (this.nv && this.nv.destroy) this.nv.destroy();
+  }
+
   render() {
     return (
       <div style={{ overflowX: "scroll" }} ref={(me) => (this.holder = me)} />
