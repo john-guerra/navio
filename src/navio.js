@@ -658,9 +658,19 @@ function navio(selection, _h) {
       );
 
     let filteredData = _dataIs[level].filter((d) => {
-      // OR of positives, AND of negatives
+      // OR of positives, AND of negatives.
+      //
+      // With no positive filter the starting set is everything at this level,
+      // so the OR has to seed to true. Seeding it to false (the correct seed
+      // for an OR over a non-empty set) made a level holding only negative
+      // filters select nothing at all - a single alt-click emptied the whole
+      // widget. See #79.
+      const keptByPositives = posFilters.length
+        ? posFilters.reduce((p, f) => p || f.filter(data[d]), false)
+        : true;
+
       return (data[d].selected =
-        posFilters.reduce((p, f) => p || f.filter(data[d]), false) &&
+        keptByPositives &&
         negFilters.reduce((p, f) => p && f.filter(data[d]), true));
       // // Check if a possitive filter apply
       // for (let filter of posFilters) {
