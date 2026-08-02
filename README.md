@@ -15,7 +15,7 @@ Use it to <strong>summarize</strong>, <strong>explore</strong> and <strong>navig
 
 | Sort | Filter a Range | Filter By Value|
 | -----| --- | ---|
-| Click on a header to sort <br> <a href="https://navio.dev/example_vispubdata"><img src="imgs/navio_sort.gif" alt="Navio sort on les miserables network" width="300"></a> | Drag to select a range <br> <a href="https://john-guerra.github.io/momaExplorer"><img src="imgs/navio_range.gif" alt="Moma Explorer" width="300"></a> | Click on a value to select all instances <br> <a href="https://navio.dev/example_vispubdata"> <img src="imgs/navio_value.gif" alt="Navio select a value with the vispubdata" width="300"></a> |
+| Click on a header to sort <br> <a href="https://navio.dev/examples/vispubdata"><img src="imgs/navio_sort.gif" alt="Navio sort on les miserables network" width="300"></a> | Drag to select a range <br> <a href="https://john-guerra.github.io/momaExplorer"><img src="imgs/navio_range.gif" alt="Moma Explorer" width="300"></a> | Click on a value to select all instances <br> <a href="https://navio.dev/examples/vispubdata"> <img src="imgs/navio_value.gif" alt="Navio select a value with the vispubdata" width="300"></a> |
 
 ## Try it!
 
@@ -28,11 +28,11 @@ You can test Navio right now with your **own CSV or JSON data** (less than 200MB
 Other demos:
 
 * [MoMa Collection](https://john-guerra.github.io/momaExplorer/) ([Code](https://github.com/john-guerra/momaExplorer))
-* [Navio-only Vast 2017 MiniChallenge1 ](http://john-guerra.github.io/navio/example_vastChallenge2017/index.html) ([Code](https://github.com/john-guerra/navio/tree/master/example_vastChallenge2017))
+* [Navio-only Vast 2017 MiniChallenge1 ](http://john-guerra.github.io/navio/examples/vast-challenge-2017/index.html) ([Code](https://github.com/john-guerra/navio/tree/master/examples/vast-challenge-2017))
 * [Co-voting patterns of the Colombian senate](http://johnguerra.co/viz/senadoColombia)
-* [Simplest example with Networks on SVG](https://john-guerra.github.io/navio/example/) ([Code](https://github.com/john-guerra/navio/tree/master/example))
-* [Simple example with Networks on Canvas](https://john-guerra.github.io/navio/exampleSenate/) ([Code](https://github.com/john-guerra/navio/tree/master/exampleSenate))
-* [IEEEVIS Publications Data](https://john-guerra.github.io/navio/example_vispubdata/) ([Code](https://github.com/john-guerra/navio/blob/master/example_vispubdata/index.html)) ([Observable Notebook](https://observablehq.com/@john-guerra/navio))
+* [Simplest example with Networks on SVG](https://john-guerra.github.io/navio/examples/basic/) ([Code](https://github.com/john-guerra/navio/tree/master/examples/basic))
+* [Simple example with Networks on Canvas](https://john-guerra.github.io/navio/examples/senate/) ([Code](https://github.com/john-guerra/navio/tree/master/examples/senate))
+* [IEEEVIS Publications Data](https://john-guerra.github.io/navio/examples/vispubdata/) ([Code](https://github.com/john-guerra/navio/blob/master/examples/vispubdata/index.html)) ([Observable Notebook](https://observablehq.com/@john-guerra/navio))
 
 # Comparing
 

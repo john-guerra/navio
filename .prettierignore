@@ -9,9 +9,8 @@ playwright-report/
 blob-report/
 package-lock.json
 
-# Legacy/scratch demo pages - not part of the shipped package.
-example/
+# Demo pages - hand-authored, some legacy; not part of the shipped package.
+examples/
 example_*/
-exampleSenate/
 extras/
 imgs/

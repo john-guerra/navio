@@ -19,10 +19,10 @@ export default [
       "test-results/**",
       "playwright-report/**",
       "blob-report/**",
-      // Legacy/scratch demo pages - not part of the shipped package.
-      "example/**",
+      // Demo pages - hand-authored, some legacy; not part of the shipped
+      // package. `example_*` covers untracked local scratch dirs at the root.
+      "examples/**",
       "example_*/**",
-      "exampleSenate/**",
       "extras/**",
       // Dead and currently unbuildable: imports react/prop-types (not
       // dependencies) through a self-referential node_modules/navio path, and

@@ -16,9 +16,12 @@
   }
 </style>
 <div id="nv"></div>
+<div id="nv2"></div>
 <svg width="400" height="600"></svg>
 
 <script src="https://d3js.org/d3.v7.js"></script>
+<!-- Production version -->
+<!-- <script src="https://unpkg.com/@popperjs/core@2"></script> -->
 <script src="https://unpkg.com/popper.js@1.16/dist/umd/popper.min.js"></script>
 <script src="../../dist/navio.js"></script>
 <!-- <script src="https://unpkg.com/navio/dist/navio.js"></script> -->
@@ -49,6 +52,10 @@
   nv.id("id");
   nv.addCategoricalAttrib("group", color);
 
+  var nv2 = new navio(d3.select("#nv2"), height);
+  nv2.id("id");
+  nv2.addCategoricalAttrib("group", color);
+
   // d3 v4
   // d3.json("miserables.json", function(error, graph) {
   d3.json("miserables.json").then(function (graph) {
@@ -62,9 +69,8 @@
       d.target = dNodes[d.target];
     });
 
-
-
     nv.data(graph.nodes);
+    nv2.data(graph.nodes);
     nv.updateCallback(function (nodes) {
       update({
         nodes: nodes,
