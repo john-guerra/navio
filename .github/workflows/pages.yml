@@ -1,0 +1,73 @@
+name: Deploy navio.dev
+
+# navio.dev serves this repo. The demos under examples/ load ../../dist/, but
+# dist/ is deliberately gitignored (42e1cd0, "Removing dist from github"), so a
+# plain branch deploy 404s on the bundle. This builds dist/ and ships it
+# alongside the Jekyll-rendered site.
+#
+# jekyll-build-pages runs the same github-pages gem the legacy branch build
+# used, so the homepage - which is README.md rendered with jekyll-seo-tag and
+# the default theme, with no _config.yml in the repo - keeps rendering the same
+# way. See docs/ai/ and issue #65.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never cancel a half-finished deploy of a live site.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Must run before the Jekyll step so dist/ is on disk and gets copied
+      # into _site as a static file.
+      - name: Build the bundle
+        run: npm run build
+
+      - uses: actions/configure-pages@v5
+
+      # Jekyll's default excludes drop node_modules, so only the site content
+      # and the freshly built dist/ end up in _site.
+      - uses: actions/jekyll-build-pages@v1
+        with:
+          source: .
+          destination: ./_site
+
+      # Belt and braces: guarantee the bundle is present regardless of how
+      # Jekyll treats the directory, then fail loudly if it somehow is not.
+      - name: Ensure dist/ shipped
+        run: |
+          mkdir -p ./_site/dist
+          cp -r dist/. ./_site/dist/
+          test -s ./_site/dist/navio.js
+          test -s ./_site/index.html
+          echo "dist/navio.js $(wc -c < ./_site/dist/navio.js) bytes"
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./_site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
