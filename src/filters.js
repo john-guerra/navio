@@ -198,28 +198,14 @@ export function filterFromValue(value, ctx = {}) {
   const known = rows.some((r) => read(r, itemAttr) !== undefined);
   if (rows.length && !known) return null;
 
-  // NOTE: rollup-plugin-ascii parses this file with an ES5-era acorn, so
-  // computed property keys and object spread break `npm run build` even though
-  // the tests, linter and every browser accept them. Hence Object.assign and
-  // the explicit key assignment below. Tracked by #80.
-  function opts(extra) {
-    return Object.assign(
-      {
-        itemAttr: itemAttr,
-        getAttrib: getAttrib,
-        getAttribName: getAttribName,
-      },
-      extra
-    );
-  }
+  const common = { itemAttr, getAttrib, getAttribName };
 
   if (value.type === "value" || value.type === "negativeValue") {
     // A synthetic row is enough: both predicates only ever read itemAttr off it.
-    const sel = {};
-    sel[value.attrib] = value.value;
+    const sel = { [value.attrib]: value.value };
     const make =
       value.type === "value" ? FilterByValue : FilterByValueDifferent;
-    return make(opts({ sel: sel }));
+    return make({ ...common, sel });
   }
 
   if (value.type === "range" || value.type === "negativeRange") {
@@ -257,7 +243,7 @@ export function filterFromValue(value, ctx = {}) {
     }
 
     const make = value.type === "range" ? FilterByRange : FilterByRangeNegative;
-    const filter = make(opts({ level: level, first: lo, last: hi }));
+    const filter = make({ ...common, level, first: lo, last: hi });
     if (first.approximate || last.approximate) filter.approximate = true;
     return filter;
   }

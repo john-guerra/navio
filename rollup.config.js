@@ -1,5 +1,5 @@
 import { readFileSync } from "fs";
-import ascii from "rollup-plugin-ascii";
+import ascii from "./build/ascii.js";
 import node from "@rollup/plugin-node-resolve";
 import commonjs from "rollup-plugin-commonjs";
 import terser from "@rollup/plugin-terser";
@@ -85,6 +85,9 @@ export default [
       terser({
         output: {
           preamble: `// ${meta.homepage} v${meta.version} Copyright ${copyright}`,
+          // Terser decodes \uXXXX escapes when it re-emits, which would undo
+          // the ascii() plugin and leave raw glyphs in the minified bundle.
+          ascii_only: true,
         },
       }),
     ],

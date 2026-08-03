@@ -59,9 +59,14 @@ export default [
     },
   },
 
-  // Build/tooling configs: run in Node.
+  // Build tooling and configs: run in Node, not the browser.
   {
-    files: ["*.config.js", "rollup.config.js"],
+    files: ["*.config.js", "rollup.config.js", "build/**/*.js"],
+    rules: {
+      // build/ascii.js matches the non-ASCII range as /[^\x00-\x7F]/, which is
+      // exactly the point of the file - the control characters are deliberate.
+      "no-control-regex": "off",
+    },
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
