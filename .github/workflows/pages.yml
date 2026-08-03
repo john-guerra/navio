@@ -55,15 +55,23 @@ jobs:
           source: .
           destination: ./_site
 
-      # Belt and braces: guarantee the bundle is present regardless of how
-      # Jekyll treats the directory, then fail loudly if it somehow is not.
+      # Jekyll normally copies dist/ through as a static file. Verify that
+      # rather than assuming it, and fall back to copying only if it is
+      # missing. jekyll-build-pages runs in a container as root, so _site is
+      # not writable by the runner user - hence sudo on the fallback path.
       - name: Ensure dist/ shipped
         run: |
-          mkdir -p ./_site/dist
-          cp -r dist/. ./_site/dist/
+          if [ ! -s ./_site/dist/navio.js ]; then
+            echo "Jekyll did not carry dist/ through; copying it in."
+            sudo mkdir -p ./_site/dist
+            sudo cp -r dist/. ./_site/dist/
+          fi
+          # A missing bundle or an unrendered homepage must fail the deploy
+          # rather than quietly publishing a broken site.
           test -s ./_site/dist/navio.js
           test -s ./_site/index.html
-          echo "dist/navio.js $(wc -c < ./_site/dist/navio.js) bytes"
+          echo "dist/navio.js  $(wc -c < ./_site/dist/navio.js) bytes"
+          echo "index.html     $(wc -c < ./_site/index.html) bytes"
 
       - uses: actions/upload-pages-artifact@v3
         with:
