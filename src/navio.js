@@ -496,24 +496,35 @@ function navio(selection, _h) {
       return; // dragged
     }
 
-    dSortBy[d.level] = {
-      attrib: d.attrib,
-      desc:
-        dSortBy[d.level] !== undefined && dSortBy[d.level].attrib === d.attrib
-          ? !dSortBy[d.level].desc
-          : false,
-    };
+    // Clicking the attribute already sorted by flips the direction.
+    const desc =
+      dSortBy[d.level] !== undefined && dSortBy[d.level].attrib === d.attrib
+        ? !dSortBy[d.level].desc
+        : false;
 
-    deleteObsoleteFiltersFromLevel(d.level + 1);
+    applySort(d.level, d.attrib, desc);
+  }
 
-    updateSorting(d.level);
-    removeBrushOnLevel(d.level);
+  // The single implementation of "sort this level", shared by the header-click
+  // handler and by nv.sortBy so the UI and the public API cannot drift apart.
+  // nv.sortBy used to set dSortBy and call nv.update(), which only redraws -
+  // updateSorting was never reached, so the data was never actually reordered
+  // while the header still gained its sort arrow. See #81.
+  function applySort(level, attrib, desc) {
+    dSortBy[level] = { attrib, desc };
 
-    nv.updateData(dataIs, colScales, {
-      levelsToUpdate: [d.level],
-    });
+    // A re-sort invalidates range filters further down the chain, since those
+    // are expressed as positions in an ordering that no longer holds.
+    deleteObsoleteFiltersFromLevel(level + 1);
+
+    updateSorting(level);
+    removeBrushOnLevel(level);
+
+    nv.updateData(dataIs, colScales, { levelsToUpdate: [level] });
 
     updateCallback(nv.getVisible());
+
+    return nv;
   }
 
   function getAttrib(item, attrib) {
@@ -2174,11 +2185,7 @@ function navio(selection, _h) {
       // if (attribsOrdered.indexOf(_attrib)===-1) {
       //   throw `sortBy: ${_attrib} is not in the list of attributes`
       // }
-      dSortBy[level] = {
-        attrib: _attrib,
-        desc: _desc,
-      };
-      return nv.update();
+      return applySort(level, _attrib, _desc);
     } else {
       return dSortBy[level];
     }
