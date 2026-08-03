@@ -6,6 +6,11 @@ in one person's chat history or local notes.
 
 ## Contents
 
+- [`FILTERING-MODEL.md`](./FILTERING-MODEL.md) — **read this before touching
+  filtering, sorting or selection.** How the level chain, the filter algebra
+  and the `selected` flag actually behave, verified by measurement. The
+  intuitive model ("a filter is a predicate, re-evaluated on render") is wrong
+  in a way that silently misleads; two bugs were found by testing it.
 - [`2026-08-01-repo-review-and-roadmap.md`](./2026-08-01-repo-review-and-roadmap.md) —
   full whole-repository review (AI-coding readiness, GitHub issue triage, two
   root-caused bugs, reactive-widget/Inputs.bind compliance gap, vertical

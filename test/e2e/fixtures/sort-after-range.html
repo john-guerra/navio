@@ -1,0 +1,32 @@
+<!doctype html>
+<meta charset="utf-8" />
+<div id="nv"></div>
+
+<script src="/node_modules/d3/dist/d3.js"></script>
+<script src="/node_modules/popper.js/dist/umd/popper.js"></script>
+<script src="/dist/navio.js"></script>
+<script>
+  /* global d3, navio */
+  // `rank` and `other` order the rows differently on purpose, so that
+  // re-sorting a level genuinely permutes the visual order.
+  window.rows = [
+    { id: "a", rank: 1, other: 60, grp: "x" },
+    { id: "b", rank: 2, other: 50, grp: "y" },
+    { id: "c", rank: 3, other: 40, grp: "x" },
+    { id: "d", rank: 4, other: 30, grp: "y" },
+    { id: "e", rank: 5, other: 20, grp: "x" },
+    { id: "f", rank: 6, other: 10, grp: "y" },
+  ];
+
+  window.nv = new navio(d3.select("#nv"), 400);
+  window.nv.id("id");
+  window.nv.data(window.rows);
+  window.nv.addAllAttribs();
+  window.nv.sortBy("rank", false, 0);
+
+  window.selectedIds = () =>
+    window.nv
+      .getVisible()
+      .map((d) => d.id)
+      .sort();
+</script>
