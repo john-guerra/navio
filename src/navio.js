@@ -666,6 +666,11 @@ function navio(selection, _h) {
   // with range filters
   function deleteObsoleteFiltersFromLevel(level) {
     for (let l = level; l < filtersByLevel.length; l++) {
+      // filtersByLevel can be sparse: deleteSubsequentLevels bails out early
+      // when the level is missing from dataIs, so an index can exist without
+      // ever having been assigned. A level with no filters has nothing to make
+      // obsolete, so skip it rather than dereferencing a hole.
+      if (!filtersByLevel[l]) continue;
       filtersByLevel[l] = filtersByLevel[l].filter(
         (f) => f.type === "value" || f.type === "negativeValue"
       );
@@ -2199,7 +2204,9 @@ function navio(selection, _h) {
   // range, which is why this needs nv.sortBy to actually sort (#81).
 
   nv.getFilters = function () {
-    return filtersByLevel.map((levelFilters, level) =>
+    // filtersByLevel can be sparse; emit [] for a missing level so the value is
+    // plain JSON with no nulls in it.
+    return Array.from(filtersByLevel, (levelFilters, level) =>
       (levelFilters || []).map((f) =>
         f.toValue({
           sortAttrib: dSortBy[level]
@@ -2227,7 +2234,10 @@ function navio(selection, _h) {
 
     // Start from a clean chain; every apply below is silent so that restoring
     // a value emits exactly one change at the end rather than one per level.
-    filtersByLevel = [];
+    // Levels are filled with empty arrays rather than left as holes - Navio
+    // indexes filtersByLevel by position, and a hole is not the same as "no
+    // filters here".
+    filtersByLevel = dataIs.map(() => []);
     deleteSubsequentLevels(1, dataIs, { shouldUpdate: false, silent: true });
 
     for (let level = 0; level < value.length; level++) {
@@ -2266,6 +2276,7 @@ function navio(selection, _h) {
       }
       if (!rebuilt.length) break;
 
+      while (filtersByLevel.length < level) filtersByLevel.push([]);
       filtersByLevel[level] = rebuilt;
       // Produces dataIs[level + 1], which the next iteration needs.
       applyFiltersAndUpdate(level, { silent: true });

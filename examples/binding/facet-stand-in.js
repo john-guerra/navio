@@ -59,6 +59,8 @@ function FacetStandIn(data, { attribs } = {}) {
 
       const box = document.createElement("input");
       box.type = "checkbox";
+      box.dataset.attr = attr;
+      box.dataset.value = v;
       box.addEventListener("change", () => {
         const chosen = filters.get(attr);
         if (box.checked) chosen.add(v);
@@ -72,6 +74,30 @@ function FacetStandIn(data, { attribs } = {}) {
     }
     target.appendChild(group);
   }
+
+  /**
+   * Reflect an externally-chosen set of facets (the reverse direction of the
+   * bridge). Updates the checkboxes and recomputes, without dispatching - the
+   * caller is mid-sync and a dispatch here would echo straight back.
+   */
+  target.setFacets = function (map) {
+    for (const [attr, chosen] of filters) {
+      const wanted = map.get(attr) || new Set();
+      chosen.clear();
+      for (const v of wanted) chosen.add(String(v));
+    }
+    for (const box of target.querySelectorAll("input[type=checkbox]")) {
+      box.checked = filters.get(box.dataset.attr)?.has(box.dataset.value);
+    }
+    const rows = data.filter((d) =>
+      Array.from(filters.entries()).every(
+        ([attr, chosen]) => chosen.size === 0 || chosen.has(String(d[attr]))
+      )
+    );
+    target.value = rows;
+    target.value.filters = filters;
+    count.textContent = `${rows.length} of ${data.length} rows`;
+  };
 
   apply();
   return target;

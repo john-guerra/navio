@@ -96,10 +96,14 @@
     <p class="note">
       Not every reactive widget agrees on what <code>.value</code> means.
       Navio's is a <em>filter chain</em>; a faceted-search widget's is typically
-      the <em>surviving rows</em>. Those cannot be bound directly — Navio would
-      read row objects as filter descriptors. A small adapter bridges them:
-      rows flowing in become Navio's data, and Navio's own drill-down is
-      re-applied on top.
+      the <em>surviving rows</em>, with the facets themselves hanging off it as
+      <code>value.filters</code>. So they cannot be bound directly — but the
+      <em>facets</em> and Navio's filters describe the same thing, and translate
+      cleanly. Tick <em>Adelie</em> below and Navio gains a level with
+      <code>species == Adelie</code> selected, exactly as if you had clicked
+      that value in its species column. Each faceted attribute becomes one
+      level; several values within one facet become OR'd filters on that level.
+      It works in both directions.
     </p>
     <div class="row">
       <div class="panel" style="min-width: 16rem">
@@ -107,7 +111,7 @@
         <div id="facets"></div>
       </div>
       <div class="panel">
-        <h3>Navio C (fed by the facets)</h3>
+        <h3>Navio C (bound to the facets)</h3>
         <div id="navioC"></div>
       </div>
       <div class="panel" style="flex: 1; min-width: 16rem">
@@ -172,32 +176,61 @@
       document.getElementById("navioC").appendChild(c);
 
       /**
-       * Bridge a widget whose `.value` is an array of rows into a NavioWidget.
+       * Facets and Navio filters describe the same thing in different shapes,
+       * so translate between them rather than replacing Navio's data.
        *
-       * The two speak different languages: rows cannot be expressed as a filter
-       * chain, so this is not a symmetric bind. Instead the incoming rows become
-       * Navio's dataset, and whatever drill-down Navio already had is re-applied
-       * on top - so the two kinds of filtering compose instead of overwriting
-       * each other.
+       *   facet  { species: {Adelie}, island: {Biscoe} }
+       *   navio  [ [species == Adelie], [island == Biscoe] ]
+       *
+       * One faceted attribute per level, which is what makes Navio show the
+       * drill-down; several chosen values within one facet become OR'd filters
+       * on the same level, matching Navio's OR-of-positives.
        */
-      function bridgeRowsInto(navioWidget, rowsWidget) {
-        rowsWidget.addEventListener("input", () => {
-          const nv = navioWidget.navio;
-          const keep = nv.getFilters();
-          nv.data(rowsWidget.value.slice());
-          nv.addAllAttribs();
-          nv.setFilters(keep);
-          report();
-        });
+      function facetsToFilters(map) {
+        const chain = [];
+        for (const [attrib, chosen] of map) {
+          if (!chosen || chosen.size === 0) continue;
+          chain.push(
+            Array.from(chosen, (value) => ({ type: "value", attrib, value }))
+          );
+        }
+        return chain;
       }
-      bridgeRowsInto(c, facets);
+
+      function filtersToFacets(chain) {
+        const map = new Map();
+        for (const level of chain) {
+          for (const f of level || []) {
+            if (f.type !== "value") continue;
+            if (!map.has(f.attrib)) map.set(f.attrib, new Set());
+            map.get(f.attrib).add(f.value);
+          }
+        }
+        return map;
+      }
+
+      // Both directions, with a guard so echoing back does not loop.
+      let syncing = false;
+      facets.addEventListener("input", () => {
+        if (syncing) return;
+        syncing = true;
+        c.value = facetsToFilters(facets.value.filters);
+        syncing = false;
+        report();
+      });
+      c.addEventListener("input", () => {
+        if (syncing) return;
+        syncing = true;
+        facets.setFacets(filtersToFacets(c.value));
+        syncing = false;
+        report();
+      });
 
       const bridgeOut = document.getElementById("bridgeOut");
       function report() {
         bridgeOut.textContent = [
           `facets .value : ${facets.value.length} rows`,
-          `navio C data  : ${c.navio.data().length} rows`,
-          `navio C shows : ${c.getSelected().length} rows`,
+          `navio C levels: ${c.navio.data().length} rows, ${c.getSelected().length} selected`,
           ``,
           `navio C .value:`,
           JSON.stringify(

@@ -29,31 +29,109 @@ test("two bound Navios stay in sync", async ({ page }) => {
   expect(errs).toEqual([]);
 });
 
-test("the facet bridge narrows Navio's dataset and keeps its own drill-down", async ({
+test("a facet selection becomes a Navio level, exactly as clicking would", async ({
   page,
 }) => {
   await page.goto("/examples/binding/");
-  const rowsOf = () =>
-    page.evaluate(
-      () => document.querySelector("#navioC").firstChild.navio.data().length
-    );
+  const state = () =>
+    page.evaluate(() => {
+      const c = document.querySelector("#navioC").firstChild;
+      return {
+        panels: document.querySelectorAll("#navioC .levelOverlay").length,
+        selected: c.getSelected().length,
+        value: c.value.filter((l) => l && l.length),
+      };
+    });
 
-  expect(await rowsOf()).toBe(120);
+  const before = await state();
+  expect(before.panels).toBe(1);
+  expect(before.selected).toBe(120);
 
-  // A rows-valued widget cannot be bound to Navio directly; the bridge feeds
-  // its output in as data instead.
+  // Tick "Adelie" in the facet widget.
   await page.locator("#facets input[type=checkbox]").first().check();
   await page.waitForTimeout(200);
 
-  const after = await rowsOf();
-  expect(after).toBeGreaterThan(0);
-  expect(after).toBeLessThan(120);
+  const after = await state();
+  // A second panel appears - the drill-down - rather than the dataset being
+  // swapped out underneath Navio.
+  expect(after.panels).toBe(2);
+  expect(after.selected).toBe(40);
+  expect(after.value).toEqual([
+    [{ type: "value", attrib: "species", value: "Adelie" }],
+  ]);
+});
 
-  // Navio's own filtering still applies on top of the narrowed dataset.
-  const composed = await page.evaluate(() => {
-    const c = document.querySelector("#navioC").firstChild;
-    c.setValue([[{ type: "value", attrib: "island", value: "Biscoe" }]]);
-    return { total: c.navio.data().length, shown: c.getSelected().length };
+test("the bridge also runs backwards, from Navio to the facets", async ({
+  page,
+}) => {
+  await page.goto("/examples/binding/");
+
+  await page.evaluate(() => {
+    document
+      .querySelector("#navioC")
+      .firstChild.setValue([
+        [{ type: "value", attrib: "island", value: "Biscoe" }],
+      ]);
   });
-  expect(composed.shown).toBeLessThanOrEqual(composed.total);
+  await page.waitForTimeout(200);
+
+  const checked = await page.evaluate(() =>
+    Array.from(document.querySelectorAll("#facets input[type=checkbox]"))
+      .filter((b) => b.checked)
+      .map((b) => `${b.dataset.attr}=${b.dataset.value}`)
+  );
+  expect(checked).toEqual(["island=Biscoe"]);
+});
+
+test("interacting with a bound peer does not crash", async ({ page }) => {
+  // Regression: filtering A then brushing B threw "Cannot read properties of
+  // undefined (reading 'filter')" - filtersByLevel had become sparse, and
+  // deleteObsoleteFiltersFromLevel dereferenced the hole.
+  const errs = [];
+  page.on("pageerror", (e) => errs.push(e.message));
+  await page.goto("/examples/binding/");
+
+  await page.evaluate(() =>
+    document
+      .querySelector("#navioA")
+      .firstChild.setValue([
+        [{ type: "value", attrib: "species", value: "Adelie" }],
+      ])
+  );
+
+  const box = await page.locator("#navioB canvas").boundingBox();
+  const g = await page.evaluate(() => {
+    const n = document.querySelector("#navioB").firstChild.navio;
+    return { y0: n.y0, margin: n.margin, aw: n.attribWidth };
+  });
+  const rowSpan = (380 - g.margin - 30 - g.y0) / 40;
+  const x = box.x + g.aw * 2.5;
+  await page.mouse.move(x, box.y + g.y0 + rowSpan * 3);
+  await page.mouse.down();
+  await page.mouse.move(x, box.y + g.y0 + rowSpan * 12, { steps: 10 });
+  await page.mouse.up();
+  await page.waitForTimeout(250);
+
+  expect(errs).toEqual([]);
+  // And the two stay in agreement afterwards.
+  const both = await page.evaluate(() => ({
+    a: document.querySelector("#navioA").firstChild.getSelected().length,
+    b: document.querySelector("#navioB").firstChild.getSelected().length,
+  }));
+  expect(both.a).toBe(both.b);
+});
+
+test("getFilters never emits holes", async ({ page }) => {
+  await page.goto("/examples/binding/");
+  await page.evaluate(() =>
+    document
+      .querySelector("#navioA")
+      .firstChild.setValue([
+        [{ type: "value", attrib: "species", value: "Adelie" }],
+      ])
+  );
+  const v = await page.evaluate(
+    () => document.querySelector("#navioB").firstChild.value
+  );
+  expect(v.every((level) => Array.isArray(level))).toBe(true);
 });
