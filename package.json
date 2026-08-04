@@ -20,7 +20,7 @@
     "@playwright/test": "^1.62.1",
     "@rollup/plugin-babel": "^6.0.3",
     "@rollup/plugin-node-resolve": "^15.0.2",
-    "@rollup/plugin-terser": "^0.4.3",
+    "@rollup/plugin-terser": "^1.0.0",
     "@vitest/eslint-plugin": "^1.6.24",
     "eslint": "^10.8.0",
     "eslint-config-prettier": "^10.1.8",
