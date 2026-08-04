@@ -12,9 +12,7 @@ import { test, expect } from "@playwright/test";
 const order = (page) =>
   page.evaluate(() =>
     window.nv
-      .data()
-      .slice()
-      .sort((a, b) => a.__i[0] - b.__i[0])
+      .getRowsAtLevel(0)
       .map((d) => d.id)
       .join(" ")
   );

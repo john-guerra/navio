@@ -1,9 +1,21 @@
 export function FilterByRange(opts) {
-  const first = opts.first;
-  const last = opts.last;
+  // Boundaries are INDICES into `data`, and positions come from a side table.
+  // Navio used to keep an `__i` array on every row; at a million rows that was
+  // 214 MB of per-row array objects. See #88.
+  const firstIndex = opts.firstIndex;
+  const lastIndex = opts.lastIndex;
   const level = opts.level;
   const itemAttr = opts.itemAttr;
+  const getPos = opts.getPos;
+  const getRow = opts.getRow || ((i) => i);
+  const first = getRow(firstIndex);
+  const last = getRow(lastIndex);
   const getAttrib = opts.getAttrib || ((d) => d[itemAttr]);
+  // Reads an attribute by row INDEX. Needed because the default itemAttr is
+  // "__seqId", which is derived from the index rather than stored on the row
+  // (#88), so a plain row lookup would return undefined.
+  const attribAt =
+    opts.getAttribAt || ((i, attrib) => getAttrib(getRow(i), attrib));
   const getAttribName =
     opts.getAttribName ||
     ((attrib) => (typeof attrib === "function" ? attrib.name : attrib));
@@ -19,13 +31,14 @@ export function FilterByRange(opts) {
     staleSort = true;
   }
 
-  function filter(d) {
-    return d.__i[level] >= first.__i[level] && d.__i[level] <= last.__i[level];
+  function filter(_row, index) {
+    const p = getPos(index, level);
+    return p >= getPos(firstIndex, level) && p <= getPos(lastIndex, level);
   }
 
   function toStr() {
-    let firstVal = `${getAttrib(first, itemAttr)}`,
-      lastVal = `${getAttrib(last, itemAttr)}`;
+    let firstVal = `${attribAt(firstIndex, itemAttr)}`,
+      lastVal = `${attribAt(lastIndex, itemAttr)}`;
     firstVal = typeof firstVal === typeof "" ? firstVal.slice(0, 5) : firstVal;
     lastVal = typeof lastVal === typeof "" ? lastVal.slice(0, 5) : lastVal;
     const label = `${getAttribName(itemAttr)} range including ${firstVal} to ${lastVal}`;
@@ -47,18 +60,18 @@ export function FilterByRange(opts) {
     return {
       type: "range",
       attrib: getAttribName(itemAttr),
-      first: getAttrib(first, itemAttr),
-      last: getAttrib(last, itemAttr),
-      firstId: first ? first[id] : undefined,
-      lastId: last ? last[id] : undefined,
+      first: attribAt(firstIndex, itemAttr),
+      last: attribAt(lastIndex, itemAttr),
+      firstId: attribAt(firstIndex, id),
+      lastId: attribAt(lastIndex, id),
       sortAttrib,
       sortDesc,
     };
   }
 
-  /** The rows the brush was dragged between, for redrawing it (#60). */
+  /** Where the brush was dragged, for redrawing it (#60). */
   function bounds() {
-    return { first, last };
+    return { first, last, firstIndex, lastIndex };
   }
 
   return {
@@ -182,11 +195,21 @@ export function FilterByValueRange(opts) {
 }
 
 export function FilterByRangeNegative(opts) {
-  const first = opts.first;
-  const last = opts.last;
+  // See FilterByRange: indices plus a side table, not `__i` on the row.
+  const firstIndex = opts.firstIndex;
+  const lastIndex = opts.lastIndex;
   const level = opts.level;
   const itemAttr = opts.itemAttr;
+  const getPos = opts.getPos;
+  const getRow = opts.getRow || ((i) => i);
+  const first = getRow(firstIndex);
+  const last = getRow(lastIndex);
   const getAttrib = opts.getAttrib || ((d) => d[itemAttr]);
+  // Reads an attribute by row INDEX. Needed because the default itemAttr is
+  // "__seqId", which is derived from the index rather than stored on the row
+  // (#88), so a plain row lookup would return undefined.
+  const attribAt =
+    opts.getAttribAt || ((i, attrib) => getAttrib(getRow(i), attrib));
   const getAttribName =
     opts.getAttribName ||
     ((attrib) => (typeof attrib === "function" ? attrib.name : attrib));
@@ -202,13 +225,14 @@ export function FilterByRangeNegative(opts) {
     staleSort = true;
   }
 
-  function filter(d) {
-    return d.__i[level] < first.__i[level] || d.__i[level] > last.__i[level];
+  function filter(_row, index) {
+    const p = getPos(index, level);
+    return p < getPos(firstIndex, level) || p > getPos(lastIndex, level);
   }
 
   function toStr() {
-    let firstVal = `${getAttrib(first, itemAttr)}`,
-      lastVal = `${getAttrib(last, itemAttr)}`;
+    let firstVal = `${attribAt(firstIndex, itemAttr)}`,
+      lastVal = `${attribAt(lastIndex, itemAttr)}`;
     firstVal = typeof firstVal === typeof "" ? firstVal.slice(0, 5) : firstVal;
     lastVal = typeof lastVal === typeof "" ? lastVal.slice(0, 5) : lastVal;
     const label = `${getAttribName(itemAttr)} range excluding ${firstVal} to ${lastVal}`;
@@ -228,18 +252,18 @@ export function FilterByRangeNegative(opts) {
     return {
       type: "negativeRange",
       attrib: getAttribName(itemAttr),
-      first: getAttrib(first, itemAttr),
-      last: getAttrib(last, itemAttr),
-      firstId: first ? first[id] : undefined,
-      lastId: last ? last[id] : undefined,
+      first: attribAt(firstIndex, itemAttr),
+      last: attribAt(lastIndex, itemAttr),
+      firstId: attribAt(firstIndex, id),
+      lastId: attribAt(lastIndex, id),
       sortAttrib,
       sortDesc,
     };
   }
 
-  /** The rows the brush was dragged between, for redrawing it (#60). */
+  /** Where the brush was dragged, for redrawing it (#60). */
   function bounds() {
-    return { first, last };
+    return { first, last, firstIndex, lastIndex };
   }
 
   return {
@@ -270,7 +294,12 @@ export function filterFromValue(value, ctx = {}) {
 
   const {
     level = 0,
-    rows = [],
+    // Indices into `data`, plus the accessors to reach a row and its position.
+    // Rows are no longer materialized just to be searched. See #88.
+    indices = [],
+    getRow = (i) => i,
+    getPos,
+    getAttribAt,
     resolveAttrib = (name) => name,
     getAttrib,
     getAttribName,
@@ -280,13 +309,17 @@ export function filterFromValue(value, ctx = {}) {
   if (itemAttr === undefined || itemAttr === null) return null;
 
   const read = getAttrib || ((d, a) => d[a]);
+  // Read by INDEX, not by row: derived attributes such as "__seqId" are no
+  // longer stored on the row, so `row[attrib]` would be undefined for them and
+  // every boundary lookup below would fail. See #88.
+  const readAt = getAttribAt || ((i, a) => read(getRow(i), a));
 
   // The attribute has to exist on the data, or every predicate would silently
   // compare undefined to undefined and match everything.
-  const known = rows.some((r) => read(r, itemAttr) !== undefined);
-  if (rows.length && !known) return null;
+  const known = indices.some((i) => readAt(i, itemAttr) !== undefined);
+  if (indices.length && !known) return null;
 
-  const common = { itemAttr, getAttrib, getAttribName };
+  const common = { itemAttr, getAttrib, getAttribName, getAttribAt };
 
   if (value.type === "valueRange") {
     return FilterByValueRange({ ...common, min: value.min, max: value.max });
@@ -302,40 +335,42 @@ export function filterFromValue(value, ctx = {}) {
 
   if (value.type === "range" || value.type === "negativeRange") {
     const first = resolveBoundary(
-      rows,
+      indices,
       value.first,
       value.firstId,
-      read,
+      readAt,
       itemAttr,
       "ceil"
     );
     const last = resolveBoundary(
-      rows,
+      indices,
       value.last,
       value.lastId,
-      read,
+      readAt,
       itemAttr,
       "floor"
     );
-    if (!first.row || !last.row) return null;
+    if (first.index === undefined || last.index === undefined) return null;
 
-    // The runtime predicate assumes first.__i <= last.__i. Under a descending
-    // sort the lower VALUE sits at the higher position, so order the resolved
-    // rows by position rather than trusting which one was named "first".
-    let lo = first.row,
-      hi = last.row;
-    if (
-      lo.__i &&
-      hi.__i &&
-      lo.__i[level] !== undefined &&
-      hi.__i[level] !== undefined &&
-      lo.__i[level] > hi.__i[level]
-    ) {
+    // The runtime predicate assumes first sits at or before last. Under a
+    // descending sort the lower VALUE is at the higher position, so order the
+    // resolved boundaries by position rather than trusting which was named
+    // "first".
+    let lo = first.index,
+      hi = last.index;
+    if (getPos && getPos(lo, level) > getPos(hi, level)) {
       [lo, hi] = [hi, lo];
     }
 
     const make = value.type === "range" ? FilterByRange : FilterByRangeNegative;
-    const filter = make({ ...common, level, first: lo, last: hi });
+    const filter = make({
+      ...common,
+      level,
+      firstIndex: lo,
+      lastIndex: hi,
+      getPos,
+      getRow,
+    });
     if (first.approximate || last.approximate) filter.approximate = true;
     return filter;
   }
@@ -352,45 +387,49 @@ export function filterFromValue(value, ctx = {}) {
  * missing upper bound snaps down. Snapping outward would silently include rows
  * the user never selected.
  */
-function resolveBoundary(rows, wanted, wantedId, read, itemAttr, side) {
+function resolveBoundary(indices, wanted, wantedId, readAt, itemAttr, side) {
+  // With no custom id, the serialized id IS the row's index into `data`, so
+  // matching on it is a plain equality check.
   if (wantedId !== undefined) {
-    const exact = rows.find(
-      (r) => r.__seqId === wantedId && read(r, itemAttr) === wanted
+    const exact = indices.find(
+      (i) => i === wantedId && readAt(i, itemAttr) === wanted
     );
-    if (exact) return { row: exact, approximate: false };
+    if (exact !== undefined) return { index: exact, approximate: false };
   }
 
-  const byValue = rows.find((r) => read(r, itemAttr) === wanted);
-  if (byValue) return { row: byValue, approximate: false };
+  const byValue = indices.find((i) => readAt(i, itemAttr) === wanted);
+  if (byValue !== undefined) return { index: byValue, approximate: false };
 
   // Only numbers and dates have a meaningful ordering here; for anything else a
   // guess would be arbitrary, so report failure instead of inventing one.
   const num = (v) =>
     v instanceof Date ? v.getTime() : typeof v === "number" ? v : null;
   const target = num(wanted);
-  if (target === null) return { row: null };
+  if (target === null) return { index: undefined };
 
-  let inward = null,
+  let inward,
     inwardD = Infinity,
-    nearest = null,
+    nearest,
     nearestD = Infinity;
 
-  for (const r of rows) {
-    const v = num(read(r, itemAttr));
+  for (const i of indices) {
+    const v = num(readAt(i, itemAttr));
     if (v === null) continue;
     const d = Math.abs(v - target);
     if (d < nearestD) {
       nearestD = d;
-      nearest = r;
+      nearest = i;
     }
     // "ceil" wants the smallest value >= target; "floor" the largest <= target.
     const isInward = side === "ceil" ? v >= target : v <= target;
     if (isInward && d < inwardD) {
       inwardD = d;
-      inward = r;
+      inward = i;
     }
   }
 
-  const row = inward || nearest;
-  return row ? { row, approximate: true } : { row: null };
+  const index = inward !== undefined ? inward : nearest;
+  return index !== undefined
+    ? { index, approximate: true }
+    : { index: undefined };
 }

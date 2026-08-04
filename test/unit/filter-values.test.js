@@ -17,23 +17,42 @@ const LEVEL = 0;
 
 /** Penguins-ish rows, pre-sorted by beak ascending, with __i assigned. */
 function makeRows() {
-  const rows = [
-    { __seqId: 0, species: "Adelie", island: "Torgersen", beak: 9 },
-    { __seqId: 1, species: "Adelie", island: "Torgersen", beak: 10 },
-    { __seqId: 2, species: "Adelie", island: "Biscoe", beak: 11 },
-    { __seqId: 3, species: "Gentoo", island: "Biscoe", beak: 12 },
-    { __seqId: 4, species: "Gentoo", island: "Dream", beak: 13 },
-    { __seqId: 5, species: "Chinstrap", island: "Dream", beak: 14 },
+  return [
+    { species: "Adelie", island: "Torgersen", beak: 9 },
+    { species: "Adelie", island: "Torgersen", beak: 10 },
+    { species: "Adelie", island: "Biscoe", beak: 11 },
+    { species: "Gentoo", island: "Biscoe", beak: 12 },
+    { species: "Gentoo", island: "Dream", beak: 13 },
+    { species: "Chinstrap", island: "Dream", beak: 14 },
   ];
-  rows.forEach((r, i) => (r.__i = [i]));
-  return rows;
 }
 
-const ctx = (rows) => ({
-  level: LEVEL,
-  rows,
-  resolveAttrib: (name) => name,
-});
+/**
+ * Bookkeeping lives in side tables now (#88), so a filter is given indices and
+ * accessors rather than rows carrying `__i`/`__seqId`. `order` is the visual
+ * order of the level: order[p] is the index of the row drawn at position p.
+ */
+const ctx = (rows, order = rows.map((_unused, i) => i)) => {
+  const posOf = new Map(order.map((rowIdx, pos) => [rowIdx, pos]));
+  return {
+    level: LEVEL,
+    indices: order,
+    getRow: (i) => rows[i],
+    getPos: (i) => posOf.get(i),
+    resolveAttrib: (name) => name,
+  };
+};
+
+/** Build a range filter the way navio does, over rows in their natural order. */
+const rangeOver = (Make, rows, firstIndex, lastIndex) =>
+  Make({
+    firstIndex,
+    lastIndex,
+    level: LEVEL,
+    itemAttr: "beak",
+    getRow: (i) => rows[i],
+    getPos: (i) => i,
+  });
 
 describe("value filters round-trip", () => {
   it("serializes FilterByValue to a plain JSON-safe object", () => {
@@ -61,8 +80,12 @@ describe("value filters round-trip", () => {
 
     const restored = filterFromValue(original.toValue(), ctx(rows));
 
-    expect(rows.filter(restored.filter)).toEqual(rows.filter(original.filter));
-    expect(rows.filter(restored.filter).map((r) => r.__seqId)).toEqual([0, 1]);
+    expect(rows.filter((r, i) => restored.filter(r, i))).toEqual(
+      rows.filter((r, i) => original.filter(r, i))
+    );
+    expect(
+      rows.filter((r, i) => restored.filter(r, i)).map((r) => r.island)
+    ).toEqual(["Torgersen", "Torgersen"]);
   });
 
   it("rehydrates a negative value filter", () => {
@@ -72,19 +95,16 @@ describe("value filters round-trip", () => {
       sel: rows[0],
     });
     const restored = filterFromValue(original.toValue(), ctx(rows));
-    expect(rows.filter(restored.filter)).toEqual(rows.filter(original.filter));
+    expect(rows.filter((r, i) => restored.filter(r, i))).toEqual(
+      rows.filter((r, i) => original.filter(r, i))
+    );
   });
 });
 
 describe("range filters round-trip", () => {
   it("records raw boundary values and sort context, not position indexes", () => {
     const rows = makeRows();
-    const f = FilterByRange({
-      first: rows[1],
-      last: rows[4],
-      level: LEVEL,
-      itemAttr: "beak",
-    });
+    const f = rangeOver(FilterByRange, rows, 1, 4);
 
     const v = f.toValue({ sortAttrib: "beak", sortDesc: false });
 
@@ -96,74 +116,57 @@ describe("range filters round-trip", () => {
       sortAttrib: "beak",
       sortDesc: false,
     });
-    // Stable ids are kept only to disambiguate duplicate values.
-    expect(v.firstId).toBe(1);
-    expect(v.lastId).toBe(4);
     // Nothing position-derived leaks into the serialized form.
     expect(JSON.stringify(v)).not.toContain("__i");
   });
 
   it("rehydrates a range filter selecting the same rows", () => {
     const rows = makeRows();
-    const original = FilterByRange({
-      first: rows[1],
-      last: rows[4],
-      level: LEVEL,
-      itemAttr: "beak",
-    });
+    const original = rangeOver(FilterByRange, rows, 1, 4);
 
     const restored = filterFromValue(
       original.toValue({ sortAttrib: "beak", sortDesc: false }),
       ctx(rows)
     );
 
-    expect(rows.filter(restored.filter).map((r) => r.__seqId)).toEqual([
-      1, 2, 3, 4,
-    ]);
+    expect(
+      rows.filter((r, i) => restored.filter(r, i)).map((r) => r.beak)
+    ).toEqual([10, 11, 12, 13]);
   });
 
   it("rehydrates negativeRange as the complement", () => {
     const rows = makeRows();
-    const original = FilterByRangeNegative({
-      first: rows[1],
-      last: rows[4],
-      level: LEVEL,
-      itemAttr: "beak",
-    });
+    const original = rangeOver(FilterByRangeNegative, rows, 1, 4);
 
     const restored = filterFromValue(
       original.toValue({ sortAttrib: "beak", sortDesc: false }),
       ctx(rows)
     );
 
-    expect(rows.filter(restored.filter).map((r) => r.__seqId)).toEqual([0, 5]);
+    expect(
+      rows.filter((r, i) => restored.filter(r, i)).map((r) => r.beak)
+    ).toEqual([9, 14]);
   });
 
   // The whole point of capturing raw values: a range means "beak 10..13",
   // not "whatever sat in positions 1..4 under the sort that was active".
   it("selects by value even when the target is sorted differently", () => {
     const rows = makeRows();
-    const original = FilterByRange({
-      first: rows[1],
-      last: rows[4],
-      level: LEVEL,
-      itemAttr: "beak",
-    });
+    const original = rangeOver(FilterByRange, rows, 1, 4);
     const serialized = original.toValue({
       sortAttrib: "beak",
       sortDesc: false,
     });
 
-    // Same data, now sorted by beak DESCENDING, so __i is reversed.
-    const reordered = makeRows().reverse();
-    reordered.forEach((r, i) => (r.__i = [i]));
-
-    const restored = filterFromValue(serialized, ctx(reordered));
+    // Same rows, but the level is now ordered by beak DESCENDING, so the
+    // positions are reversed while the row indices are unchanged.
+    const descending = [5, 4, 3, 2, 1, 0];
+    const restored = filterFromValue(serialized, ctx(rows, descending));
 
     // Still beaks 10..13, regardless of position.
     expect(
-      reordered
-        .filter(restored.filter)
+      rows
+        .filter((r, i) => restored.filter(r, i))
         .map((r) => r.beak)
         .sort((a, b) => a - b)
     ).toEqual([10, 11, 12, 13]);
@@ -171,24 +174,21 @@ describe("range filters round-trip", () => {
 
   it("falls back to the nearest value and flags approximate when a boundary row is gone", () => {
     const rows = makeRows();
-    const serialized = FilterByRange({
-      first: rows[1],
-      last: rows[4],
-      level: LEVEL,
-      itemAttr: "beak",
-    }).toValue({ sortAttrib: "beak", sortDesc: false });
+    const serialized = rangeOver(FilterByRange, rows, 1, 4).toValue({
+      sortAttrib: "beak",
+      sortDesc: false,
+    });
 
     // The row holding beak=10 no longer exists in this dataset.
     const without = makeRows().filter((r) => r.beak !== 10);
-    without.forEach((r, i) => (r.__i = [i]));
 
     const restored = filterFromValue(serialized, ctx(without));
 
     expect(restored).not.toBeNull();
     expect(restored.approximate).toBe(true);
-    expect(without.filter(restored.filter).map((r) => r.beak)).toEqual([
-      11, 12, 13,
-    ]);
+    expect(
+      without.filter((r, i) => restored.filter(r, i)).map((r) => r.beak)
+    ).toEqual([11, 12, 13]);
   });
 
   it("returns null rather than mis-selecting when the attribute is absent", () => {
@@ -198,6 +198,50 @@ describe("range filters round-trip", () => {
       ctx(rows)
     );
     expect(restored).toBeNull();
+  });
+});
+
+// "__seqId" is derived from the row's index rather than stored on the row
+// (#88), so `row["__seqId"]` is undefined. A range serialized against it - the
+// default for an unsorted level, which is what a first brush produces - has to
+// rebuild through the index-aware accessor. Reading it off the row instead made
+// setFilters drop the filter and collapse the bound peer back to one level.
+describe("derived attributes survive the round-trip", () => {
+  const seqCtx = (rows) => ({
+    level: LEVEL,
+    indices: rows.map((_unused, i) => i),
+    getRow: (i) => rows[i],
+    getPos: (i) => i,
+    getAttribAt: (i, attrib) => (attrib === "__seqId" ? i : rows[i][attrib]),
+    resolveAttrib: (name) => name,
+  });
+
+  const serialized = {
+    type: "range",
+    attrib: "__seqId",
+    first: 1,
+    last: 4,
+    firstId: 1,
+    lastId: 4,
+  };
+
+  it("rebuilds a range over __seqId even though no row carries it", () => {
+    const rows = makeRows();
+    expect(rows[0].__seqId).toBeUndefined();
+
+    const restored = filterFromValue(serialized, seqCtx(rows));
+
+    expect(restored).not.toBeNull();
+    expect(
+      rows.filter((r, i) => restored.filter(r, i)).map((r) => r.beak)
+    ).toEqual([10, 11, 12, 13]);
+  });
+
+  it("still rejects an attribute that is genuinely absent", () => {
+    const rows = makeRows();
+    expect(
+      filterFromValue({ ...serialized, attrib: "nonexistent" }, seqCtx(rows))
+    ).toBeNull();
   });
 });
 

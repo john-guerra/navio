@@ -67,6 +67,7 @@ function navio(selection, _h) {
     // and - because two Navios given the same array share the same row objects
     // - let one instance silently overwrite another's selection. See #88.
     selectedFlags = new Uint8Array(0),
+    posByLevel = [],
     rowIndex = null,
     cursorSubstractData =
       "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iMzJweCIgaGVpZ2h0PSIzMnB4IiB2aWV3Qm94PSIwIDAgMzIgMzIiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+CiAgICA8IS0tIEdlbmVyYXRvcjogU2tldGNoIDU0LjEgKDc2NDkwKSAtIGh0dHBzOi8vc2tldGNoYXBwLmNvbSAtLT4KICAgIDx0aXRsZT5jdXJzb3JTdWJzdHJhY3Q8L3RpdGxlPgogICAgPGRlc2M+Q3JlYXRlZCB3aXRoIFNrZXRjaC48L2Rlc2M+CiAgICA8ZyBpZD0iY3Vyc29yU3Vic3RyYWN0IiBzdHJva2U9Im5vbmUiIHN0cm9rZS13aWR0aD0iMSIgZmlsbD0ibm9uZSIgZmlsbC1ydWxlPSJldmVub2RkIj4KICAgICAgICA8cGF0aCBkPSJNOSwwLjUgTDcsMC41IEw3LDcgTDAuNSw3IEwwLjUsOSBMNyw5IEw3LDE1LjUgTDksMTUuNSBMOSw5IEwxNS41LDkgTDE1LjUsNyBMOSw3IEw5LDAuNSBaIiBpZD0iQ29tYmluZWQtU2hhcGUiIHN0cm9rZT0iI0ZGRkZGRiIgZmlsbD0iIzAwMDAwMCI+PC9wYXRoPgogICAgICAgIDxyZWN0IGlkPSJSZWN0YW5nbGUiIGZpbGw9IiMwMDAwMDAiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDE1LjAwMDAwMCwgMTUuMDAwMDAwKSByb3RhdGUoLTI3MC4wMDAwMDApIHRyYW5zbGF0ZSgtMTUuMDAwMDAwLCAtMTUuMDAwMDAwKSAiIHg9IjE0IiB5PSIxMSIgd2lkdGg9IjIiIGhlaWdodD0iOCI+PC9yZWN0PgogICAgPC9nPgo8L3N2Zz4=",
@@ -567,6 +568,32 @@ function navio(selection, _h) {
    * The lookup table is built lazily: most work here is index-driven and never
    * needs it, and for a million rows the map is not free.
    */
+  /**
+   * The id value for a row index.
+   *
+   * The default id used to be a `__seqId` property written onto every row - but
+   * `data` is never reordered (only `dataIs[level]` is), so it always equalled
+   * the row's index. It is now derived rather than stored. A custom id set via
+   * nv.id() points at one of the caller's own fields and is read as before.
+   */
+  function idOf(index) {
+    return id === "__seqId" ? index : getAttrib(data[index], id);
+  }
+
+  /**
+   * An attribute value by row INDEX. `__seqId` is derived from the index rather
+   * than stored on the row (#88), so it needs resolving here.
+   */
+  function attribAt(index, attrib) {
+    return attrib === "__seqId" ? idOf(index) : getAttrib(data[index], attrib);
+  }
+
+  /** A row's position within its level, from the side table. */
+  function posAt(index, level) {
+    const p = posByLevel[level];
+    return p ? p[index] : undefined;
+  }
+
   function indexOfRow(rowOrIndex) {
     if (typeof rowOrIndex === "number") return rowOrIndex;
     if (!rowOrIndex || typeof rowOrIndex !== "object") return undefined;
@@ -614,13 +641,19 @@ function navio(selection, _h) {
     for (i = 0; i < attribsOrdered.length; i++) {
       attrib = attribsOrdered[i];
       // `selected` is a rendered column but is no longer a row property.
+      // `selected` and `__seqId` are rendered columns but no longer row
+      // properties - both are derived from the row's index. See #88.
       const val =
         attrib === "selected"
           ? !!selectedFlags[rowIdx]
-          : getAttrib(item, attrib);
+          : attrib === "__seqId"
+            ? rowIdx
+            : getAttrib(item, attrib);
       const attribName = getAttribName(attrib);
 
-      y = Math.round(yScales[level](item[id]) + yScales[level].bandwidth() / 2);
+      y = Math.round(
+        yScales[level](idOf(rowIdx)) + yScales[level].bandwidth() / 2
+      );
       // y = yScales[level](item[id]) + yScales[level].bandwidth()/2;
 
       context.beginPath();
@@ -639,7 +672,7 @@ function navio(selection, _h) {
       // TODO get this out
       //If the range bands are tick enough draw divisions
       if (yScales[level].bandwidth() > nv.divisionsThreshold * 2) {
-        let yLine = Math.round(yScales[level](item[id]));
+        let yLine = Math.round(yScales[level](idOf(rowIdx)));
         // y = yScales[level](item[id])+yScales[level].bandwidth()/2;
         context.beginPath();
         context.moveTo(x(attribName, level), yLine);
@@ -691,8 +724,11 @@ function navio(selection, _h) {
   // Assigns the indexes on the new level data
   function assignIndexes(dataIsToUpdate, level) {
     if (nv.DEBUG) console.log("Assiging indexes ", level);
+    // One Int32Array per level, allocated on first use, rather than an array
+    // object hanging off every row. See #88.
+    if (!posByLevel[level]) posByLevel[level] = new Int32Array(data.length);
     for (let j = 0; j < dataIsToUpdate.length; j++) {
-      data[dataIsToUpdate[j]].__i[level] = j;
+      posByLevel[level][dataIsToUpdate[j]] = j;
     }
   }
 
@@ -749,12 +785,12 @@ function navio(selection, _h) {
       // filters select nothing at all - a single alt-click emptied the whole
       // widget. See #79.
       const keptByPositives = posFilters.length
-        ? posFilters.reduce((p, f) => p || f.filter(data[d]), false)
+        ? posFilters.reduce((p, f) => p || f.filter(data[d], d), false)
         : true;
 
       const keep =
         keptByPositives &&
-        negFilters.reduce((p, f) => p && f.filter(data[d]), true);
+        negFilters.reduce((p, f) => p && f.filter(data[d], d), true);
       selectedFlags[d] = keep ? 1 : 0;
       return keep;
       // // Check if a possitive filter apply
@@ -944,15 +980,18 @@ function navio(selection, _h) {
       let brushed = event.selection;
 
       let // first = dData.get(invertOrdinalScale(yScales[level], brushed[0] -yScales[level].bandwidth())),
-        first = dData.get(invertOrdinalScale(yScales[level], brushed[0])),
+        firstIndex = dData.get(invertOrdinalScale(yScales[level], brushed[0])),
         // last = dData.get(invertOrdinalScale(yScales[level], brushed[1] -yScales[level].bandwidth()))
-        last = dData.get(invertOrdinalScale(yScales[level], brushed[1]));
+        lastIndex = dData.get(invertOrdinalScale(yScales[level], brushed[1]));
 
       let newFilter;
       if (event.sourceEvent.altKey) {
         newFilter = new FilterByRangeNegative({
-          first,
-          last,
+          firstIndex,
+          lastIndex,
+          getPos: posAt,
+          getRow: (i) => data[i],
+          getAttribAt: attribAt,
           level: level,
           itemAttr: dSortBy[level] ? dSortBy[level].attrib : "__seqId",
           getAttrib,
@@ -960,8 +999,11 @@ function navio(selection, _h) {
         });
       } else {
         newFilter = new FilterByRange({
-          first,
-          last,
+          firstIndex,
+          lastIndex,
+          getPos: posAt,
+          getRow: (i) => data[i],
+          getAttribAt: attribAt,
           level: level,
           itemAttr: dSortBy[level] ? dSortBy[level].attrib : "__seqId",
           getAttrib,
@@ -990,8 +1032,8 @@ function navio(selection, _h) {
       if (nv.DEBUG)
         console.log(
           "selectByRange filtering " + (after - before) + "ms",
-          first,
-          last
+          firstIndex,
+          lastIndex
         );
 
       hideLoading(this);
@@ -1039,7 +1081,7 @@ function navio(selection, _h) {
       }
       itemAttr = dAttribs.get(itemAttr);
 
-      const sel = dData.get(itemId);
+      const sel = data[dData.get(itemId)];
       let newFilter;
       if (event.altKey) {
         newFilter = new FilterByValueDifferent({
@@ -1090,7 +1132,7 @@ function navio(selection, _h) {
     }
 
     let itemAttr = invertOrdinalScale(xScale, xOnWidget - levelScale(level));
-    const d = dData.get(itemId);
+    const d = data[dData.get(itemId)];
 
     itemAttr = dAttribs.get(itemAttr);
 
@@ -1475,10 +1517,10 @@ function navio(selection, _h) {
     let lastAttrib = xScale.domain()[xScale.domain().length - 1],
       rightBorder = x(lastAttrib, dataIs.length - 1) + xScale.bandwidth() + 2,
       ys =
-        yScales[dataIs.length - 1](link.source[id]) +
+        yScales[dataIs.length - 1](idOf(indexOfRow(link.source))) +
         yScales[dataIs.length - 1].bandwidth() / 2,
       yt =
-        yScales[dataIs.length - 1](link.target[id]) +
+        yScales[dataIs.length - 1](idOf(indexOfRow(link.target))) +
         yScales[dataIs.length - 1].bandwidth() / 2,
       miny = Math.min(ys, yt),
       maxy = Math.max(ys, yt),
@@ -1539,7 +1581,7 @@ function navio(selection, _h) {
     }
     for (let item of dataIs[level].representatives) {
       // Compute the yPrev by calculating the index of the corresponding representative
-      let iOnPrev = dData.get(data[item][id]).__i[level - 1];
+      let iOnPrev = posAt(item, level - 1);
       let iRep = Math.floor(
         iOnPrev - (iOnPrev % dataIs[level - 1].itemsPerpixel)
       );
@@ -1548,11 +1590,11 @@ function navio(selection, _h) {
       // if (nv.DEBUG) console.log(yScales[level-1](data[level-1][iRep][id]));
       let locPrevLevel = {
         x: levelScale(level - 1) + xScale.range()[1],
-        y: yScales[level - 1](data[dataIs[level - 1][iRep]][id]),
+        y: yScales[level - 1](idOf(dataIs[level - 1][iRep])),
       };
       let locLevel = {
         x: levelScale(level),
-        y: yScales[level](data[item][id]),
+        y: yScales[level](idOf(item)),
       };
 
       let points = [
@@ -1661,7 +1703,7 @@ function navio(selection, _h) {
       // Update x and y scales
       yScales[levelToUp].domain(
         representatives.map(function (rep) {
-          return data[rep][id];
+          return idOf(rep);
         })
       );
     }
@@ -1825,11 +1867,7 @@ function navio(selection, _h) {
     // });
     dData = new Map();
     for (let i = 0; i < data.length; i++) {
-      const d = data[i];
-      d.__seqId = i; //create a default id with the sequential number
-      dData.set(d[id], d);
-      d.__i = [];
-      d.__i[0] = i;
+      dData.set(idOf(i), i);
     }
 
     filtersByLevel = [];
@@ -2217,6 +2255,9 @@ function navio(selection, _h) {
       data = _.slice(0);
       // Fresh side tables for the new dataset; everything starts selected.
       selectedFlags = new Uint8Array(data.length).fill(1);
+      posByLevel = [
+        Int32Array.from({ length: data.length }, (_unused, i) => i),
+      ];
       rowIndex = null;
       dataIs = [
         data.map(function (_, i) {
@@ -2304,12 +2345,14 @@ function navio(selection, _h) {
         });
       }
 
-      const rows = dataIs[level].map((i) => data[i]);
       const rebuilt = specs
         .map((spec) =>
           filterFromValue(spec, {
             level,
-            rows,
+            indices: dataIs[level],
+            getRow: (i) => data[i],
+            getPos: posAt,
+            getAttribAt: attribAt,
             resolveAttrib,
             getAttrib,
             getAttribName,
@@ -2359,9 +2402,9 @@ function navio(selection, _h) {
         return;
       }
 
-      const { first, last } = ranged.bounds();
-      const y0 = yScales[level](first[id]);
-      const y1 = yScales[level](last[id]);
+      const { firstIndex, lastIndex } = ranged.bounds();
+      const y0 = yScales[level](idOf(firstIndex));
+      const y1 = yScales[level](idOf(lastIndex));
       if (y0 === undefined || y1 === undefined) return;
 
       const band = yScales[level].bandwidth();
@@ -2375,6 +2418,17 @@ function navio(selection, _h) {
    * Navio no longer writes a `selected` property onto your rows, so use this
    * (or getSelected()) rather than reading `d.selected`. See #88.
    */
+  /**
+   * The rows at a level, in the order they are drawn.
+   *
+   * Row positions used to be readable as `d.__i[level]`; that bookkeeping now
+   * lives in a side table (#88), so this is the supported way to observe the
+   * visual ordering.
+   */
+  nv.getRowsAtLevel = function (level = 0) {
+    return dataIs[level] ? dataIs[level].map((i) => data[i]) : [];
+  };
+
   nv.isSelected = function (rowOrIndex) {
     const i = indexOfRow(rowOrIndex);
     return i === undefined ? false : !!selectedFlags[i];
@@ -2513,6 +2567,7 @@ function navio(selection, _h) {
     // Drop references to the data so the closure stops pinning it in memory.
     data = [];
     selectedFlags = new Uint8Array(0);
+    posByLevel = [];
     rowIndex = null;
     dataIs = [];
     links = [];
