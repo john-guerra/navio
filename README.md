@@ -326,6 +326,22 @@ window.NAVIO_DEBUG = true;
 
 Either way the default stays off, so no rebuild is needed to turn tracing on.
 
+### Orientation
+
+```js
+nv.orientation = "vertical"; // default "horizontal"
+nv.hardUpdate();
+```
+
+Navio has two logical axes: the **attribute** axis, along which the columns are
+laid out, and the **record** axis, along which one line per row is drawn.
+`horizontal` (the default, and the historical behaviour) puts attributes across
+and records down. `vertical` transposes them — attributes become labelled rows
+and records run left to right, with drill-down levels stacking downward.
+
+Everything works in both: sorting, click-to-filter, brushing a range (drag along
+whichever axis the records run), drill-down, and the tooltip.
+
 ### Accessibility
 
 Navio draws to a canvas, so its content is opaque to assistive technology. The

@@ -1,0 +1,25 @@
+<!doctype html>
+<meta charset="utf-8" />
+<div id="nv"></div>
+<script src="/node_modules/d3/dist/d3.js"></script>
+<script src="/node_modules/popper.js/dist/umd/popper.js"></script>
+<script src="/dist/navio.js"></script>
+<script>
+  /* global d3, navio */
+  var params = new URLSearchParams(location.search);
+  var N = +(params.get("n") || 60);
+  var CATS = ["alpha", "beta", "gamma"];
+  var data = d3.range(N).map(function (i) {
+    return {
+      id: i + 1,
+      category: CATS[i % 3],
+      value: (i * 37) % 100,
+      score: Math.round(Math.sin(i) * 50 + 50),
+    };
+  });
+  window.nv = new navio(d3.select("#nv"), 420);
+  window.nv.orientation = params.get("orientation") || "vertical";
+  window.nv.id("id");
+  window.nv.data(data);
+  window.nv.addAllAttribs();
+</script>

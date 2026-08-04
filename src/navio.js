@@ -124,6 +124,9 @@ function navio(selection, _h) {
   nv.attribFontSize = 13; // Headers font size
   nv.attribFontSizeSelected = 32; // Headers font size when mouse over
 
+  // "horizontal" (default): attributes across, records down - the historical
+  // layout. "vertical": transposed, attributes down and records across. See #22.
+  nv.orientation = "horizontal";
   nv.filterFontSize = 8; // Font size of the filters explanations on the bottom
 
   nv.tooltipFontSize = 12; // Font size for the tooltip
@@ -494,6 +497,19 @@ function navio(selection, _h) {
       return levelScale(level) + xScale(val);
     };
 
+    // Orientation (#22).
+    //
+    // Navio has two logical axes: the ATTRIBUTE axis, along which the columns
+    // are laid out, and the RECORD axis, along which one line per row is drawn.
+    // Horizontal (the default and the historical behaviour) puts attributes on
+    // x and records on y; vertical transposes them. Every piece of geometry
+    // below is expressed in (attribute, record) and mapped through toXY, so the
+    // two orientations share one implementation rather than mirroring code.
+    //
+    // x(val, level) and yScales[level] keep their names: they are the
+    // attribute-axis and record-axis scales respectively, whichever screen
+    // direction those happen to be.
+
     canvas = selection.select("canvas").node();
 
     const ctxWidth = levelScale.range()[1] + nv.margin + nv.x0;
@@ -738,6 +754,24 @@ function navio(selection, _h) {
     return attrib === "__seqId" ? index : getAttrib(data[index], attrib);
   }
 
+  /** True when attributes run down the screen and records run across (#22). */
+  function isVertical() {
+    return nv.orientation === "vertical";
+  }
+
+  /**
+   * Map a logical (attribute-axis, record-axis) point to screen coordinates.
+   * This single function is what makes the two orientations one implementation.
+   */
+  function toXY(a, r) {
+    return isVertical() ? { x: r, y: a } : { x: a, y: r };
+  }
+
+  /** Screen width and height for a box that is `a` along A and `r` along R. */
+  function toWH(a, r) {
+    return isVertical() ? { width: r, height: a } : { width: a, height: r };
+  }
+
   /** A row's position within its level, from the side table. */
   function posAt(index, level) {
     const p = posByLevel[level];
@@ -806,9 +840,15 @@ function navio(selection, _h) {
       );
       // y = yScales[level](item[id]) + yScales[level].bandwidth()/2;
 
+      // One stroke per (record, attribute) cell: it runs the width of the
+      // attribute band along A, and is as thick as one record along R.
+      const aStart = Math.round(x(attribName, level)),
+        aEnd = Math.round(x(attribName, level) + xScale.bandwidth()),
+        p0 = toXY(aStart, y),
+        p1 = toXY(aEnd, y);
       context.beginPath();
-      context.moveTo(Math.round(x(attribName, level)), y);
-      context.lineTo(Math.round(x(attribName, level) + xScale.bandwidth()), y);
+      context.moveTo(p0.x, p0.y);
+      context.lineTo(p1.x, p1.y);
       context.lineWidth = Math.ceil(yScales[level].bandwidth());
       // context.lineWidth = 1;
 
@@ -824,9 +864,11 @@ function navio(selection, _h) {
       if (yScales[level].bandwidth() > nv.divisionsThreshold * 2) {
         let yLine = Math.round(yScales[level](idOf(rowIdx)));
         // y = yScales[level](item[id])+yScales[level].bandwidth()/2;
+        const d0 = toXY(x(attribName, level), yLine),
+          d1 = toXY(x(attribName, level) + xScale.bandwidth(), yLine);
         context.beginPath();
-        context.moveTo(x(attribName, level), yLine);
-        context.lineTo(x(attribName, level) + xScale.bandwidth(), yLine);
+        context.moveTo(d0.x, d0.y);
+        context.lineTo(d1.x, d1.y);
         context.lineWidth = 1;
         // context.lineWidth = 1;
         context.strokeStyle = nv.divisionsColor;
@@ -839,12 +881,12 @@ function navio(selection, _h) {
   function drawLevelBorder(i) {
     context.save();
     context.beginPath();
-    context.rect(
-      levelScale(i),
-      yScales[i].range()[0] - 1,
-      xScale.range()[1] + 1,
-      yScales[i].range()[1] + 2 - yScales[i].range()[0]
-    );
+    const origin = toXY(levelScale(i), yScales[i].range()[0] - 1),
+      size = toWH(
+        xScale.range()[1] + 1,
+        yScales[i].range()[1] + 2 - yScales[i].range()[0]
+      );
+    context.rect(origin.x, origin.y, size.width, size.height);
     context.strokeStyle = "black";
     context.lineWidth = 1;
     context.stroke();
@@ -1038,15 +1080,20 @@ function navio(selection, _h) {
   }
 
   function updateBrushes(d, level) {
-    dBrushes[level] = d3
-      .brushY()
+    // The brush selects a RANGE OF RECORDS, so it runs along R: brushY when
+    // records go down the screen, brushX when they go across (#22).
+    const aLo = x(xScale.domain()[0], level),
+      aHi =
+        x(xScale.domain()[xScale.domain().length - 1], level) +
+        xScale.bandwidth() * 1.1,
+      rLo = yScales[level].range()[0],
+      rHi = yScales[level].range()[1],
+      c0 = toXY(aLo, rLo),
+      c1 = toXY(aHi, rHi);
+    dBrushes[level] = (isVertical() ? d3.brushX() : d3.brushY())
       .extent([
-        [x(xScale.domain()[0], level), yScales[level].range()[0]],
-        [
-          x(xScale.domain()[xScale.domain().length - 1], level) +
-            xScale.bandwidth() * 1.1,
-          yScales[level].range()[1],
-        ],
+        [c0.x, c0.y],
+        [c1.x, c1.y],
       ])
       .on("brush", brushed)
       .on("end", onSelectByRange);
@@ -1071,11 +1118,7 @@ function navio(selection, _h) {
       .on("mouseout", onMouseOut)
       .attr("class", "brush")
       .selectAll("rect")
-      .attr(
-        "width",
-        x(xScale.domain()[xScale.domain().length - 1], level) +
-          xScale.bandwidth() * 1.1
-      );
+      .attr(isVertical() ? "height" : "width", aHi);
 
     _brush.exit().remove();
 
@@ -1213,13 +1256,17 @@ function navio(selection, _h) {
 
       removeAllBrushesBut(-1); // Remove all brushes
 
+      // Same axis swap as showTooptip: these are screen coords (#22).
+      const onA = isVertical() ? clientY : clientX,
+        onR = isVertical() ? clientX : clientY;
+
       const before = performance.now();
-      const itemId = invertOrdinalScale(yScales[level], clientY);
+      const itemId = invertOrdinalScale(yScales[level], onR);
       const after = performance.now();
       if (nv.DEBUG)
         console.log("invertOrdinalScale " + (after - before) + "ms");
 
-      let itemAttr = invertOrdinalScale(xScale, clientX - levelScale(level));
+      let itemAttr = invertOrdinalScale(xScale, onA - levelScale(level));
       if (itemAttr === undefined) {
         if (nv.DEBUG)
           console.log(
@@ -1273,15 +1320,20 @@ function navio(selection, _h) {
   } // updateBrushes
 
   function showTooptip(xOnWidget, yOnWidget, clientX, clientY, level) {
+    // Pointer coords are screen-space; the scales are axis-space. Vertical
+    // swaps which is which (#22).
+    const onA = isVertical() ? yOnWidget : xOnWidget,
+      onR = isVertical() ? xOnWidget : yOnWidget;
+
     let itemId;
     try {
-      itemId = invertOrdinalScale(yScales[level], yOnWidget);
+      itemId = invertOrdinalScale(yScales[level], onR);
     } catch (e) {
       nv.DEBUG && console.log("Navio.showTooltip Error inverting scale", e);
       return;
     }
 
-    let itemAttr = invertOrdinalScale(xScale, xOnWidget - levelScale(level));
+    let itemAttr = invertOrdinalScale(xScale, onA - levelScale(level));
     const rowIdx = dData.get(itemId);
     const d = data[rowIdx];
 
@@ -1488,8 +1540,13 @@ function navio(selection, _h) {
                     : " ↑"
                   : "");
         })
-        .attr("x", xScale.bandwidth() / 2)
-        .attr("y", 0)
+        // The group is already translated to the column's origin, so this is a
+        // local offset. Horizontal: sit above the column and rotate. Vertical:
+        // sit to the left of the row, upright and right-aligned (#22).
+        .attr("x", () => (isVertical() ? -6 : xScale.bandwidth() / 2))
+        .attr("y", () => (isVertical() ? xScale.bandwidth() / 2 : 0))
+        .attr("text-anchor", () => (isVertical() ? "end" : "start"))
+        .attr("dominant-baseline", () => (isVertical() ? "middle" : "auto"))
         .style("font-weight", function (d) {
           return dSortBy[d.level] !== undefined &&
             dSortBy[d.level].attrib === d.attrib
@@ -1526,7 +1583,11 @@ function navio(selection, _h) {
             Math.min(nv.attribFontSize, nv.attribWidth) + "px"
           );
         })
-        .attr("transform", `rotate(${nv.attribRotation})`);
+        // Rotating the label only makes sense when it has to fit a narrow
+        // column; along the record axis there is room to read it upright.
+        .attr("transform", () =>
+          isVertical() ? null : `rotate(${nv.attribRotation})`
+        );
     } // if (nv.showAttribTitles) {
   }
 
@@ -1592,13 +1653,10 @@ function navio(selection, _h) {
         announce(`Moved ${d.name} to position ${to + 1}`);
       });
 
-    attribOverlayEnter
-      .merge(attribOverlay)
-      .attr(
-        "transform",
-        (d) =>
-          `translate(${x(d.name, d.level)}, ${yScales[d.level].range()[0]})`
-      );
+    attribOverlayEnter.merge(attribOverlay).attr("transform", (d) => {
+      const p = toXY(x(d.name, d.level), yScales[d.level].range()[0]);
+      return `translate(${p.x}, ${p.y})`;
+    });
 
     attribOverlayEnter
       .append("rect")
@@ -1608,11 +1666,17 @@ function navio(selection, _h) {
       // .style("opacity", "0.1")
       .attr("x", 0)
       .attr("y", 0)
-      .attr("width", function () {
-        return xScale.bandwidth() * 1.1;
+      .attr("width", function (d) {
+        return toWH(
+          xScale.bandwidth() * 1.1,
+          yScales[d.level].range()[1] - yScales[d.level].range()[0]
+        ).width;
       })
       .attr("height", function (d) {
-        return yScales[d.level].range()[1] - yScales[d.level].range()[0];
+        return toWH(
+          xScale.bandwidth() * 1.1,
+          yScales[d.level].range()[1] - yScales[d.level].range()[0]
+        ).height;
       });
 
     drawAttribHeaders(attribOverlay, attribOverlayEnter);
@@ -1646,33 +1710,35 @@ function navio(selection, _h) {
     levelOverlay.exit().remove();
   } // drawBrushes
 
+  /** The drag coordinate along the ATTRIBUTE axis - x horizontally, y not (#22). */
+  function dragAlongA(event) {
+    return isVertical() ? event.y : event.x;
+  }
+
+  /** Where the dragged header should sit while it follows the pointer. */
+  function draggedHeaderTransform(event, d) {
+    const p = toXY(
+      dragAlongA(event) + nv.attribFontSize / 2,
+      yScales[d.level].range()[0]
+    );
+    return `translate(${p.x}, ${p.y})`;
+  }
+
   function attribDragstarted(event, d) {
     if (nv.DEBUG) console.log("attrib drag start", d);
     if (!event.sourceEvent.shiftKey) return;
 
-    d3.select(this.parentNode).attr("transform", function (d) {
-      return (
-        "translate(" +
-        (event.x + nv.attribFontSize / 2) +
-        "," +
-        yScales[d.level].range()[0] +
-        ")"
-      );
-    });
+    d3.select(this.parentNode).attr("transform", (dd) =>
+      draggedHeaderTransform(event, dd)
+    );
   }
 
   function attribDragged(event) {
     if (!event.sourceEvent.shiftKey) return;
 
-    d3.select(this.parentNode).attr("transform", function (d) {
-      return (
-        "translate(" +
-        (event.x + nv.attribFontSize / 2) +
-        "," +
-        yScales[d.level].range()[0] +
-        ")"
-      );
-    });
+    d3.select(this.parentNode).attr("transform", (dd) =>
+      draggedHeaderTransform(event, dd)
+    );
   }
 
   function attribDragended(event, d) {
@@ -1681,19 +1747,14 @@ function navio(selection, _h) {
 
     let attrDraggedInto = invertOrdinalScale(
       xScale,
-      event.x + nv.attribFontSize / 2 - levelScale(d.level)
+      dragAlongA(event) + nv.attribFontSize / 2 - levelScale(d.level)
     );
     attrDraggedInto = dAttribs.get(attrDraggedInto);
 
     let pos;
-    d3.select(this.parentNode).attr("transform", function (d) {
-      return (
-        "translate(" +
-        x(d.name, d.level) +
-        "," +
-        yScales[d.level].range()[0] +
-        ")"
-      );
+    d3.select(this.parentNode).attr("transform", function (dd) {
+      const p = toXY(x(dd.name, dd.level), yScales[dd.level].range()[0]);
+      return `translate(${p.x}, ${p.y})`;
     });
 
     if (attrDraggedInto !== d.attrib) {
@@ -1708,17 +1769,16 @@ function navio(selection, _h) {
     svg
       .select("#closeButton")
       .style("display", dataIs.length === 1 ? "none" : "block")
-      .attr(
-        "transform",
-        "translate(" +
-          (levelScale(maxLevel) +
+      .attr("transform", () => {
+        const p = toXY(
+          levelScale(maxLevel) +
             levelScale.bandwidth() -
             nv.levelsSeparation +
-            15) +
-          "," +
-          yScales[maxLevel].range()[0] +
-          ")"
-      );
+            15,
+          yScales[maxLevel].range()[0]
+        );
+        return `translate(${p.x}, ${p.y})`;
+      });
   }
 
   // Links between nodes
@@ -1828,8 +1888,12 @@ function navio(selection, _h) {
         },
         locPrevLevel,
       ];
-      drawLine(points, 1, nv.levelConnectionsColor);
-      drawLine(points, 1, nv.levelConnectionsColor, true);
+      // `points` is built in (attribute-axis, record-axis) space above - the
+      // .x fields come from levelScale/xScale and the .y fields from yScales -
+      // so mapping the whole path through toXY transposes it for free (#22).
+      const path = points.map((pt) => toXY(pt.x, pt.y));
+      drawLine(path, 1, nv.levelConnectionsColor);
+      drawLine(path, 1, nv.levelConnectionsColor, true);
     }
   }
 
@@ -2091,20 +2155,23 @@ function navio(selection, _h) {
   }
 
   function updateWidthAndHeight() {
-    const ctxWidth = levelScale.range()[1] + nv.margin + nv.x0;
-    nv.DEBUG && console.log("updateWidthAndHeight: ", ctxWidth, height);
+    // levelScale runs along A, `height` along R, so the two swap places on the
+    // screen when the widget is vertical (#22).
+    const alongA = levelScale.range()[1] + nv.margin + nv.x0,
+      { width: ctxWidth, height: ctxHeight } = toWH(alongA, height);
+    nv.DEBUG && console.log("updateWidthAndHeight: ", ctxWidth, ctxHeight);
     const scale = window.devicePixelRatio || 1;
     d3.select(canvas)
       .attr("width", ctxWidth * scale)
-      .attr("height", height * scale)
+      .attr("height", ctxHeight * scale)
       .style("width", ctxWidth)
-      .style("height", height + "px");
+      .style("height", ctxHeight + "px");
     canvas.style.width = ctxWidth + "px";
-    canvas.style.height = height + "px";
+    canvas.style.height = ctxHeight + "px";
 
     context.scale(scale, scale);
 
-    svg.attr("width", ctxWidth).attr("height", height);
+    svg.attr("width", ctxWidth).attr("height", ctxHeight);
   }
 
   nv.initData = function (mData, mColScales) {
