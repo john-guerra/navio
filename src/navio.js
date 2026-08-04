@@ -62,6 +62,12 @@ function navio(selection, _h) {
     id = "__seqId",
     updateCallback = function () {},
     changeListeners = [],
+    // Navio's bookkeeping lives in side tables keyed by a row's index into
+    // `data`, never on the caller's objects. Writing to the rows polluted them,
+    // and - because two Navios given the same array share the same row objects
+    // - let one instance silently overwrite another's selection. See #88.
+    selectedFlags = new Uint8Array(0),
+    rowIndex = null,
     cursorSubstractData =
       "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iMzJweCIgaGVpZ2h0PSIzMnB4IiB2aWV3Qm94PSIwIDAgMzIgMzIiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+CiAgICA8IS0tIEdlbmVyYXRvcjogU2tldGNoIDU0LjEgKDc2NDkwKSAtIGh0dHBzOi8vc2tldGNoYXBwLmNvbSAtLT4KICAgIDx0aXRsZT5jdXJzb3JTdWJzdHJhY3Q8L3RpdGxlPgogICAgPGRlc2M+Q3JlYXRlZCB3aXRoIFNrZXRjaC48L2Rlc2M+CiAgICA8ZyBpZD0iY3Vyc29yU3Vic3RyYWN0IiBzdHJva2U9Im5vbmUiIHN0cm9rZS13aWR0aD0iMSIgZmlsbD0ibm9uZSIgZmlsbC1ydWxlPSJldmVub2RkIj4KICAgICAgICA8cGF0aCBkPSJNOSwwLjUgTDcsMC41IEw3LDcgTDAuNSw3IEwwLjUsOSBMNyw5IEw3LDE1LjUgTDksMTUuNSBMOSw5IEwxNS41LDkgTDE1LjUsNyBMOSw3IEw5LDAuNSBaIiBpZD0iQ29tYmluZWQtU2hhcGUiIHN0cm9rZT0iI0ZGRkZGRiIgZmlsbD0iIzAwMDAwMCI+PC9wYXRoPgogICAgICAgIDxyZWN0IGlkPSJSZWN0YW5nbGUiIGZpbGw9IiMwMDAwMDAiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDE1LjAwMDAwMCwgMTUuMDAwMDAwKSByb3RhdGUoLTI3MC4wMDAwMDApIHRyYW5zbGF0ZSgtMTUuMDAwMDAwLCAtMTUuMDAwMDAwKSAiIHg9IjE0IiB5PSIxMSIgd2lkdGg9IjIiIGhlaWdodD0iOCI+PC9yZWN0PgogICAgPC9nPgo8L3N2Zz4=",
     cursorAddData =
@@ -554,6 +560,23 @@ function navio(selection, _h) {
     for (const fn of changeListeners.slice()) fn();
   }
 
+  /**
+   * Index of a row within `data`. Accepts an index unchanged, so internal
+   * callers (which already have one) pay nothing.
+   *
+   * The lookup table is built lazily: most work here is index-driven and never
+   * needs it, and for a million rows the map is not free.
+   */
+  function indexOfRow(rowOrIndex) {
+    if (typeof rowOrIndex === "number") return rowOrIndex;
+    if (!rowOrIndex || typeof rowOrIndex !== "object") return undefined;
+    if (!rowIndex) {
+      rowIndex = new WeakMap();
+      for (let i = 0; i < data.length; i++) rowIndex.set(data[i], i);
+    }
+    return rowIndex.get(rowOrIndex);
+  }
+
   function getAttrib(item, attrib) {
     if (typeof attrib === "function") {
       try {
@@ -583,13 +606,18 @@ function navio(selection, _h) {
     }
   }
 
-  function drawItem(item, level) {
+  function drawItem(rowIdx, level) {
+    const item = data[rowIdx];
     let attrib, i, y;
 
     context.save();
     for (i = 0; i < attribsOrdered.length; i++) {
       attrib = attribsOrdered[i];
-      const val = getAttrib(item, attrib);
+      // `selected` is a rendered column but is no longer a row property.
+      const val =
+        attrib === "selected"
+          ? !!selectedFlags[rowIdx]
+          : getAttrib(item, attrib);
       const attribName = getAttribName(attrib);
 
       y = Math.round(yScales[level](item[id]) + yScales[level].bandwidth() / 2);
@@ -724,9 +752,11 @@ function navio(selection, _h) {
         ? posFilters.reduce((p, f) => p || f.filter(data[d]), false)
         : true;
 
-      return (data[d].selected =
+      const keep =
         keptByPositives &&
-        negFilters.reduce((p, f) => p && f.filter(data[d]), true));
+        negFilters.reduce((p, f) => p && f.filter(data[d]), true);
+      selectedFlags[d] = keep ? 1 : 0;
+      return keep;
       // // Check if a possitive filter apply
       // for (let filter of posFilters) {
       //   if (filter.filter(data[d])) {
@@ -1685,7 +1715,7 @@ function navio(selection, _h) {
       removeBrushOnLevel(level - 1);
 
       for (let d of _dataIs[level - 1]) {
-        data[d].selected = true;
+        selectedFlags[d] = 1;
       }
 
       if (
@@ -1748,7 +1778,13 @@ function navio(selection, _h) {
   function recomputeVisibleLinks() {
     if (links.length > 0) {
       visibleLinks = links.filter(function (d) {
-        return d.source.selected && d.target.selected;
+        // Link endpoints are the caller's own row objects (the d3-force
+        // convention), so this is the one place identity crosses the API.
+        const s = indexOfRow(d.source),
+          t = indexOfRow(d.target);
+        return s !== undefined && t !== undefined
+          ? selectedFlags[s] && selectedFlags[t]
+          : false;
       });
     }
   }
@@ -1756,7 +1792,7 @@ function navio(selection, _h) {
   function updateLevel(levelData, i) {
     drawLevelBorder(i);
     for (let rep of levelData.representatives) {
-      drawItem(data[rep], i);
+      drawItem(rep, i);
     }
 
     drawLevelConnections(i);
@@ -2179,9 +2215,9 @@ function navio(selection, _h) {
 
     if (arguments.length) {
       data = _.slice(0);
-      for (let d of data) {
-        d.selected = true;
-      }
+      // Fresh side tables for the new dataset; everything starts selected.
+      selectedFlags = new Uint8Array(data.length).fill(1);
+      rowIndex = null;
       dataIs = [
         data.map(function (_, i) {
           return i;
@@ -2333,10 +2369,21 @@ function navio(selection, _h) {
     });
   }
 
+  /**
+   * Is this row currently selected? Accepts a row object or its index.
+   *
+   * Navio no longer writes a `selected` property onto your rows, so use this
+   * (or getSelected()) rather than reading `d.selected`. See #88.
+   */
+  nv.isSelected = function (rowOrIndex) {
+    const i = indexOfRow(rowOrIndex);
+    return i === undefined ? false : !!selectedFlags[i];
+  };
+
   nv.getSelected = function () {
     return dataIs[dataIs.length - 1]
       .filter(function (d) {
-        return data[d].selected;
+        return selectedFlags[d];
       })
       .map(function (d) {
         return data[d];
@@ -2465,6 +2512,8 @@ function navio(selection, _h) {
 
     // Drop references to the data so the closure stops pinning it in memory.
     data = [];
+    selectedFlags = new Uint8Array(0);
+    rowIndex = null;
     dataIs = [];
     links = [];
     visibleLinks = [];
