@@ -16,6 +16,11 @@ const copyright = readFileSync("./LICENSE", "utf-8")
   .map((line) => line.replace(/^Copyright\s+/, ""))
   .join(", ");
 
+// Baked in at build time so the version Navio reports can never drift from
+// package.json. src guards on `typeof`, so importing src directly (unit tests,
+// a bundler pointed at src/) still works - it just reports "dev".
+const versionIntro = `var __NAVIO_VERSION__ = ${JSON.stringify(meta.version)};`;
+
 export default [
   {
     input: "src/index.js",
@@ -38,6 +43,7 @@ export default [
       indent: false,
       // sourcemap: true,
       banner: `// ${meta.homepage} v${meta.version} Copyright ${copyright}`,
+      intro: versionIntro,
       globals: {
         d3: "d3",
         "popper.js": "Popper",
@@ -62,6 +68,7 @@ export default [
       indent: false,
       // sourcemap: true,
       banner: `// ${meta.homepage} v${meta.version} Copyright ${copyright}`,
+      intro: versionIntro,
       globals: {
         d3: "d3",
         "popper.js": "Popper",
@@ -95,6 +102,7 @@ export default [
       // Expose the navio function itself as the global; see src/index.js.
       exports: "default",
       indent: false,
+      intro: versionIntro,
       globals: {
         d3: "d3",
         "popper.js": "Popper",

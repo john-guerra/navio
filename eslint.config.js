@@ -39,7 +39,12 @@ export default [
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
-      globals: { ...globals.browser },
+      globals: {
+        ...globals.browser,
+        // Injected by rollup at build time (see versionIntro in
+        // rollup.config.js); src guards on typeof so it is optional.
+        __NAVIO_VERSION__: "readonly",
+      },
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
     rules: {

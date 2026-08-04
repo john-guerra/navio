@@ -32,6 +32,18 @@ import {
 
 let navioInstanceCount = 0;
 
+// Injected by rollup (see versionIntro in rollup.config.js) so it tracks
+// package.json automatically. Undefined when src/ is imported directly.
+const VERSION =
+  typeof __NAVIO_VERSION__ !== "undefined" ? __NAVIO_VERSION__ : "dev";
+
+// Announced once per page load, not per instance. Loading the wrong build is
+// easy to do and invisible otherwise - notebooks and CDNs cache aggressively,
+// and unpkg's unpinned URL silently follows whatever is latest.
+if (typeof console !== "undefined" && console.info) {
+  console.info(`navio ${VERSION}`);
+}
+
 //selection should be a d3 selection or a string with the id of the element
 function navio(selection, _h) {
   "use strict";
@@ -2648,5 +2660,9 @@ function navio(selection, _h) {
 navio.getAttribsFromObjectRecursive = getAttribsFromObjectRecursive;
 // Returns a flat array with all the attributes in an object up to recursionLevel, for nested attributes returns a function
 navio.getAttribsFromObjectAsFn = getAttribsFromObjectAsFn;
+
+// So the loaded build can be checked without reading the console - useful from
+// a notebook cell, or from a test.
+navio.version = VERSION;
 
 export default navio;

@@ -12,7 +12,13 @@ function captureConsole(page) {
   return messages;
 }
 
-test("mounting and auto-detecting attributes writes nothing to the console", async ({
+// The one line Navio is allowed to write unprompted: which build loaded.
+// Notebooks and CDNs cache hard enough that "am I running the version I think
+// I am?" is a real question, and it is printed once per page load rather than
+// once per instance.
+const VERSION_BANNER = /^info: navio (\d+\.\d+\.\d+.*|dev)$/;
+
+test("mounting and auto-detecting attributes writes only the version banner", async ({
   page,
 }) => {
   const messages = captureConsole(page);
@@ -20,7 +26,24 @@ test("mounting and auto-detecting attributes writes nothing to the console", asy
   await page.goto("/test/e2e/fixtures/single.html");
   await expect(page.locator("#nv canvas")).toHaveCount(1);
 
-  expect(messages).toEqual([]);
+  expect(messages).toHaveLength(1);
+  expect(messages[0]).toMatch(VERSION_BANNER);
+});
+
+test("the version banner is printed once per page, not once per instance", async ({
+  page,
+}) => {
+  const messages = captureConsole(page);
+
+  await page.goto("/test/e2e/fixtures/two-instances.html");
+  await expect(page.locator("#nv1 canvas")).toHaveCount(1);
+  await expect(page.locator("#nv2 canvas")).toHaveCount(1);
+
+  expect(messages).toHaveLength(1);
+  expect(messages[0]).toMatch(VERSION_BANNER);
+  // And it matches what the module reports programmatically.
+  const version = await page.evaluate(() => window.navio.version);
+  expect(messages[0]).toBe(`info: navio ${version}`);
 });
 
 test("interacting (hover, stray click, filter) stays silent", async ({
