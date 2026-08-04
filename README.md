@@ -352,6 +352,20 @@ nv.setHiddenAttribs([]);             // show everything again
 None of these emit a change event, so a widget bound with `Inputs.bind` is
 unaffected.
 
+Panel changes are remembered in `localStorage` and reapplied on the next load.
+Direct property assignments cannot notify anyone, so call `nv.saveSettings()`
+after those if you want them remembered.
+
+```js
+nv.settingsKey = "my-page";   // storage key; null turns persistence off
+nv.getSettings() / nv.setSettings(cfg)
+nv.getSettingsCode()          // the JS that reproduces the current settings
+nv.clearStoredSettings()
+```
+
+The panel's **Copy config** button puts `getSettingsCode()` on the clipboard, so
+a layout you arrived at by fiddling can be pasted straight into your source.
+
 The picker is pluggable — `nv.attribPicker` takes any
 `(names, {value, onChange, move}) => HTMLElement`. See
 [`examples/settings`](examples/settings/index.html), which plugs in

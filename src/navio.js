@@ -88,6 +88,7 @@ function navio(selection, _h) {
     liveRegion,
     settingsButton,
     settingsPanel,
+    pendingSettings = null,
     tooltipCoords = { x: -50, y: -50 },
     id = "__seqId",
     updateCallback = function () {},
@@ -495,6 +496,10 @@ function navio(selection, _h) {
       .style("margin", "-1px");
 
     initSettingsPanel();
+    // NOT restored here: at init() there is no data and no attributes yet, so
+    // hiddenAttribs and attribOrder would resolve against an empty list. It is
+    // applied on the first draw that has attributes - see maybeRestoreSettings.
+    pendingSettings = readStoredSettings();
 
     initTooltipPopper();
 
@@ -830,13 +835,59 @@ function navio(selection, _h) {
 
   /** Options safe to expose: each is re-read on every hardUpdate(). */
   const LIVE_OPTIONS = [
+    {
+      key: "height",
+      label: "Size along records",
+      min: 100,
+      max: 1200,
+      step: 20,
+      get: () => nv.height(),
+      set: (v) => nv.height(v),
+    },
     { key: "attribWidth", label: "Column width", min: 4, max: 60, step: 1 },
     { key: "attribFontSize", label: "Header font", min: 6, max: 24, step: 1 },
+    {
+      key: "attribFontSizeSelected",
+      label: "Header font (hover)",
+      min: 6,
+      max: 32,
+      step: 1,
+    },
     { key: "attribRotation", label: "Header angle", min: -90, max: 0, step: 5 },
     { key: "levelsSeparation", label: "Level gap", min: 0, max: 200, step: 5 },
     { key: "filterFontSize", label: "Filter font", min: 6, max: 20, step: 1 },
     { key: "margin", label: "Margin", min: 0, max: 100, step: 5 },
+    { key: "x0", label: "Left offset", min: 0, max: 200, step: 5 },
+    { key: "y0", label: "Top offset", min: 0, max: 300, step: 5 },
+    {
+      key: "divisionsThreshold",
+      label: "Row divider threshold",
+      min: 0,
+      max: 20,
+      step: 1,
+    },
+    {
+      key: "clickTolerance",
+      label: "Click tolerance",
+      min: 0,
+      max: 20,
+      step: 1,
+    },
   ];
+
+  /** Colours re-read on every draw. Excludes the ones baked into scales. */
+  const LIVE_COLOURS = [
+    { key: "divisionsColor", label: "Row dividers" },
+    { key: "levelConnectionsColor", label: "Level connections" },
+    { key: "linkColor", label: "Links" },
+    { key: "tooltipBgColor", label: "Tooltip background", needsData: true },
+  ];
+
+  /** <input type="color"> only accepts #rrggbb, so normalise whatever is set. */
+  function toHex(colour) {
+    const c = d3.color(colour);
+    return c ? c.formatHex() : "#000000";
+  }
 
   function styleButton(sel) {
     return sel
@@ -847,6 +898,148 @@ function navio(selection, _h) {
       .style("padding", "2px 8px")
       .style("cursor", "pointer");
   }
+
+  /** Everything the panel can change, as a plain JSON-safe object. */
+  nv.getSettings = function () {
+    const out = { orientation: nv.orientation, height: height };
+    for (const o of LIVE_OPTIONS)
+      if (o.key !== "height") out[o.key] = nv[o.key];
+    for (const c of LIVE_COLOURS) out[c.key] = nv[c.key];
+    for (const k of [
+      "showAttribTitles",
+      "showSelectedAttrib",
+      "showSequenceIDAttrib",
+      "nestedFilters",
+    ])
+      out[k] = nv[k];
+    out.hiddenAttribs = Array.from(hiddenAttribs);
+    out.attribOrder = attribsOrdered.map((a) => getAttribName(a));
+    return out;
+  };
+
+  /**
+   * Apply a settings object. Deliberately does NOT touch filters or the
+   * selection - those are getFilters()/setFilters(), and keeping the two
+   * separate is what lets settings be restored without disturbing a
+   * selection the user has already made.
+   */
+  nv.setSettings = function (cfg = {}) {
+    if (!cfg || typeof cfg !== "object") return nv;
+    for (const k of Object.keys(cfg)) {
+      if (k === "hiddenAttribs" || k === "attribOrder" || k === "height")
+        continue;
+      if (k in nv) nv[k] = cfg[k];
+    }
+    if (typeof cfg.height === "number") height = cfg.height;
+    if (Array.isArray(cfg.attribOrder)) {
+      cfg.attribOrder.forEach((name, i) => {
+        const a = attribsOrdered.find((x) => getAttribName(x) === name);
+        if (a) moveAttrToPos(a, i);
+      });
+    }
+    if (Array.isArray(cfg.hiddenAttribs)) {
+      hiddenAttribs = new Set(cfg.hiddenAttribs);
+    }
+    nv.hardUpdate();
+    if (settingsPanel && settingsPanel.style("display") !== "none")
+      drawSettingsPanel();
+    return nv;
+  };
+
+  /**
+   * Where panel settings are remembered between page loads. Set to null to
+   * turn persistence off. instanceId keeps two Navios on one page apart -
+   * which assumes they are constructed in the same order each load, so name
+   * the key yourself if that is not true for your page.
+   */
+  function settingsStorageKey() {
+    return nv.settingsKey === undefined
+      ? `navio.settings.${instanceId}`
+      : nv.settingsKey;
+  }
+
+  function persistSettings() {
+    const key = settingsStorageKey();
+    if (!key || typeof localStorage === "undefined") return;
+    try {
+      localStorage.setItem(key, JSON.stringify(nv.getSettings()));
+    } catch (e) {
+      // Private mode, quota, disabled storage - never break the widget for it.
+      if (nv.DEBUG) console.log("navio: could not persist settings", e);
+    }
+  }
+
+  function readStoredSettings() {
+    const key = settingsStorageKey();
+    if (!key || typeof localStorage === "undefined") return null;
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      if (nv.DEBUG) console.log("navio: could not read settings", e);
+      return null;
+    }
+  }
+
+  /**
+   * Apply stored settings once the widget actually has attributes to apply
+   * them to. Runs at most once; after that the panel owns the state.
+   */
+  function maybeRestoreSettings() {
+    if (!pendingSettings || !attribsOrdered.length) return;
+    const cfg = pendingSettings;
+    pendingSettings = null;
+    nv.setSettings(cfg);
+  }
+
+  /**
+   * Save the current settings now. Plain option properties (nv.attribWidth =
+   * 20) cannot notify anyone, so call this after setting them if you want the
+   * change remembered.
+   */
+  nv.saveSettings = function () {
+    persistSettings();
+    return nv;
+  };
+
+  /** Forget the stored settings and go back to the defaults for this page. */
+  nv.clearStoredSettings = function () {
+    const key = settingsStorageKey();
+    if (key && typeof localStorage !== "undefined") {
+      try {
+        localStorage.removeItem(key);
+      } catch (e) {
+        if (nv.DEBUG) console.log("navio: could not clear settings", e);
+      }
+    }
+    return nv;
+  };
+
+  /** The JS that would reproduce the current settings on a fresh instance. */
+  nv.getSettingsCode = function () {
+    const cfg = nv.getSettings();
+    const lines = [`const nv = new navio(d3.select("#navio"), ${cfg.height});`];
+    for (const k of Object.keys(cfg)) {
+      if (k === "height" || k === "hiddenAttribs" || k === "attribOrder")
+        continue;
+      lines.push(`nv.${k} = ${JSON.stringify(cfg[k])};`);
+    }
+    lines.push("");
+    lines.push("nv.data(data);");
+    lines.push("nv.addAllAttribs();");
+    if (cfg.hiddenAttribs.length) {
+      lines.push("");
+      lines.push("// Hidden columns - hiding keeps the attribute and any");
+      lines.push("// selection made on it; it only leaves it undrawn.");
+      lines.push(`nv.setHiddenAttribs(${JSON.stringify(cfg.hiddenAttribs)});`);
+    }
+    lines.push("");
+    lines.push("// Column order");
+    lines.push(
+      `nv.setSettings({ attribOrder: ${JSON.stringify(cfg.attribOrder)} });`
+    );
+    return lines.join("\n");
+  };
 
   function initSettingsPanel() {
     if (settingsPanel) settingsPanel.remove();
@@ -871,7 +1064,7 @@ function navio(selection, _h) {
       .attr("title", "Widget settings")
       .style("position", "absolute")
       .style("top", "2px")
-      .style("right", "2px")
+      .style("left", "2px")
       .style("z-index", 3)
       .style("line-height", "1")
       .style("padding", "3px 6px")
@@ -886,7 +1079,7 @@ function navio(selection, _h) {
       .attr("data-navio-instance", instanceId)
       .style("position", "absolute")
       .style("top", "26px")
-      .style("right", "2px")
+      .style("left", "2px")
       .style("z-index", 4)
       .style("display", "none")
       .style("max-height", "70%")
@@ -985,6 +1178,7 @@ function navio(selection, _h) {
             .filter((a) => !shown.has(label(a)))
             .map((a) => getAttribName(a))
         );
+        persistSettings();
         announce(`${shown.size} of ${names.length} columns shown`);
       },
       move: (name, delta) => {
@@ -995,26 +1189,12 @@ function navio(selection, _h) {
         moveAttrToPos(attrib, to);
         nv.updateData(dataIs);
         announce(`Moved ${name} to position ${to + 1}`);
+        persistSettings();
         drawSettingsPanel();
       },
       instanceId,
     });
     if (pickerEl) attribs.node().appendChild(pickerEl);
-
-    const bulk = attribs
-      .append("div")
-      .style("display", "flex")
-      .style("gap", "6px")
-      .style("margin-top", "6px");
-    bulk
-      .append("button")
-      .attr("type", "button")
-      .call(styleButton)
-      .text("Show all")
-      .on("click", () => {
-        nv.setHiddenAttribs([]);
-        drawSettingsPanel();
-      });
 
     // --- layout ----------------------------------------------------------
     const layout = settingsSection(settingsPanel, "Layout");
@@ -1046,12 +1226,14 @@ function navio(selection, _h) {
         .style("align-items", "center")
         .style("gap", "6px");
       row.append("span").style("flex", "1").text(opt.label);
+      const read = opt.get || (() => nv[opt.key]);
+      const write = opt.set || ((v) => (nv[opt.key] = v));
       const out = row
         .append("span")
-        .style("width", "28px")
+        .style("width", "34px")
         .style("text-align", "right")
         .style("color", "#666")
-        .text(nv[opt.key]);
+        .text(read());
       row
         .append("input")
         .attr("type", "range")
@@ -1059,13 +1241,69 @@ function navio(selection, _h) {
         .attr("max", opt.max)
         .attr("step", opt.step)
         .attr("aria-label", opt.label)
-        .property("value", nv[opt.key])
+        .property("value", read())
         .style("width", "90px")
         .on("input", function () {
-          nv[opt.key] = +this.value;
+          write(+this.value);
           out.text(this.value);
-          nv.hardUpdate();
+          if (!opt.set) nv.hardUpdate(); // opt.set does its own redraw
+          persistSettings();
         });
+    }
+
+    // --- colours ---------------------------------------------------------
+    const colours = settingsSection(settingsPanel, "Colours");
+    for (const c of LIVE_COLOURS) {
+      const row = colours
+        .append("label")
+        .style("display", "flex")
+        .style("align-items", "center")
+        .style("gap", "6px");
+      row.append("span").style("flex", "1").text(c.label);
+      row
+        .append("input")
+        .attr("type", "color")
+        .attr("aria-label", c.label)
+        .property("value", toHex(nv[c.key]))
+        .style("width", "40px")
+        .on("input", function () {
+          nv[c.key] = this.value;
+          // Tooltip options are read in initTooltipPopper, which only runs on
+          // data(); everything else is re-read on the next draw.
+          if (c.needsData) nv.data(nv.data());
+          else nv.hardUpdate();
+          persistSettings();
+        });
+    }
+
+    // --- what is drawn ---------------------------------------------------
+    const shows = settingsSection(settingsPanel, "Show");
+    for (const t of [
+      { key: "showAttribTitles", label: "Column headers" },
+      { key: "showSelectedAttrib", label: "Selected column", needsData: true },
+      {
+        key: "showSequenceIDAttrib",
+        label: "Sequential index column",
+        needsData: true,
+      },
+    ]) {
+      const row = shows
+        .append("label")
+        .style("display", "flex")
+        .style("align-items", "center")
+        .style("gap", "6px");
+      row
+        .append("input")
+        .attr("type", "checkbox")
+        .property("checked", !!nv[t.key])
+        .on("change", function () {
+          nv[t.key] = this.checked;
+          // These are read inside data(), so a redraw alone would not show it.
+          if (t.needsData) nv.data(nv.data());
+          else nv.hardUpdate();
+          persistSettings();
+        });
+      row.append("span").text(t.label);
     }
 
     // --- filtering -------------------------------------------------------
@@ -1082,20 +1320,68 @@ function navio(selection, _h) {
       .on("change", function () {
         nv.nestedFilters = this.checked;
         announce(`Nested filters ${this.checked ? "on" : "off"}`);
+        persistSettings();
       });
     nested.append("span").text("Nested filters (drill down into a new level)");
 
-    const close = settingsPanel
+    const footer = settingsPanel
+      .append("div")
+      .style("display", "flex")
+      .style("gap", "6px")
+      .style("margin-top", "10px")
+      .style("flex-wrap", "wrap");
+
+    const copyBtn = footer
       .append("button")
       .attr("type", "button")
       .call(styleButton)
-      .style("margin-top", "10px")
+      .text("Copy config")
+      .attr("title", "Copy the JS that reproduces these settings")
+      .on("click", async function () {
+        const code = nv.getSettingsCode();
+        try {
+          await navigator.clipboard.writeText(code);
+          announce("Configuration copied to the clipboard");
+        } catch {
+          // Clipboard needs a secure context and permission; fall back to a
+          // textarea the user can copy from by hand.
+          const ta = settingsPanel
+            .append("textarea")
+            .attr("readonly", "")
+            .attr("aria-label", "Configuration source")
+            .style("width", "100%")
+            .style("height", "120px")
+            .style("font", "11px ui-monospace, Menlo, monospace")
+            .text(code);
+          ta.node().select();
+          announce("Configuration ready to copy");
+        }
+        d3.select(this).text("Copied");
+        setTimeout(() => d3.select(this).text("Copy config"), 1200);
+      });
+    void copyBtn;
+
+    footer
+      .append("button")
+      .attr("type", "button")
+      .call(styleButton)
+      .text("Reset")
+      .attr("title", "Forget the saved settings for this page")
+      .on("click", () => {
+        nv.clearStoredSettings();
+        announce("Saved settings cleared; reload to see the defaults");
+      });
+
+    footer
+      .append("button")
+      .attr("type", "button")
+      .call(styleButton)
+      .style("margin-left", "auto")
       .text("Close")
       .on("click", () => {
         toggleSettings(false);
         settingsButton.node().focus();
       });
-    void close;
   }
 
   /**
@@ -1161,6 +1447,14 @@ function navio(selection, _h) {
       .style("padding", "0 5px")
       .text("\u2193")
       .on("click", (event, n) => move(n, 1));
+
+    wrap
+      .append("button")
+      .attr("type", "button")
+      .call(styleButton)
+      .style("margin-top", "6px")
+      .text("Show all")
+      .on("click", () => onChange(names.slice()));
 
     return wrap.node();
   }
@@ -2686,6 +2980,10 @@ function navio(selection, _h) {
 
     let after = performance.now();
     if (nv.DEBUG) console.log("Updating data " + (after - before) + "ms");
+
+    // First draw that has attributes: this is the earliest point at which
+    // stored hiddenAttribs / attribOrder can resolve to real attributes.
+    maybeRestoreSettings();
   }; // updateData
 
   nv.update = function (opts) {
@@ -3243,6 +3541,7 @@ function navio(selection, _h) {
     if (visible) hiddenAttribs.delete(name);
     else hiddenAttribs.add(name);
     nv.hardUpdate();
+    persistSettings();
     return nv;
   };
 
@@ -3260,11 +3559,24 @@ function navio(selection, _h) {
   nv.setHiddenAttribs = function (names = []) {
     hiddenAttribs = new Set(Array.from(names, (n) => getAttribName(n)));
     nv.hardUpdate();
+    persistSettings();
     return nv;
   };
 
   nv.getHiddenAttribs = function () {
     return Array.from(hiddenAttribs);
+  };
+
+  /**
+   * The widget's extent along the RECORD axis - its height horizontally, its
+   * width vertically (#22). It was a construction-only argument; the settings
+   * panel needs to change it live.
+   */
+  nv.height = function (_) {
+    if (!arguments.length) return height;
+    height = +_;
+    nv.hardUpdate();
+    return nv;
   };
 
   nv.getVisibleLinks = function () {
@@ -3366,10 +3678,11 @@ function navio(selection, _h) {
     });
 
     // hardUpdate is the "geometry changed" path - attribWidth, orientation,
-    // margins. A brush rectangle is in pixels, so any of those leaves it
-    // pointing at the wrong rows, and an orientation flip leaves it on the
-    // wrong AXIS entirely, which makes it unusable. restoreBrushes re-derives
-    // it from the filter's stored row bounds through the current scales.
+    // margins. A brush's on-screen rectangle is in pixels, so any of those
+    // leaves it pointing at the wrong rows, and an orientation flip leaves it
+    // on the wrong AXIS entirely, which makes it unusable. restoreBrushes
+    // re-derives it from the filter's stored row bounds through the current
+    // scales, so it lands correctly in either orientation.
     if (shouldDrawBrushes) restoreBrushes();
   };
 

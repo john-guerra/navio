@@ -130,10 +130,12 @@ test("the attribute picker is pluggable", async ({ page }) => {
   expect(got.names.length).toBeGreaterThan(3);
   expect(got.value).toHaveLength(got.names.length);
   await expect(page.locator("#nv ._nv_custom_picker")).toHaveCount(1);
-  // The default picker is not also rendered.
+  // The default picker is not ALSO rendered. Identify it by its per-attribute
+  // checkbox ids rather than by counting checkboxes - the panel has other
+  // toggles that have nothing to do with the picker.
   await expect(
-    page.locator("#nv ._nv_settings input[type=checkbox]")
-  ).toHaveCount(1); // just the nestedFilters toggle
+    page.locator('#nv ._nv_settings input[id^="_nv_vis_"]')
+  ).toHaveCount(0);
 });
 
 test("nv.settings = false removes the gear entirely", async ({ page }) => {
@@ -151,4 +153,122 @@ test("destroy() takes the panel with it", async ({ page }) => {
   await page.evaluate(() => window.nv.destroy());
   await expect(page.locator("#nv ._nv_gear")).toHaveCount(0);
   await expect(page.locator("#nv ._nv_settings")).toHaveCount(0);
+});
+
+test("settings survive a reload, and Reset forgets them", async ({ page }) => {
+  await page.goto(FIXTURE);
+  await expect(page.locator("#nv canvas")).toHaveCount(1);
+  await page.evaluate(() => window.nv.clearStoredSettings());
+
+  await page.evaluate(() => {
+    window.nv.attribWidth = 28;
+    window.nv.orientation = "vertical";
+    window.nv.hardUpdate();
+    window.nv.setAttribVisible("category", false);
+    window.nv.saveSettings();
+  });
+
+  await page.reload();
+  await expect(page.locator("#nv canvas")).toHaveCount(1);
+  await expect
+    .poll(() =>
+      page.evaluate(() => ({
+        aw: window.nv.attribWidth,
+        o: window.nv.orientation,
+        hidden: window.nv.getHiddenAttribs(),
+      }))
+    )
+    .toEqual({ aw: 28, o: "vertical", hidden: ["category"] });
+
+  // Reset clears storage; the next load is back to the defaults.
+  await page.evaluate(() => window.nv.clearStoredSettings());
+  await page.reload();
+  await expect(page.locator("#nv canvas")).toHaveCount(1);
+  expect(await page.evaluate(() => window.nv.attribWidth)).toBe(15);
+});
+
+test("the generated config is runnable and reproduces the settings", async ({
+  page,
+}) => {
+  await page.goto(FIXTURE);
+  await expect(page.locator("#nv canvas")).toHaveCount(1);
+  await page.evaluate(() => window.nv.clearStoredSettings());
+
+  const code = await page.evaluate(() => {
+    window.nv.attribWidth = 22;
+    window.nv.orientation = "vertical";
+    window.nv.hardUpdate();
+    window.nv.setAttribVisible("category", false);
+    return window.nv.getSettingsCode();
+  });
+
+  expect(code).toContain('nv.orientation = "vertical"');
+  expect(code).toContain("nv.attribWidth = 22");
+  expect(code).toContain('nv.setHiddenAttribs(["category"])');
+  // It must only call API that exists - a snippet that throws is worse than none.
+  expect(code).not.toContain("moveAttribToPos");
+
+  // Run it against a second container and compare.
+  const same = await page.evaluate((src) => {
+    const host = document.createElement("div");
+    host.id = "gen";
+    document.body.appendChild(host);
+    const data = window.nv.data();
+    new Function("d3", "navio", "data", src.replace("#navio", "#gen"))(
+      window.d3,
+      window.navio,
+      data
+    );
+    const gen = window.__genNv;
+    return gen ? null : "constructed";
+  }, code);
+  expect(same).toBe("constructed");
+});
+
+test("a brush follows a geometry change and an orientation flip", async ({
+  page,
+}) => {
+  await page.goto("/test/e2e/fixtures/vertical.html?orientation=horizontal");
+  await expect(page.locator("#nv canvas")).toHaveCount(1);
+
+  const box = await page.locator("#nv canvas").boundingBox();
+  const g = await page.evaluate(() => ({
+    y0: window.nv.y0,
+    aw: window.nv.attribWidth,
+  }));
+  const x = box.x + g.aw * 2.5;
+  await page.mouse.move(x, box.y + g.y0 + 30);
+  await page.mouse.down();
+  await page.mouse.move(x, box.y + g.y0 + 120, { steps: 8 });
+  await page.mouse.up();
+
+  const selected = () => page.evaluate(() => window.nv.getVisible().length);
+  const rect = () =>
+    page.evaluate(() => {
+      const s = document.querySelector("#nv .brush .selection");
+      return s
+        ? { w: +s.getAttribute("width"), h: +s.getAttribute("height") }
+        : null;
+    });
+
+  const n = await selected();
+  expect(n).toBeGreaterThan(0);
+  const before = await rect();
+
+  // A pixel-space brush is wrong the moment the geometry changes.
+  await page.evaluate(() => {
+    window.nv.attribWidth = 40;
+    window.nv.hardUpdate();
+  });
+  expect(await selected()).toBe(n);
+  expect(await rect()).not.toEqual(before);
+
+  // And a flip moves it to the other axis entirely.
+  await page.evaluate(() => {
+    window.nv.orientation = "vertical";
+    window.nv.hardUpdate();
+  });
+  expect(await selected()).toBe(n);
+  const flipped = await rect();
+  expect(flipped.h).toBeGreaterThan(flipped.w);
 });
