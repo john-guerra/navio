@@ -15,14 +15,21 @@ widget - came from working through the algebra in section 3.
 ## 1. The data structures
 
 ```js
-data            // flat array of every row. Navio adds two fields to each row:
-                //   __i        an array of positions, one per level
-                //   selected   a stored boolean, see §4
+data            // flat array of every row, EXACTLY as the caller passed them.
+                // Navio does not write anything onto a row. It also never
+                // sorts or splices this array, so a row's index in `data` is
+                // a stable id for its whole lifetime.
 
 dataIs          // array of arrays of INDICES INTO `data`, one entry per level
                 //   dataIs[0] = every row
                 //   dataIs[1] = the rows that survived level 0's filters
                 //   dataIs[2] = the rows that survived level 1's filters
+                // Sorting reorders THESE, never `data`.
+
+posByLevel      // posByLevel[L] = Int32Array, indexed by row index, giving
+                // that row's position within dataIs[L]. See below.
+
+selectedFlags   // Uint8Array, indexed by row index. See §4.
 
 filtersByLevel  // filtersByLevel[L] = the filters applied AT level L,
                 // producing dataIs[L+1]
@@ -31,13 +38,34 @@ dSortBy         // dSortBy[L] = { attrib, desc } — the CURRENT sort of level L
                 // No history is kept. See §6.
 ```
 
-**`__i[L]` is a row's position within `dataIs[L]`** — not a global row id. It is
-written in exactly two places:
+**Navio adds no properties to your rows** (#88). Bookkeeping that used to live on
+each row as `__i` (an array of per-level positions) and `selected` is now held in
+the typed side tables above, and `__seqId` is gone entirely — it was always equal
+to the row's index into `data`, so it is derived on demand by `idOf(index)`. This
+keeps the caller's objects clean under `Object.keys`/`JSON.stringify`, lets two
+Navios share one array without corrupting each other, and on 1M rows costs ~16MB
+of heap instead of ~214MB.
+
+**`posByLevel[L][i]` is row `i`'s position within `dataIs[L]`** — not a global
+row id. It is written in exactly two places:
 
 - `assignIndexes(filteredData, level + 1)` in `applyFiltersAndUpdate`
 - `assignIndexes(dataIs[L], L)` at the end of `updateSorting`
 
-so **re-sorting a level rewrites `__i[L]` for every row at that level.**
+so **re-sorting a level rewrites `posByLevel[L]` for every row at that level.**
+Entries for rows that are not present at level `L` are meaningless, not zero-safe.
+
+Because positions are no longer readable off a row, code outside navio observes
+ordering through `nv.getRowsAtLevel(L)` and membership through
+`nv.isSelected(rowOrIndex)`. Internally, filters are handed `(row, index)` plus
+accessors — `posAt(index, level)`, `attribAt(index, attrib)` — rather than being
+allowed to reach into the row for either.
+
+`attribAt` is also what makes the derived `__seqId` readable: it maps that name
+back to the index instead of doing a property lookup that would return
+`undefined`. Anything resolving an attribute by row index must go through it —
+`filterFromValue` reading `row["__seqId"]` directly is exactly how a serialized
+brush silently failed to rebuild.
 
 ## 2. Levels are a drill-down chain
 
@@ -81,16 +109,19 @@ subtract".
 
 ## 4. Filters are evaluated ONCE, at creation. This is the important part.
 
-`applyFilters` has a side effect: it sets `data[d].selected` for every row it
-scans. `getSelected()`/`getVisible()` then just reads that stored flag:
+`applyFilters` has a side effect: it sets `selectedFlags[d]` for every row it
+scans. `getSelected()`/`getVisible()` then just read that stored flag:
 
 ```js
 nv.getSelected = function () {
   return dataIs[dataIs.length - 1]
-    .filter((d) => data[d].selected)
+    .filter((d) => selectedFlags[d])
     .map((d) => data[d]);
 };
 ```
+
+The flag used to be written onto the row as `d.selected`; it is a side table now
+(#88), so ask `nv.isSelected(row)` rather than reading a property.
 
 So **the selection is materialized state, not a live query.** Nothing re-runs
 the predicate on redraw. `applyFilters` runs only from `applyFiltersAndUpdate`,
@@ -101,7 +132,7 @@ which fires on an actual filter action — a brush end, a click, closing a chip.
 `onSortLevel` (clicking a column header) calls `updateSorting` and
 `nv.updateData`, and deliberately **never calls `applyFilters`**. Therefore
 re-sorting a level cannot change which rows are selected — even though it
-rewrites the `__i[L]` values the range predicate is written against.
+rewrites the `posByLevel[L]` values the range predicate is written against.
 
 Verified in a browser (`rank` 1..6, `grp` alternating x/y):
 

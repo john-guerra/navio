@@ -282,6 +282,26 @@ Returns the color scale for a certain attribute, make sure to pass an attribute 
 
 Returns the ordered list of attributes added to navio
 
+<a name="isSelected" href="#isSelected">#</a> <i>nv</i>.<b>isSelected</b>(rowOrIndex)
+
+Whether a row is currently selected. Accepts either one of the row objects you
+passed to `.data()` or its index into that array.
+
+<a name="getRowsAtLevel" href="#getRowsAtLevel">#</a> <i>nv</i>.<b>getRowsAtLevel</b>([level = 0])
+
+The rows present at a level, **in the order they are drawn**. Use this to observe
+the visual ordering produced by sorting.
+
+### A note on your data
+
+Navio does not add any properties to the rows you give it. Earlier versions wrote
+`selected`, `__i` and `__seqId` onto every row; that bookkeeping now lives in
+typed arrays inside the instance, so your objects stay exactly as you passed them
+and two Navios can share one array safely.
+
+If you were reading `d.selected`, call `nv.isSelected(d)` instead. If you were
+reading `d.__i`, use `nv.getRowsAtLevel(level)` to get the drawn order.
+
 ## Reactive Widget
 
 Navio can be used as a [Reactive Widget](https://reactivewidgets.org): an HTML
