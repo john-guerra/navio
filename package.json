@@ -9,7 +9,7 @@
   "unpkg": "dist/navio.min.js",
   "jsdelivr": "dist/navio.min.js",
   "dependencies": {
-    "d3": "^7.8.5",
+    "d3": "^7.9.0",
     "popper.js": "^1.16.1",
     "reactive-widget-helper": "^0.0.4"
   },
@@ -20,7 +20,8 @@
     "@playwright/test": "^1.62.1",
     "@rollup/plugin-babel": "^6.0.3",
     "@rollup/plugin-node-resolve": "^15.0.2",
-    "@rollup/plugin-terser": "^0.4.3",
+    "@rollup/plugin-terser": "^1.0.0",
+    "@rollup/pluginutils": "^5.4.0",
     "@vitest/eslint-plugin": "^1.6.24",
     "eslint": "^10.8.0",
     "eslint-config-prettier": "^10.1.8",
@@ -28,7 +29,7 @@
     "globals": "^17.8.0",
     "http-server": "^14.1.1",
     "prettier": "^3.9.6",
-    "rollup": "^3.25.1",
+    "rollup": "^4.62.4",
     "rollup-plugin-commonjs": "^10.1.0",
     "vitest": "^4.1.10"
   },
