@@ -21,8 +21,18 @@ for (const file of BUNDLES) {
     continue;
   }
 
-  // The banner is a comment; non-ASCII there cannot affect execution.
-  const body = code.split("\n").slice(1).join("\n");
+  // Only literals matter: those are what Navio renders, and a page served as
+  // latin-1 would mangle them. Non-ASCII in a comment is cosmetic - it never
+  // reaches the DOM - and bundled dependencies legitimately have emoji in
+  // theirs. Strip comments before checking.
+  //
+  // The stripping is heuristic (it does not parse), but that is safe here: it
+  // runs after the ascii transform, so any non-ASCII still inside a string
+  // literal would already be a bug, and a `//` appearing within a string could
+  // at worst hide one - never invent one.
+  const body = code
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
   const raw = [...body].filter((ch) => ch.charCodeAt(0) > 0x7f);
 
   if (raw.length) {
@@ -44,6 +54,20 @@ for (const file of BUNDLES) {
   }
 
   console.log(`  ok       ${file}`);
+}
+
+// The UMD global must stay the navio function itself. Adding a named export
+// alongside the default silently turns it into a namespace object, and
+// `new navio(...)` throws "navio is not a constructor" for every existing
+// user - a break that only shows up in a browser. See src/index.js.
+for (const file of ["dist/navio.js", "dist/navio.min.js"]) {
+  const code = readFileSync(file, "utf8");
+  if (/exports\.default\s*=|\bexports\.navio\s*=/.test(code)) {
+    console.error(
+      `  FAIL     ${file}: UMD global looks like a namespace, not the navio function`
+    );
+    failed = true;
+  }
 }
 
 if (failed) {

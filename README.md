@@ -282,6 +282,50 @@ Returns the color scale for a certain attribute, make sure to pass an attribute 
 
 Returns the ordered list of attributes added to navio
 
+## Reactive Widget
+
+Navio can be used as a [Reactive Widget](https://reactivewidgets.org): an HTML
+element that holds its state in `.value` and emits an `input` event whenever the
+user changes it. That makes it bindable to other widgets, and usable directly as
+an Observable `viewof`.
+
+```javascript
+import { NavioWidget } from "navio";
+
+const w = NavioWidget(data, { height: 600 });
+document.body.appendChild(w);
+
+// The rows surviving every level of the drill-down
+w.addEventListener("input", () => render(w.getSelected()));
+```
+
+`.value` is the **multi-level filter chain**, one entry per level:
+
+```javascript
+[
+  [{ type: "value", attrib: "species", value: "Adelie" }],
+  [{ type: "value", attrib: "island",  value: "Torgersen" }],
+]
+```
+
+It is JSON-safe, so it can go in a URL or `localStorage`, and assigning it back
+restores the whole chain:
+
+```javascript
+w.value = JSON.parse(saved);          // applies the filters, emits nothing
+Inputs.bind(otherNavio, w);           // keeps two Navios in sync
+```
+
+**Why the filters and not the selected rows?** On a bind hop the receiver has to
+apply the *filters* against its own data - the sender's row objects are
+projections through the sender's own arrays and cannot be reused. Putting them
+in `.value` would send, on every hop, the one field the receiver is obliged to
+throw away. The selection stays a getter, and it is fresh by the time `input`
+fires. Use `w.snapshot()` if you want `{ filters, selection }` together in one
+non-reactive read.
+
+The classic `navio(selection, height)` API is unchanged; this is additive.
+
 <a name="destroy" href="#destroy">#</a> <i>nv</i>.<b>destroy</b>()
 
 Tears the instance down: removes its tooltip, detaches the listeners it added to `document.body`, empties its container, and drops its reference to your data.

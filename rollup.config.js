@@ -37,6 +37,8 @@ export default [
       name: "navio",
       extend: true,
       format: "umd",
+      // Expose the navio function itself as the global; see src/index.js.
+      exports: "default",
       indent: false,
       // sourcemap: true,
       banner: `// ${meta.homepage} v${meta.version} Copyright ${copyright}`,
@@ -47,7 +49,7 @@ export default [
     },
   },
   {
-    input: "src/index.js",
+    input: "src/index.esm.js",
     plugins: [
       // babel({
       //   exclude: "node_modules/**"
@@ -97,6 +99,8 @@ export default [
       name: "navio",
       extend: true,
       format: "umd",
+      // Expose the navio function itself as the global; see src/index.js.
+      exports: "default",
       indent: false,
       globals: {
         d3: "d3",
