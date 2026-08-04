@@ -56,11 +56,17 @@ export function FilterByRange(opts) {
     };
   }
 
+  /** The rows the brush was dragged between, for redrawing it (#60). */
+  function bounds() {
+    return { first, last };
+  }
+
   return {
     filter,
     toStr,
     toValue,
     markSortStale,
+    bounds,
     type: "range",
   };
 }
@@ -185,11 +191,17 @@ export function FilterByRangeNegative(opts) {
     };
   }
 
+  /** The rows the brush was dragged between, for redrawing it (#60). */
+  function bounds() {
+    return { first, last };
+  }
+
   return {
     filter,
     toStr,
     toValue,
     markSortStale,
+    bounds,
     type: "negativeRange",
   };
 }

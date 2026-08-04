@@ -640,11 +640,17 @@ function navio(selection, _h) {
     context.restore();
   }
 
+  // Level groups are identified by #levelN, which is NOT unique when several
+  // Navios share a page - a document-wide d3.select would always return the
+  // first instance's element and move the wrong widget's brush. Same class of
+  // bug as #57; always go through this.
+  function brushesOnLevel(lev) {
+    return selection.select("#level" + lev).selectAll(".brush");
+  }
+
   function removeBrushOnLevel(lev) {
-    if (lev < 0) return;
-    d3.select("#level" + lev)
-      .selectAll(".brush")
-      .call(dBrushes[lev].move, null);
+    if (lev < 0 || !dBrushes[lev]) return;
+    brushesOnLevel(lev).call(dBrushes[lev].move, null);
   }
 
   function removeAllBrushesBut(but) {
@@ -2282,9 +2288,47 @@ function navio(selection, _h) {
       applyFiltersAndUpdate(level, { silent: true });
     }
 
+    // The brush is how a range filter is expressed on screen; put it back so a
+    // synced widget can be dragged, not just read.
+    restoreBrushes();
+
     notifyChange({ silent: false });
     return nv;
   };
+
+  /**
+   * Redraw the brush rectangle for every level holding a range filter.
+   *
+   * Applying filters programmatically reproduces the selection but not the
+   * brush that expressed it, so a widget synced from a peer ends up filtered
+   * with nothing to grab. Mapping the filter's boundary rows back through the
+   * level's y scale puts the handles back where the user could drag them.
+   */
+  function restoreBrushes() {
+    filtersByLevel.forEach((levelFilters, level) => {
+      if (!levelFilters || !dBrushes[level] || !yScales[level]) return;
+
+      const ranged = levelFilters.find((f) => f.bounds);
+      const g = brushesOnLevel(level);
+      if (g.empty()) return;
+
+      if (!ranged) {
+        g.call(dBrushes[level].move, null);
+        return;
+      }
+
+      const { first, last } = ranged.bounds();
+      const y0 = yScales[level](first[id]);
+      const y1 = yScales[level](last[id]);
+      if (y0 === undefined || y1 === undefined) return;
+
+      const band = yScales[level].bandwidth();
+      g.call(dBrushes[level].move, [
+        Math.min(y0, y1),
+        Math.max(y0, y1) + band,
+      ]);
+    });
+  }
 
   nv.getSelected = function () {
     return dataIs[dataIs.length - 1]

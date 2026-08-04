@@ -135,3 +135,64 @@ test("getFilters never emits holes", async ({ page }) => {
   );
   expect(v.every((level) => Array.isArray(level))).toBe(true);
 });
+
+test("the brush is restored in the bound peer, and is draggable there", async ({
+  page,
+}) => {
+  const errs = [];
+  page.on("pageerror", (e) => errs.push(e.message));
+  await page.goto("/examples/binding/");
+
+  const geom = async (sel) => {
+    const box = await page.locator(`${sel} canvas`).boundingBox();
+    const g = await page.evaluate((s) => {
+      const n = document.querySelector(s).firstChild.navio;
+      return { y0: n.y0, margin: n.margin, aw: n.attribWidth };
+    }, sel);
+    return { box, g, rowSpan: (380 - g.margin - 30 - g.y0) / 120 };
+  };
+  const brushHeights = (sel) =>
+    page.evaluate(
+      (s) =>
+        Array.from(document.querySelectorAll(`${s} .selection`))
+          .filter((r) => getComputedStyle(r).display !== "none")
+          .map((r) => +r.getAttribute("height")),
+      sel
+    );
+
+  // Drag a range in A.
+  const A = await geom("#navioA");
+  const xa = A.box.x + A.g.aw * 2.5;
+  await page.mouse.move(xa, A.box.y + A.g.y0 + A.rowSpan * 10);
+  await page.mouse.down();
+  await page.mouse.move(xa, A.box.y + A.g.y0 + A.rowSpan * 60, { steps: 10 });
+  await page.mouse.up();
+  await page.waitForTimeout(250);
+
+  // A range filter is expressed on screen by its brush, so the synced peer
+  // must show one too - otherwise it is filtered with nothing to grab.
+  const [ha] = await brushHeights("#navioA");
+  const [hb] = await brushHeights("#navioB");
+  expect(ha).toBeGreaterThan(0);
+  expect(hb).toBe(ha);
+
+  // And it is a real brush: dragging it in B drives A back.
+  const before = await page.evaluate(
+    () => document.querySelector("#navioA").firstChild.getSelected().length
+  );
+  const B = await geom("#navioB");
+  const xb = B.box.x + B.g.aw * 2.5;
+  await page.mouse.move(xb, B.box.y + B.g.y0 + B.rowSpan * 20);
+  await page.mouse.down();
+  await page.mouse.move(xb, B.box.y + B.g.y0 + B.rowSpan * 40, { steps: 10 });
+  await page.mouse.up();
+  await page.waitForTimeout(250);
+
+  const after = await page.evaluate(() => ({
+    a: document.querySelector("#navioA").firstChild.getSelected().length,
+    b: document.querySelector("#navioB").firstChild.getSelected().length,
+  }));
+  expect(after.b).not.toBe(before); // B's drag changed the selection
+  expect(after.a).toBe(after.b); // and A followed
+  expect(errs).toEqual([]);
+});
