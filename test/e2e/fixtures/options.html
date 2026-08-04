@@ -1,0 +1,70 @@
+<!doctype html>
+<meta charset="utf-8" />
+<div id="a"></div>
+<div id="b"></div>
+<div id="c"></div>
+<div id="d"></div>
+<div id="e"></div>
+<div id="w"></div>
+<script src="/node_modules/d3/dist/d3.js"></script>
+<script src="/node_modules/popper.js/dist/umd/popper.js"></script>
+<script src="/dist/navio.js"></script>
+<script>
+  /* global d3, navio */
+  window.rows = d3.range(30).map((i) => ({
+    id: i + 1,
+    cat: ["a", "b", "c"][i % 3],
+    v: (i * 7) % 50,
+  }));
+  const load = (nv) => {
+    nv.id("id");
+    nv.data(window.rows);
+    nv.addAllAttribs();
+    return nv;
+  };
+
+  // options object at construction
+  window.a = load(
+    new navio(d3.select("#a"), {
+      height: 300,
+      attribWidth: 22,
+      orientation: "vertical",
+      tooltipBgColor: "#ff0000",
+    })
+  );
+
+  // the original signature: a bare number
+  window.b = load(new navio(d3.select("#b"), 321));
+
+  // options read inside data() / addAllAttribs
+  window.c = load(
+    new navio(d3.select("#c"), {
+      height: 300,
+      showSequenceIDAttrib: false,
+      maxNumDistinctForCategorical: 2,
+    })
+  );
+
+  // a typo
+  window.d = load(
+    new navio(d3.select("#d"), { height: 300, attribWidht: 999 })
+  );
+
+  // the renamed option, old spelling
+  window.e = load(
+    new navio(d3.select("#e"), {
+      height: 300,
+      maxNumDistictForCategorical: 3,
+    })
+  );
+
+  // through the reactive widget
+  const { NavioWidget } = navio;
+  window.w = NavioWidget(window.rows, {
+    height: 250,
+    attribWidth: 18,
+    orientation: "vertical",
+    id: "id",
+  });
+  document.getElementById("w").appendChild(window.w);
+</script>

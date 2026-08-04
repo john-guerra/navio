@@ -9,7 +9,11 @@ import navio from "./navio.js";
  * which emits an `input` event whenever the user changes it. That makes it
  * bindable to any other reactive widget, and usable as an Observable `viewof`.
  *
- *     const w = NavioWidget(data, { height: 600 });
+ *     const w = NavioWidget(data, { height: 600, attribWidth: 20 });
+ *
+ * Every nv.* option is accepted here; see nv.getOptions() for the full set.
+ * `value`, `attribs` and `autodetect` are the widget's own, everything else is
+ * passed to navio() and applied before construction.
  *     document.body.appendChild(w);
  *     w.addEventListener("input", () => render(w.getSelected()));
  *
@@ -24,19 +28,16 @@ import navio from "./navio.js";
  * The existing `navio(selection, height)` API is untouched; this is additive.
  */
 export default function NavioWidget(data, options = {}) {
-  const {
-    height = 600,
-    value = [],
-    attribs,
-    autodetect = true,
-    ...settings
-  } = options;
+  const { value = [], attribs, autodetect = true, ...rest } = options;
 
   const container = document.createElement("div");
-  const nv = navio(d3.select(container), height);
-
-  // Any remaining option is a plain nv.* setting (margin, attribWidth, DEBUG…).
-  for (const [key, v] of Object.entries(settings)) nv[key] = v;
+  // Everything else goes to the constructor rather than being assigned
+  // afterwards. That is not cosmetic: options like tooltipBgColor and
+  // showSelectedAttrib are read once, during construction or inside data(), so
+  // assigning them after navio() returned only worked by accident - and not at
+  // all when no data was supplied. navio() also warns about unknown keys, so a
+  // typo is now visible instead of silently doing nothing.
+  const nv = navio(d3.select(container), rest);
 
   if (data && data.length) {
     nv.data(data);

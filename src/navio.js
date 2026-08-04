@@ -53,9 +53,18 @@ if (
 }
 
 //selection should be a d3 selection or a string with the id of the element
+/**
+ * @param selection  a d3 selection, or a selector string
+ * @param _h         the height, OR an options object. Passing a number is the
+ *                   original signature and still works; an object lets every
+ *                   option be set at construction instead of assigned one by
+ *                   one afterwards, which also gets the ordering right for the
+ *                   options that are only read once (see OPTION_PHASE).
+ */
 function navio(selection, _h) {
   "use strict";
   const instanceId = ++navioInstanceCount;
+  const _options = _h !== null && typeof _h === "object" ? _h : null;
   let nv = this || {},
     data = [], //Contains the original data attributes
     dataIs = [], //Contains only the indices to the data, is an array of arrays, one for each level
@@ -77,7 +86,13 @@ function navio(selection, _h) {
     invertScaleCache = new WeakMap(),
     xScale,
     x,
-    height = _h !== undefined ? _h : 600,
+    height = _options
+      ? _options.height !== undefined
+        ? _options.height
+        : 600
+      : _h !== undefined
+        ? _h
+        : 600,
     colScales = new Map(),
     levelScale,
     svg,
@@ -110,19 +125,20 @@ function navio(selection, _h) {
   // Default parameters
   nv.x0 = 0; //Where to start drawing navio in x
   nv.y0 = 100; //Where to start drawing navio in y, useful if your attrib names are too long
-  nv.maxNumDistictForCategorical = 10; // addAllAttribs uses this for deciding if an attribute is categorical (has less than nv.maxNumDistictForCategorical categories) or ordered
-  nv.maxNumDistictForOrdered = 90; // addAllAttribs uses this for deciding if an attribute is ordered (has less than nv.maxNumDistictForCategorical categories) or text
-  // use nv.maxNumDistictForOrdered = Infinity for never choosing Text
+  // addAllAttribs decides an attribute is categorical below the first
+  // threshold, ordered below the second, and text above it. Set the second to
+  // Infinity to never choose text.
+  nv.maxNumDistinctForCategorical = 10;
+  nv.maxNumDistinctForOrdered = 90;
   nv.howManyItemsShouldSearchForNotNull = 100; // How many rows should addAllAttribs search to decide guess an attribute type
   nv.margin = 10; // Margin around navio
 
   nv.levelsSeparation = 40; // Separation between the levels
   nv.divisionsColor = "white"; // Border color for the divisions
   nv.nullColor = "#ffedfd"; // Color for null values
-  nv.levelConnectionsColor = "rgba(205, 220, 163, 0.5)"; // Color for the conections between levels
+  nv.levelConnectionsColor = "rgba(205, 220, 163, 0.5)"; // Color for the connections between levels
   nv.divisionsThreshold = 4; // What's the minimum row height needed to draw divisions
   nv.fmtCounts = d3.format(",.0d"); // Format used to display the counts on the bottom
-  nv.legendFont = "14px sans-serif"; // The font for the header
   nv.linkColor = "#ccc"; // Color used for network links if provided with nv.links()
   nv.nestedFilters = true; // Should navio use nested levels?
 
@@ -185,6 +201,132 @@ function navio(selection, _h) {
   // you can reach nv.DEBUG. Still settable per instance afterwards.
   nv.DEBUG = navio.DEBUG === true;
   nv.stringify = JSON.stringify; // function to use to stringify the data, for speeding up use d => d
+
+  // ---------------------------------------------------------------------
+  // Options
+  //
+  // Every option above is a plain property, and the set of them IS the schema -
+  // snapshotted here rather than written out by hand, so it can never drift
+  // from the defaults it describes.
+  // ---------------------------------------------------------------------
+  const OPTION_NAMES = new Set(Object.keys(nv));
+
+  // Renamed options. The old spelling still works and forwards to the new one,
+  // because these shipped: silently ignoring `maxNumDistictForCategorical`
+  // would change how a published notebook types its attributes.
+  const RENAMED = {
+    maxNumDistictForCategorical: "maxNumDistinctForCategorical",
+    maxNumDistictForOrdered: "maxNumDistinctForOrdered",
+  };
+  const warnedRenames = new Set();
+  for (const [oldName, newName] of Object.entries(RENAMED)) {
+    Object.defineProperty(nv, oldName, {
+      enumerable: false, // keeps it out of OPTION_NAMES and getOptions()
+      configurable: true,
+      get() {
+        return nv[newName];
+      },
+      set(v) {
+        if (!warnedRenames.has(oldName)) {
+          warnedRenames.add(oldName);
+          console.warn(
+            `navio: "${oldName}" was a typo and is now "${newName}". ` +
+              `The old name still works but will be removed.`
+          );
+        }
+        nv[newName] = v;
+      },
+    });
+  }
+
+  /**
+   * Which options must be applied before which phase.
+   *
+   * Most options are re-read on every draw, so when they are set does not
+   * matter. These are the exceptions - they are read once, inside the call
+   * named here, so setting them afterwards silently does nothing. applyOptions
+   * uses this to apply everything in an order that actually works, rather than
+   * relying on the caller to know.
+   */
+  const OPTION_PHASE = {
+    // read by addAllAttribs
+    maxNumDistinctForCategorical: "attribs",
+    maxNumDistinctForOrdered: "attribs",
+    howManyItemsShouldSearchForNotNull: "attribs",
+    addAllAttribsRecursionLevel: "attribs",
+    addAllAttribsIncludeObjects: "attribs",
+    addAllAttribsIncludeArrays: "attribs",
+    digitsForText: "attribs",
+    digitsForObjects: "attribs",
+    // read inside data()
+    showSelectedAttrib: "data",
+    showSequenceIDAttrib: "data",
+    tooltipFontSize: "data",
+    tooltipBgColor: "data",
+    tooltipMargin: "data",
+    tooltipArrowSize: "data",
+    settings: "data",
+    settingsPlacement: "data",
+  };
+
+  /**
+   * Apply an options object.
+   *
+   * Unknown keys warn rather than throw: throwing would break anyone already
+   * passing extra keys, and silence is what let `attribWidht: 999` sit there
+   * doing nothing. `height` and `data` are handled by the caller, not here.
+   */
+  function applyOptions(options = {}) {
+    if (!options || typeof options !== "object") return;
+    for (const [key, value] of Object.entries(options)) {
+      if (key === "height" || key === "data" || key === "value") continue;
+      if (!OPTION_NAMES.has(key) && !(key in RENAMED)) {
+        console.warn(
+          `navio: unknown option "${key}" - ignored. ` +
+            `See nv.getOptions() for the full list.`
+        );
+        continue;
+      }
+      nv[key] = value;
+    }
+  }
+
+  /** Every option and its current value. The shape accepted by the options
+   *  argument, so nv.getOptions() round-trips back into a new instance. */
+  nv.getOptions = function () {
+    const out = {};
+    for (const key of OPTION_NAMES) out[key] = nv[key];
+    return out;
+  };
+
+  /**
+   * Apply an options object to a LIVE instance, then redraw.
+   *
+   * Options in OPTION_PHASE are read once, during construction or inside
+   * data()/addAllAttribs, so setting them here is too late - warn rather than
+   * let them appear to work. Pass them to the constructor instead, or call
+   * nv.data(nv.data()) afterwards to re-run the phase that reads them.
+   */
+  nv.setOptions = function (options) {
+    for (const key of Object.keys(options || {})) {
+      const phase = OPTION_PHASE[key];
+      if (!phase) continue;
+      console.warn(
+        `navio: "${key}" is read once, inside ${
+          phase === "attribs" ? "addAllAttribs()" : "data()"
+        }. Setting it now has no effect - pass it to the constructor, or call ` +
+          `nv.data(nv.data()) to re-run that step.`
+      );
+    }
+    applyOptions(options);
+    nv.hardUpdate();
+    return nv;
+  };
+
+  // Construction-time options, applied now that the defaults and the schema
+  // both exist - and before init(), so the ones read during construction
+  // (tooltip*, settings*) see the caller's values rather than the defaults.
+  if (_options) applyOptions(_options);
 
   // function nozoom(event) {
   //   if (nv.DEBUG) console.log("nozoom");
@@ -616,7 +758,7 @@ function navio(selection, _h) {
    *
    * Taken from https://bl.ocks.org/shimizu/808e0f5cadb6a63f28bb00082dc8fe3f
    *
-   * Called from showTooptip and onSelectByRange, so it runs on every mousemove
+   * Called from showTooltip and onSelectByRange, so it runs on every mousemove
    * during a hover or a brush drag. It used to build a fresh d3.scaleQuantize
    * each time - and worse, `scale.domain()` on a band scale returns a COPY, so
    * a 24k-row level allocated a 24k-element array per pointer event. Cached per
@@ -1675,7 +1817,7 @@ function navio(selection, _h) {
 
   // Assigns the indexes on the new level data
   function assignIndexes(dataIsToUpdate, level) {
-    if (nv.DEBUG) console.log("Assiging indexes ", level);
+    if (nv.DEBUG) console.log("Assigning indexes ", level);
     // One Int32Array per level, allocated on first use, rather than an array
     // object hanging off every row. See #88.
     if (!posByLevel[level]) posByLevel[level] = new Int32Array(data.length);
@@ -1918,7 +2060,7 @@ function navio(selection, _h) {
         xOnWidget = event.sourceEvent.offsetX,
         yOnWidget = event.sourceEvent.offsetY;
 
-      showTooptip(xOnWidget, yOnWidget, clientX, clientY, level);
+      showTooltip(xOnWidget, yOnWidget, clientX, clientY, level);
     }
 
     function onSelectByRange(event) {
@@ -2042,7 +2184,7 @@ function navio(selection, _h) {
 
       removeAllBrushesBut(-1); // Remove all brushes
 
-      // Same axis swap as showTooptip: these are screen coords (#22).
+      // Same axis swap as showTooltip: these are screen coords (#22).
       const onA = isVertical() ? clientY : clientX,
         onR = isVertical() ? clientX : clientY;
 
@@ -2105,7 +2247,7 @@ function navio(selection, _h) {
     }
   } // updateBrushes
 
-  function showTooptip(xOnWidget, yOnWidget, clientX, clientY, level) {
+  function showTooltip(xOnWidget, yOnWidget, clientX, clientY, level) {
     // Pointer coords are screen-space; the scales are axis-space. Vertical
     // swaps which is which (#22).
     const onA = isVertical() ? yOnWidget : xOnWidget,
@@ -2188,7 +2330,7 @@ function navio(selection, _h) {
     }
 
     // if (nv.DEBUG) console.log("onMouseOver", xOnWidget, yOnWidget, clientY, event.pageY, event.offsetY, event);
-    showTooptip(xOnWidget, yOnWidget, clientX, clientY, overData.level);
+    showTooltip(xOnWidget, yOnWidget, clientX, clientY, overData.level);
   }
 
   function onMouseOut() {
@@ -2780,8 +2922,8 @@ function navio(selection, _h) {
     shouldUpdateColorDomains =
       shouldUpdateColorDomains !== undefined ? shouldUpdateColorDomains : false;
 
-    // Delete unvecessary scales
-    if (nv.DEBUG) console.log("Delete unvecessary scales");
+    // Delete unnecessary scales
+    if (nv.DEBUG) console.log("Delete unnecessary scales");
     yScales.splice(lastLevel + 1, yScales.length);
 
     for (let levelToUp of levelsToUpdate) {
@@ -2986,7 +3128,7 @@ function navio(selection, _h) {
     }
 
     filtersByLevel = [];
-    filtersByLevel[0] = []; // Initialice filters as empty for lev 0
+    filtersByLevel[0] = []; // Initialise filters as empty for lev 0
     // nv.updateData(mData, mColScales, mSortByAttr);
 
     let after = performance.now();
@@ -3019,7 +3161,7 @@ function navio(selection, _h) {
 
     recomputeVisibleLinks();
 
-    // Delete unnecesary brushes
+    // Delete unnecessary brushes
     dBrushes.splice(mDataIs.length);
 
     updateScales({
@@ -3266,29 +3408,29 @@ function navio(selection, _h) {
         firstNotNull === undefined ||
         typeof firstNotNull === typeof ""
       ) {
-        const numDistictValues = new Set(
+        const numDistinctValues = new Set(
           data
             .slice(0, nv.howManyItemsShouldSearchForNotNull)
             .map((d) => getAttrib(d, attr))
         ).size;
 
         // How many different elements are there
-        if (numDistictValues < nv.maxNumDistictForCategorical) {
+        if (numDistinctValues < nv.maxNumDistinctForCategorical) {
           nv.DEBUG &&
             console.log(
-              `Navio: Adding attr ${attrName} as categorical with ${numDistictValues} categories`
+              `Navio: Adding attr ${attrName} as categorical with ${numDistinctValues} categories`
             );
           nv.addCategoricalAttrib(attr);
-        } else if (numDistictValues < nv.maxNumDistictForOrdered) {
+        } else if (numDistinctValues < nv.maxNumDistinctForOrdered) {
           nv.addOrderedAttrib(attr);
           nv.DEBUG &&
             console.log(
-              `Navio: Attr ${attrName} has more than ${nv.maxNumDistictForCategorical} distinct values (${numDistictValues}) using orderedAttrib`
+              `Navio: Attr ${attrName} has more than ${nv.maxNumDistinctForCategorical} distinct values (${numDistinctValues}) using orderedAttrib`
             );
         } else {
           nv.DEBUG &&
             console.log(
-              `Navio: Attr ${attrName} has more than ${nv.maxNumDistictForOrdered} distinct values (${numDistictValues}) using textAttrib`
+              `Navio: Attr ${attrName} has more than ${nv.maxNumDistinctForOrdered} distinct values (${numDistinctValues}) using textAttrib`
             );
           nv.addTextAttrib(attr);
         }

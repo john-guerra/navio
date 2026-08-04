@@ -150,8 +150,8 @@ var nv = navio(d3.select("#Navio"), 600); //height 600
 // Default parameters
 nv.x0 = 0;  //Where to start drawing navio in x
 nv.y0 = 100; //Where to start drawing navio in y, useful if your attrib names are too long
-nv.maxNumDistictForCategorical = 10; // addAllAttribs uses this for deciding if an attribute is categorical (has less than nv.maxNumDistictForCategorical categories) or ordered
-nv.maxNumDistictForOrdered = 90; // addAllAttribs uses this for deciding if an attribute is ordered (has less than nv.maxNumDistictForCategorical categories) or text. Use nv.maxNumDistictForOrdered = Infinity for never choosing Text
+nv.maxNumDistinctForCategorical = 10; // addAllAttribs uses this for deciding if an attribute is categorical (has less than nv.maxNumDistinctForCategorical categories) or ordered
+nv.maxNumDistinctForOrdered = 90; // addAllAttribs uses this for deciding if an attribute is ordered (has less than nv.maxNumDistinctForCategorical categories) or text. Use nv.maxNumDistinctForOrdered = Infinity for never choosing Text
 
 nv.howManyItemsShouldSearchForNotNull = 100; // How many rows should addAllAttribs search to decide guess an attribute type
 nv.margin = 10; // Margin around navio
@@ -161,7 +161,6 @@ nv.divisionsColor = "white"; // Border color for the divisions
 nv.levelConnectionsColor = "rgba(205, 220, 163, 0.5)"; // Color for the conections between levels
 nv.divisionsThreshold = 4; // What's the minimum row height needed to draw divisions
 nv.fmtCounts = d3.format(",.0d"); // Format used to display the counts on the bottom
-nv.legendFont = "14px sans-serif"; // The font for the header
 nv.nestedFilters = true; // Should navio use nested levels?
 
 nv.showAttribTitles = true; // Show headers?
@@ -207,7 +206,7 @@ nv.defaultColorCategorical = d3.schemeCategory10;
 //   .concat(d3.schemePastel1)
 //   .concat(d3.schemeSet2)
 //   .concat(d3.schemeSet3);
-// nv.maxNumDistictForCategorical = nv.defaultColorCategorical.length;
+// nv.maxNumDistinctForCategorical = nv.defaultColorCategorical.length;
 
 ```
 
@@ -294,6 +293,36 @@ passed to `.data()` or its index into that array.
 
 The rows present at a level, **in the order they are drawn**. Use this to observe
 the visual ordering produced by sorting.
+
+### Options
+
+Every option can be set at construction, which also gets the ordering right for
+the ones that are only read once:
+
+```js
+const nv = new navio(d3.select("#navio"), {
+  height: 600,
+  attribWidth: 20,
+  orientation: "vertical",
+  tooltipBgColor: "#eee",
+});
+```
+
+A bare number is still the height, so the original
+`new navio(selection, 600)` is unchanged. The same object works for
+`NavioWidget(data, options)`.
+
+```js
+nv.getOptions()        // every option and its value; round-trips back in
+nv.setOptions({ ... }) // apply to a live instance and redraw
+```
+
+An unrecognised key warns rather than being silently ignored — `attribWidht: 20`
+used to land as a dead property and do nothing.
+
+**Renamed:** `maxNumDistictForCategorical` and `maxNumDistictForOrdered` were
+misspelled; they are now `maxNumDistinct...`. The old names still work and warn.
+`legendFont` has been removed — it had no effect on anything.
 
 ### Which build am I running?
 
