@@ -33,9 +33,7 @@ test("the gear opens and closes the panel", async ({ page }) => {
   await expect(gear).toBeFocused();
 });
 
-test("the gear sits at the bottom left and the panel opens upward", async ({
-  page,
-}) => {
+test("the gear sits at the bottom left", async ({ page }) => {
   await page.goto(FIXTURE);
   await expect(page.locator("#nv canvas")).toHaveCount(1);
 
@@ -43,11 +41,44 @@ test("the gear sits at the bottom left and the panel opens upward", async ({
   const gear = await page.locator("#nv ._nv_gear").boundingBox();
   expect(gear.x).toBeLessThan(host.x + host.width / 2);
   expect(gear.y).toBeGreaterThan(host.y + host.height / 2);
+});
 
+// The point of the panel is watching the widget change as you change it, so
+// it must not sit on top of the thing it is configuring.
+test("the panel opens beside the widget, never over it", async ({ page }) => {
+  await page.goto(FIXTURE);
+  await expect(page.locator("#nv canvas")).toHaveCount(1);
   await page.locator("#nv ._nv_gear").click();
-  const panel = await page.locator("#nv ._nv_settings").boundingBox();
-  // Opens up from the gear rather than down off the bottom of the widget.
-  expect(panel.y + panel.height).toBeLessThanOrEqual(gear.y + 4);
+  await expect(page.locator("#nv ._nv_settings")).toBeVisible();
+
+  const clears = async () => {
+    const cv = await page.locator("#nv canvas").boundingBox();
+    const pl = await page.locator("#nv ._nv_settings").boundingBox();
+    return pl.x >= cv.x + cv.width;
+  };
+  expect(await clears()).toBe(true);
+
+  // And it follows the canvas when the geometry changes underneath it.
+  await page.evaluate(() => {
+    window.nv.attribWidth = 45;
+    window.nv.hardUpdate();
+  });
+  expect(await clears()).toBe(true);
+});
+
+test('settingsPlacement "over" puts it back on the widget', async ({
+  page,
+}) => {
+  await page.goto(FIXTURE);
+  await expect(page.locator("#nv canvas")).toHaveCount(1);
+  await page.evaluate(() => {
+    window.nv.settingsPlacement = "over";
+  });
+  await page.locator("#nv ._nv_gear").click();
+
+  const cv = await page.locator("#nv canvas").boundingBox();
+  const pl = await page.locator("#nv ._nv_settings").boundingBox();
+  expect(pl.x).toBeLessThan(cv.x + cv.width);
 });
 
 test("unticking a column hides it without touching the data", async ({

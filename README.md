@@ -333,8 +333,16 @@ A gear in the widget's corner opens a panel for changing options live: which
 columns are shown, their order, orientation, and the geometry.
 
 ```js
-nv.settings = false;  // hide the gear entirely (default true)
+nv.settings = false;             // hide the gear entirely (default true)
+nv.settingsPlacement = "over";   // default "beside"
 ```
+
+The panel opens **beside** the widget rather than over it, so you can watch the
+effect of each control as you change it — Navio's canvas is usually much
+narrower than its container, so there is normally room. It is absolutely
+positioned, so nothing on the page reflows, and it follows the canvas when the
+geometry changes underneath it. Set `settingsPlacement` to `"over"` for the
+compact overlay if your layout has no room to the side.
 
 **Hiding a column is not removing it.** It keeps its type, its colour scale and
 its place in the order — and any selection you have already made survives,

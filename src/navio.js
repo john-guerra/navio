@@ -141,6 +141,10 @@ function navio(selection, _h) {
   // Show the gear button that opens the settings panel (#89). Embedders who
   // want a fixed configuration set this to false.
   nv.settings = true;
+  // Where the panel opens: "beside" clears the canvas so the widget stays
+  // visible while you change options; "over" is the compact overlay, better
+  // when the page has no room to the side.
+  nv.settingsPlacement = "beside";
   // Swap the settings panel's attribute picker. See defaultAttribPicker for
   // the contract; examples/settings plugs in @john-guerra/search-checkbox.
   nv.attribPicker = null;
@@ -1115,6 +1119,33 @@ function navio(selection, _h) {
       });
   }
 
+  /**
+   * Put the panel beside the drawn widget rather than on top of it, so the
+   * effect of every control stays visible while you change it.
+   *
+   * The canvas is usually much narrower than the container - a five-column
+   * widget is about 100px wide inside a full-width div - so there is normally
+   * room to its right. Absolutely positioned, so nothing on the page reflows;
+   * if the container is too narrow the panel simply extends past it, which the
+   * outer container's overflow:visible allows.
+   */
+  function placeSettingsPanel() {
+    if (!settingsPanel) return;
+    if (nv.settingsPlacement !== "beside") {
+      settingsPanel.style("left", "2px").style("bottom", "26px");
+      return;
+    }
+    const host = selection.node(),
+      cv = canvas;
+    if (!host || !cv) return;
+    const h = host.getBoundingClientRect(),
+      c = cv.getBoundingClientRect();
+    // Clear the canvas horizontally; sit level with its bottom edge.
+    settingsPanel
+      .style("left", `${Math.round(c.right - h.left) + 12}px`)
+      .style("bottom", `${Math.max(0, Math.round(h.bottom - c.bottom))}px`);
+  }
+
   function focusablePanelItems() {
     return settingsPanel
       ? Array.from(
@@ -1129,6 +1160,7 @@ function navio(selection, _h) {
       force !== undefined ? force : settingsPanel.style("display") === "none";
     if (open) drawSettingsPanel();
     settingsPanel.style("display", open ? "block" : "none");
+    if (open) placeSettingsPanel();
     settingsButton.attr("aria-expanded", open ? "true" : "false");
     if (open) {
       const items = focusablePanelItems();
@@ -3684,6 +3716,10 @@ function navio(selection, _h) {
     // re-derives it from the filter's stored row bounds through the current
     // scales, so it lands correctly in either orientation.
     if (shouldDrawBrushes) restoreBrushes();
+
+    // The canvas may have changed size under an open panel.
+    if (settingsPanel && settingsPanel.style("display") !== "none")
+      placeSettingsPanel();
   };
 
   // Tears down everything this instance attached outside its own container,
