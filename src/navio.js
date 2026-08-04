@@ -678,7 +678,13 @@ function navio(selection, _h) {
       // obsolete, so skip it rather than dereferencing a hole.
       if (!filtersByLevel[l]) continue;
       filtersByLevel[l] = filtersByLevel[l].filter(
-        (f) => f.type === "value" || f.type === "negativeValue"
+        // Only positional ranges are invalidated by a re-sort. Value-based
+        // filters - including valueRange, which compares raw attribute values
+        // rather than __i[level] - mean the same thing in any ordering.
+        (f) =>
+          f.type === "value" ||
+          f.type === "negativeValue" ||
+          f.type === "valueRange"
       );
     }
   }

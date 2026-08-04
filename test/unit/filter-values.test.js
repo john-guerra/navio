@@ -4,6 +4,7 @@ import {
   FilterByValue,
   FilterByValueDifferent,
   FilterByRangeNegative,
+  FilterByValueRange,
   filterFromValue,
 } from "../../src/filters.js";
 
@@ -212,5 +213,58 @@ describe("filterFromValue input handling", () => {
     const original = FilterByValue({ itemAttr: "island", sel: rows[0] });
     const restored = filterFromValue(original.toValue(), ctx(rows));
     expect(restored.toStr()).toBe(original.toStr());
+  });
+});
+
+// FilterByValueRange is the semantic counterpart to FilterByRange: it compares
+// raw attribute values rather than the sort-order-dependent __i[level]
+// position, so it means "beak between 10 and 13" regardless of how the level is
+// ordered. It is what a faceted-search range facet maps onto - see #60.
+describe("FilterByValueRange", () => {
+  const rows = () => makeRows();
+
+  it("selects rows whose value falls inside the range, inclusive", () => {
+    const f = FilterByValueRange({ itemAttr: "beak", min: 10, max: 13 });
+    expect(
+      rows()
+        .filter(f.filter)
+        .map((r) => r.beak)
+    ).toEqual([10, 11, 12, 13]);
+  });
+
+  it("is independent of the level's ordering, unlike FilterByRange", () => {
+    const f = FilterByValueRange({ itemAttr: "beak", min: 10, max: 13 });
+    const reordered = makeRows().reverse();
+    reordered.forEach((r, i) => (r.__i = [i]));
+    expect(
+      reordered
+        .filter(f.filter)
+        .map((r) => r.beak)
+        .sort((a, b) => a - b)
+    ).toEqual([10, 11, 12, 13]);
+  });
+
+  it("counts as a positive filter, so it ANDs with negatives and ORs with positives", () => {
+    expect(FilterByValueRange({ itemAttr: "beak", min: 1, max: 2 }).type).toBe(
+      "valueRange"
+    );
+  });
+
+  it("round-trips through toValue/filterFromValue", () => {
+    const original = FilterByValueRange({ itemAttr: "beak", min: 10, max: 13 });
+    const v = original.toValue();
+    expect(v).toEqual({ type: "valueRange", attrib: "beak", min: 10, max: 13 });
+    expect(JSON.parse(JSON.stringify(v))).toEqual(v);
+
+    const restored = filterFromValue(v, ctx(rows()));
+    expect(rows().filter(restored.filter)).toEqual(
+      rows().filter(original.filter)
+    );
+  });
+
+  it("describes itself for the chip label", () => {
+    expect(
+      FilterByValueRange({ itemAttr: "beak", min: 10, max: 13 }).toStr()
+    ).toBe("beak in [10, 13]");
   });
 });

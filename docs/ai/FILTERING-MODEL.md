@@ -6,8 +6,9 @@ and by measuring the running widget in a browser, not inferred.
 
 It exists because a plausible-sounding mental model ("a filter is a predicate,
 re-evaluated on every render") is **wrong**, and acting on it produces a design
-that looks right and is not. Two GitHub issues (#81, #82) were found purely by
-testing this model instead of trusting it.
+that looks right and is not. Issues #81 and #82 were found purely by testing
+this model instead of trusting it, and #79 - a lone negative filter emptying the
+widget - came from working through the algebra in section 3.
 
 ---
 
@@ -68,6 +69,9 @@ negatives)**:
 
 Positives OR together, negatives AND together. That asymmetry is intentional:
 positives *add* candidates, negatives *subtract* from whatever is left.
+`value`, `range` and `valueRange` are all positives; only `negativeValue` and
+`negativeRange` are negatives. So two filters that should AND - say a species
+and a beak range - belong on **separate levels**, not stacked on one.
 
 The empty-positives row of that table was a bug (#79): an OR over an empty set
 seeds to `false`, which is only correct when positives exist. A lone negative
@@ -122,7 +126,14 @@ dragging can yield "all 152 Adelie plus the first 6 Chinstrap".
 > the pixels — with the boundaries being merely how it was authored.**
 
 Do not model it as a live value range. A programmatic value range is a
-genuinely *different* thing and should be a distinct filter type (#60).
+genuinely *different* thing, and now **is** a distinct type:
+`FilterByValueRange` (`type: "valueRange"`) compares raw attribute values, so
+`beak in [38, 46]` means the same thing in any ordering. That is what an
+external widget's range facet maps onto. The two are not interchangeable:
+- **`range`** — a band of positions, what Navio's own brush produces. Invalidated
+  by a re-sort, and only meaningful against the same rows in the same order.
+- **`valueRange`** — a range over values. Portable, survives re-sorting, and
+  cannot be produced by dragging.
 
 `itemAttr` on a range filter is the level's **sort** attribute captured at
 creation time, and it is read only by `toStr()` for the chip label — the
@@ -135,26 +146,51 @@ re-sort (#82).
 the end of `applyFiltersAndUpdate`, `onSortLevel` and `deleteSubsequentLevels`.
 It is the documented integration point, so **do not register library-internal
 listeners on it** — doing so silently clobbers whatever the embedding app set.
-There is no `d3.dispatch` or `nv.on()` in the codebase; a multi-subscriber hook
-has to be built (#60).
+Use **`nv.onChange(fn)`** instead: additive, multi-subscriber, returns an
+unsubscribe function. `updateCallback` keeps firing on every change exactly as
+before.
 
-Because it fires unconditionally, any programmatic filter application will
-re-enter it. Guard in the mutation path, not in a wrapper.
+Because notification fires unconditionally, any programmatic filter application
+will re-enter it. The guard is a `silent` flag threaded through `applySort`,
+`applyFiltersAndUpdate` and `deleteSubsequentLevels` — it lives in the mutation
+path, not in a wrapper, because a wrapper only covers one synchronous stack.
+`nv.setFilters` applies every level silently and emits **once** at the end.
 
-## 6. Known gaps, with issue numbers
+## 6. Serializing filter state
 
-- **`nv.sortBy()` does not sort** (#81). It sets `dSortBy[level]` and redraws;
-  `updateSorting` is never reached. The header arrow updates, so it fails
-  deceptively. The UI header click works.
-- **Filter chips go stale after a re-sort** (#82). Rows stay correct; the label
-  names an attribute that no longer orders the view.
+`nv.getFilters()` / `nv.setFilters(value)` round-trip the chain as one entry per
+level, JSON-safe. Restoring walks the levels **in order**: a range is a band of
+positions in a level's ordering, and that ordering only exists once the levels
+above it have been applied, so each level's sort is re-established before its
+boundaries are resolved.
+
+Two things that are easy to get wrong here, both learned the hard way:
+
+- **`filtersByLevel` can be sparse.** `deleteSubsequentLevels` returns early when
+  the level is missing from `dataIs`, so an index can exist without ever being
+  assigned. Anything iterating it by `length` must tolerate a hole - a level with
+  no filters is not the same as a level that is absent. `getFilters` normalises
+  holes to `[]` so no `null` ever reaches a serialized value.
+- **Applying filters does not redraw the brush.** A restored range filters
+  correctly but leaves nothing to grab, so `setFilters` maps each range back
+  through its level's y scale and moves the brush. Without that, a widget synced
+  from a peer looks filtered but is not draggable.
+
+## 7. Traps that are not about filtering
+
+- **`#levelN` is not unique across instances.** Level groups are identified by
+  id, so with several Navios on one page `d3.select("#level0")` always resolves
+  to the *first* instance and operates on the wrong widget. Go through
+  `brushesOnLevel()`, which scopes to the instance's own container. Same family
+  as the tooltip collision in #57 - assume any document-wide selector is a bug.
 - **No sort history is retained.** `dSortBy[L]` holds only the current sort, yet
   ties resolve by the *previous* order (`Array.prototype.sort` is stable), so
   reproducing a visual ordering elsewhere may need the full history.
-- **`FilterByRange` compares positions, not values**, so a serialized range is
-  only meaningful against the same rows in the same order.
+- **Fixed, but worth knowing the shape of:** `nv.sortBy()` used to update the
+  header label without sorting (#81), and range chips kept naming the old sort
+  attribute after a re-sort (#82, now suffixed "(re-sorted since)").
 
-## 7. Rules of thumb
+## 8. Rules of thumb
 
 1. **Measure, don't infer.** Reading the source suggested filters are
    re-evaluated on sort; they are not. A ten-line Playwright probe settled in
@@ -162,7 +198,16 @@ re-enter it. Guard in the mutation path, not in a wrapper.
 2. **`selected` is state, not a derivation.** If you need it fresh, trigger a
    filter action; a redraw will not recompute it.
 3. **Never assume a range filter is a value range.**
-4. **Unit tests can pass while the build fails.** Vitest runs `src/` directly;
-   `rollup-plugin-ascii` parses it with an ES5-era acorn and rejects modern
-   syntax (#80). Always run `npm run build`, and check its exit code rather
-   than grepping its output.
+4. **Check exit codes, never grep output.** `npm run build` has failed while a
+   grep for "error" matched nothing, and a stale `dist/` then made browser tests
+   pass against yesterday's bundle. `npm ci` is also stricter than
+   `npm install` about peer ranges, so verify dependency changes the way CI runs
+   them.
+5. **The bundler can change semantics.** Rollup constant-folded
+   `obj.flag ? a : b` to `b` because it saw `flag` initialised to a literal and
+   never reassigned *within the module* - the branch vanished from the bundle
+   while the source looked right. Prefer a closure variable with an explicit
+   setter over a mutable property when behaviour depends on it.
+6. **Exercise both sides of a binding.** A test suite that only drives widget A
+   programmatically will not find the crash that happens when someone interacts
+   with the bound peer B.

@@ -30,3 +30,6 @@ extras/
 
 # Personal/machine-local scripts and notes
 update.sh
+
+# Observable notebook export, unpacked into examples/binding/faceted-search
+docs/facetedSearch/

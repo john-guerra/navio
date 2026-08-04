@@ -94,20 +94,27 @@
 
     <h2>2. Bridging a widget whose value is rows, not filters</h2>
     <p class="note">
-      Not every reactive widget agrees on what <code>.value</code> means.
-      Navio's is a <em>filter chain</em>; a faceted-search widget's is typically
-      the <em>surviving rows</em>, with the facets themselves hanging off it as
-      <code>value.filters</code>. So they cannot be bound directly — but the
-      <em>facets</em> and Navio's filters describe the same thing, and translate
-      cleanly. Tick <em>Adelie</em> below and Navio gains a level with
-      <code>species == Adelie</code> selected, exactly as if you had clicked
-      that value in its species column. Each faceted attribute becomes one
-      level; several values within one facet become OR'd filters on that level.
-      It works in both directions.
+      This is the real
+      <a href="https://observablehq.com/@john-guerra/faceted-search"
+        >@john-guerra/faceted-search</a
+      >, loaded from its Observable notebook export. Its <code>.value</code> is
+      the <em>surviving rows</em>, with the facets on
+      <code>value.filters</code> — so it cannot be bound to Navio directly. But
+      the facets and Navio's filters describe the same thing, and translate.
+    </p>
+    <p class="note">
+      Both facet kinds map across. A <strong>checkbox facet</strong> becomes
+      value filters on one level — tick <em>Adelie</em> and Navio gains a level
+      with <code>species == Adelie</code>, exactly as clicking that value would.
+      A <strong>range facet</strong> becomes a <code>valueRange</code> filter,
+      e.g. <code>beak in [38, 46]</code>. That is a different thing from Navio's
+      own brush, which selects a band of <em>positions</em> in the current
+      ordering — a value range means the same thing however the level is
+      sorted, which is what makes it portable between widgets.
     </p>
     <div class="row">
       <div class="panel" style="min-width: 16rem">
-        <h3>Stand-in facet widget (value = rows)</h3>
+        <h3>@john-guerra/faceted-search (value = rows)</h3>
         <div id="facets"></div>
       </div>
       <div class="panel">
@@ -123,7 +130,6 @@
     <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
     <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16/dist/umd/popper.min.js"></script>
     <script src="../../dist/navio.js"></script>
-    <script src="./facet-stand-in.js"></script>
     <script>
       /* global d3, navio, FacetStandIn */
       const { NavioWidget } = navio;
@@ -135,9 +141,11 @@
         id: i + 1,
         species: SPECIES[i % 3],
         island: ISLANDS[(i >> 1) % 3],
-        beak: 32 + ((i * 7) % 28),
+        beak: Math.round((32 + ((i * 37) % 271) / 10) * 10) / 10,
         mass: 2700 + ((i * 137) % 3000),
       }));
+
+      window.__navioDemoData = data;
 
       // ---- 1. Navio <-> Navio ------------------------------------------------
       const a = NavioWidget(data, { height: 380, id: "id" });
@@ -168,48 +176,70 @@
       b.addEventListener("input", showValue);
       showValue();
 
-      // ---- 2. Bridging a rows-valued widget ----------------------------------
-      const facets = FacetStandIn(data, { attribs: ["species", "island"] });
+    </script>
+
+    <script type="module">
+      /* global d3, navio */
+      import { Runtime } from "https://cdn.jsdelivr.net/npm/@observablehq/runtime@5/dist/runtime.js";
+      import define from "./faceted-search/index.js";
+
+      const { NavioWidget } = navio;
+      const data = window.__navioDemoData;
+
+      // Pull the FacetedSearch cell out of the notebook. Asking for one value
+      // computes only that cell and its dependencies, so the notebook's own
+      // data-loading cells never run.
+      const main = new Runtime().module(define);
+      const FacetedSearch = await main.value("FacetedSearch");
+
+      const facets = FacetedSearch(data, {
+        attribs: ["species", "island", "beak"],
+      });
       document.getElementById("facets").appendChild(facets);
 
       const c = NavioWidget(data, { height: 380, id: "id" });
       document.getElementById("navioC").appendChild(c);
 
       /**
-       * Facets and Navio filters describe the same thing in different shapes,
-       * so translate between them rather than replacing Navio's data.
+       * Translate the widget's facets into a Navio filter chain.
        *
-       *   facet  { species: {Adelie}, island: {Biscoe} }
-       *   navio  [ [species == Adelie], [island == Biscoe] ]
+       * Its filters are a Map of attr -> { type, selected, allOptions }:
+       *   categorical  selected is the chosen values, all of them by default
+       *   range        selected is [min, max], the full extent by default
        *
-       * One faceted attribute per level, which is what makes Navio show the
-       * drill-down; several chosen values within one facet become OR'd filters
-       * on the same level, matching Navio's OR-of-positives.
+       * A facet that is not narrowing anything is skipped, so Navio only grows
+       * a level per facet the user has actually touched.
        */
       function facetsToFilters(map) {
         const chain = [];
-        for (const [attrib, chosen] of map) {
-          if (!chosen || chosen.size === 0) continue;
-          chain.push(
-            Array.from(chosen, (value) => ({ type: "value", attrib, value }))
-          );
+        for (const f of map.values()) {
+          if (f.type === "categorical") {
+            const all = f.allOptions || [];
+            const chosen = f.selected || [];
+            if (!chosen.length || chosen.length === all.length) continue;
+            // Several values within one facet OR together on a single level,
+            // which is exactly how Navio combines positive filters.
+            chain.push(
+              chosen.map((value) => ({
+                type: "value",
+                attrib: f.attr,
+                value,
+              }))
+            );
+          } else if (f.type === "range") {
+            const [lo, hi] = f.selected || [];
+            const [min, max] = f.allOptions || [];
+            if (lo === undefined || (lo <= min && hi >= max)) continue;
+            // NOT Navio's brush: that is a band of positions. This is a range
+            // over raw values, so it survives any re-sort.
+            chain.push([
+              { type: "valueRange", attrib: f.attr, min: lo, max: hi },
+            ]);
+          }
         }
         return chain;
       }
 
-      function filtersToFacets(chain) {
-        const map = new Map();
-        for (const level of chain) {
-          for (const f of level || []) {
-            if (f.type !== "value") continue;
-            if (!map.has(f.attrib)) map.set(f.attrib, new Set());
-            map.get(f.attrib).add(f.value);
-          }
-        }
-        return map;
-      }
-
-      // Both directions, with a guard so echoing back does not loop.
       let syncing = false;
       facets.addEventListener("input", () => {
         if (syncing) return;
@@ -218,19 +248,12 @@
         syncing = false;
         report();
       });
-      c.addEventListener("input", () => {
-        if (syncing) return;
-        syncing = true;
-        facets.setFacets(filtersToFacets(c.value));
-        syncing = false;
-        report();
-      });
 
       const bridgeOut = document.getElementById("bridgeOut");
       function report() {
         bridgeOut.textContent = [
           `facets .value : ${facets.value.length} rows`,
-          `navio C levels: ${c.navio.data().length} rows, ${c.getSelected().length} selected`,
+          `navio C       : ${c.getSelected().length} of ${c.navio.data().length} selected`,
           ``,
           `navio C .value:`,
           JSON.stringify(
@@ -242,6 +265,8 @@
       }
       c.addEventListener("input", report);
       report();
+      window.__facets = facets;
+      window.__navioC = c;
     </script>
   </body>
 </html>

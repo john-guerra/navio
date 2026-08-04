@@ -15,6 +15,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@observablehq/runtime": "^5.9.9",
     "@playwright/test": "^1.62.1",
     "@rollup/plugin-node-resolve": "^15.0.2",
     "@rollup/plugin-terser": "^1.0.0",
@@ -52,7 +53,7 @@
     "Data exploration"
   ],
   "author": {
-    "name": "John Alexis Guerra G\u00f3mez",
+    "name": "John Alexis Guerra Gómez",
     "url": "https://johnguerra.co"
   },
   "license": "MIT",

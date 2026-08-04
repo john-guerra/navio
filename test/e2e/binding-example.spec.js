@@ -29,60 +29,6 @@ test("two bound Navios stay in sync", async ({ page }) => {
   expect(errs).toEqual([]);
 });
 
-test("a facet selection becomes a Navio level, exactly as clicking would", async ({
-  page,
-}) => {
-  await page.goto("/examples/binding/");
-  const state = () =>
-    page.evaluate(() => {
-      const c = document.querySelector("#navioC").firstChild;
-      return {
-        panels: document.querySelectorAll("#navioC .levelOverlay").length,
-        selected: c.getSelected().length,
-        value: c.value.filter((l) => l && l.length),
-      };
-    });
-
-  const before = await state();
-  expect(before.panels).toBe(1);
-  expect(before.selected).toBe(120);
-
-  // Tick "Adelie" in the facet widget.
-  await page.locator("#facets input[type=checkbox]").first().check();
-  await page.waitForTimeout(200);
-
-  const after = await state();
-  // A second panel appears - the drill-down - rather than the dataset being
-  // swapped out underneath Navio.
-  expect(after.panels).toBe(2);
-  expect(after.selected).toBe(40);
-  expect(after.value).toEqual([
-    [{ type: "value", attrib: "species", value: "Adelie" }],
-  ]);
-});
-
-test("the bridge also runs backwards, from Navio to the facets", async ({
-  page,
-}) => {
-  await page.goto("/examples/binding/");
-
-  await page.evaluate(() => {
-    document
-      .querySelector("#navioC")
-      .firstChild.setValue([
-        [{ type: "value", attrib: "island", value: "Biscoe" }],
-      ]);
-  });
-  await page.waitForTimeout(200);
-
-  const checked = await page.evaluate(() =>
-    Array.from(document.querySelectorAll("#facets input[type=checkbox]"))
-      .filter((b) => b.checked)
-      .map((b) => `${b.dataset.attr}=${b.dataset.value}`)
-  );
-  expect(checked).toEqual(["island=Biscoe"]);
-});
-
 test("interacting with a bound peer does not crash", async ({ page }) => {
   // Regression: filtering A then brushing B threw "Cannot read properties of
   // undefined (reading 'filter')" - filtersByLevel had become sparse, and
@@ -110,7 +56,13 @@ test("interacting with a bound peer does not crash", async ({ page }) => {
   await page.mouse.down();
   await page.mouse.move(x, box.y + g.y0 + rowSpan * 12, { steps: 10 });
   await page.mouse.up();
-  await page.waitForTimeout(250);
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => document.querySelector("#navioB").firstChild.getSelected().length
+      )
+    )
+    .toBeGreaterThan(0);
 
   expect(errs).toEqual([]);
   // And the two stay in agreement afterwards.
@@ -195,4 +147,103 @@ test("the brush is restored in the bound peer, and is draggable there", async ({
   expect(after.b).not.toBe(before); // B's drag changed the selection
   expect(after.a).toBe(after.b); // and A followed
   expect(errs).toEqual([]);
+});
+
+// The real @john-guerra/faceted-search, loaded from its notebook export. Its
+// value is the surviving rows, so it cannot be bound to Navio directly - these
+// pin the translation in both facet kinds.
+test("a checkbox facet becomes value filters on one level", async ({
+  page,
+}) => {
+  await page.goto("/examples/binding/");
+  await page.waitForFunction(() => window.__facets && window.__navioC);
+
+  const after = await page.evaluate(() => {
+    const f = window.__facets.value.filters.get("species");
+    f.selected = ["Adelie"];
+    window.__facets.dispatchEvent(new Event("input", { bubbles: true }));
+    return null;
+  });
+  expect(after).toBeNull();
+  await page.waitForFunction(() =>
+    window.__navioC.value.some((l) => l && l.length)
+  );
+
+  const state = await page.evaluate(() => ({
+    value: window.__navioC.value.filter((l) => l && l.length),
+    panels: document.querySelectorAll("#navioC .levelOverlay").length,
+  }));
+  expect(state.value).toEqual([
+    [{ type: "value", attrib: "species", value: "Adelie" }],
+  ]);
+  expect(state.panels).toBe(2);
+});
+
+test("a range facet becomes a valueRange filter, not a positional brush", async ({
+  page,
+}) => {
+  await page.goto("/examples/binding/");
+  await page.waitForFunction(() => window.__facets && window.__navioC);
+
+  const bounds = await page.evaluate(() => {
+    const f = window.__facets.value.filters.get("beak");
+    const [min, max] = f.allOptions;
+    const lo = min + (max - min) * 0.25;
+    const hi = min + (max - min) * 0.75;
+    f.selected = [lo, hi];
+    window.__facets.dispatchEvent(new Event("input", { bubbles: true }));
+    return { lo, hi };
+  });
+  await page.waitForFunction(() =>
+    window.__navioC.value.some((l) => l && l.length)
+  );
+
+  const state = await page.evaluate(() => ({
+    value: window.__navioC.value.filter((l) => l && l.length),
+    beaks: window.__navioC.getSelected().map((d) => d.beak),
+  }));
+
+  expect(state.value).toHaveLength(1);
+  expect(state.value[0][0]).toMatchObject({
+    type: "valueRange",
+    attrib: "beak",
+  });
+  expect(state.beaks.length).toBeGreaterThan(0);
+  // Every surviving row is genuinely inside the requested value range - which
+  // a positional brush could not guarantee.
+  for (const b of state.beaks) {
+    expect(b).toBeGreaterThanOrEqual(bounds.lo);
+    expect(b).toBeLessThanOrEqual(bounds.hi);
+  }
+});
+
+test("a valueRange survives a re-sort, unlike a positional range", async ({
+  page,
+}) => {
+  await page.goto("/examples/binding/");
+  await page.waitForFunction(() => window.__facets && window.__navioC);
+
+  await page.evaluate(() => {
+    const f = window.__facets.value.filters.get("beak");
+    const [min, max] = f.allOptions;
+    f.selected = [min + (max - min) * 0.25, min + (max - min) * 0.75];
+    window.__facets.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  await page.waitForFunction(() =>
+    window.__navioC.value.some((l) => l && l.length)
+  );
+  const before = await page.evaluate(
+    () => window.__navioC.getSelected().length
+  );
+
+  // Re-sorting drops positional range filters as obsolete; a value range means
+  // the same thing in any ordering and must be kept.
+  await page.evaluate(() => window.__navioC.navio.sortBy("mass", false, 0));
+
+  const after = await page.evaluate(() => ({
+    selected: window.__navioC.getSelected().length,
+    value: window.__navioC.value.filter((l) => l && l.length),
+  }));
+  expect(after.selected).toBe(before);
+  expect(after.value[0][0].type).toBe("valueRange");
 });

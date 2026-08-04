@@ -135,6 +135,52 @@ export function FilterByValueDifferent(opts) {
   };
 }
 
+/**
+ * A range over raw attribute VALUES - "beak between 10 and 13" - as opposed to
+ * FilterByRange, which is a band of positions in the level's current ordering.
+ *
+ * Navio's own brush produces the positional kind, because dragging selects
+ * whatever rows fall under the pixels. This one is the semantic counterpart:
+ * it is what an external widget means by a range facet, it survives re-sorting
+ * and replaying onto another instance, and it is expressible without reference
+ * to any ordering at all. Bounds are inclusive, matching the usual convention
+ * for faceted range inputs. See #60.
+ */
+export function FilterByValueRange(opts) {
+  const itemAttr = opts.itemAttr;
+  const min = opts.min;
+  const max = opts.max;
+  const getAttrib = opts.getAttrib || ((d) => d[itemAttr]);
+  const getAttribName =
+    opts.getAttribName ||
+    ((attrib) => (typeof attrib === "function" ? attrib.name : attrib));
+
+  function filter(d) {
+    const v = getAttrib(d, itemAttr);
+    return v >= min && v <= max;
+  }
+
+  function toStr() {
+    return `${getAttribName(itemAttr)} in [${min}, ${max}]`;
+  }
+
+  function toValue() {
+    return {
+      type: "valueRange",
+      attrib: getAttribName(itemAttr),
+      min,
+      max,
+    };
+  }
+
+  return {
+    filter,
+    toStr,
+    toValue,
+    type: "valueRange",
+  };
+}
+
 export function FilterByRangeNegative(opts) {
   const first = opts.first;
   const last = opts.last;
@@ -241,6 +287,10 @@ export function filterFromValue(value, ctx = {}) {
   if (rows.length && !known) return null;
 
   const common = { itemAttr, getAttrib, getAttribName };
+
+  if (value.type === "valueRange") {
+    return FilterByValueRange({ ...common, min: value.min, max: value.max });
+  }
 
   if (value.type === "value" || value.type === "negativeValue") {
     // A synthetic row is enough: both predicates only ever read itemAttr off it.

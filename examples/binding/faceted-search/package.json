@@ -1,0 +1,14 @@
+{
+  "name": "@john-guerra/faceted-search",
+  "main": "529f9a5a4dd1dd5a@425.js",
+  "version": "425.0.0",
+  "homepage": "https://observablehq.com/@john-guerra/faceted-search",
+  "author": {
+    "name": "John Alexis Guerra Gómez",
+    "url": "https://observablehq.com/@john-guerra"
+  },
+  "type": "module",
+  "peerDependencies": {
+    "@observablehq/runtime": "4 - 5"
+  }
+}
