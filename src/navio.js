@@ -141,10 +141,13 @@ function navio(selection, _h) {
   // Show the gear button that opens the settings panel (#89). Embedders who
   // want a fixed configuration set this to false.
   nv.settings = true;
-  // Where the panel opens: "beside" clears the canvas so the widget stays
-  // visible while you change options; "over" is the compact overlay, better
-  // when the page has no room to the side.
-  nv.settingsPlacement = "beside";
+  // Where the panel opens, all of which keep the widget visible except "over":
+  //   "below"  under the widget, left-aligned. Column width changes the
+  //            canvas WIDTH, so a below-panel does not move when you drag the
+  //            column-width slider - the default for that reason.
+  //   "beside" to the right of the canvas; moves as the canvas widens.
+  //   "over"   compact overlay on the widget, for layouts with no room.
+  nv.settingsPlacement = "below";
   // Swap the settings panel's attribute picker. See defaultAttribPicker for
   // the contract; examples/settings plugs in @john-guerra/search-checkbox.
   nv.attribPicker = null;
@@ -1131,19 +1134,38 @@ function navio(selection, _h) {
    */
   function placeSettingsPanel() {
     if (!settingsPanel) return;
-    if (nv.settingsPlacement !== "beside") {
-      settingsPanel.style("left", "2px").style("bottom", "26px");
-      return;
-    }
+
     const host = selection.node(),
       cv = canvas;
     if (!host || !cv) return;
     const h = host.getBoundingClientRect(),
       c = cv.getBoundingClientRect();
-    // Clear the canvas horizontally; sit level with its bottom edge.
+
+    // Reset both axes each time; the modes anchor differently.
     settingsPanel
-      .style("left", `${Math.round(c.right - h.left) + 12}px`)
-      .style("bottom", `${Math.max(0, Math.round(h.bottom - c.bottom))}px`);
+      .style("top", null)
+      .style("bottom", null)
+      .style("left", null)
+      .style("right", null);
+
+    if (nv.settingsPlacement === "over") {
+      settingsPanel.style("left", "2px").style("bottom", "26px");
+      return;
+    }
+
+    if (nv.settingsPlacement === "beside") {
+      settingsPanel
+        .style("left", `${Math.round(c.right - h.left) + 12}px`)
+        .style("bottom", `${Math.max(0, Math.round(h.bottom - c.bottom))}px`);
+      return;
+    }
+
+    // "below": left-aligned under the canvas. Column width changes the
+    // canvas's WIDTH, which this ignores, so the panel stays put while the
+    // slider is dragged - which is the point.
+    settingsPanel
+      .style("left", "2px")
+      .style("top", `${Math.round(c.bottom - h.top) + 30}px`);
   }
 
   function focusablePanelItems() {
@@ -1849,8 +1871,11 @@ function navio(selection, _h) {
     // Append on ENTER only. This used to be
     //   _brush.enter().merge(_brush).append("g")
     // which appends to the update selection as well, so every redraw nested
-    // another .brush inside the previous one. Each stale copy kept the width
-    // of the geometry it was born under and was drawn on top of the live one.
+    // another .brush inside the previous one. With one redraw per page load
+    // that went unnoticed; anything that redraws repeatedly - a settings slider
+    // fires hardUpdate on every input event - fills the widget with stale brush
+    // rectangles, each keeping the width of the geometry it was born under and
+    // drawn on top of the live one.
     const brushG = _brush
       .enter()
       .append("g")

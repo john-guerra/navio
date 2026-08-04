@@ -44,41 +44,93 @@ test("the gear sits at the bottom left", async ({ page }) => {
 });
 
 // The point of the panel is watching the widget change as you change it, so
-// it must not sit on top of the thing it is configuring.
-test("the panel opens beside the widget, never over it", async ({ page }) => {
+// it must not sit on top of the thing it is configuring - and it must not move
+// while you drag a slider, or the control runs away from the pointer.
+test("the panel opens below the widget and stays put as columns resize", async ({
+  page,
+}) => {
   await page.goto(FIXTURE);
   await expect(page.locator("#nv canvas")).toHaveCount(1);
   await page.locator("#nv ._nv_gear").click();
   await expect(page.locator("#nv ._nv_settings")).toBeVisible();
 
-  const clears = async () => {
+  const at = async () => {
     const cv = await page.locator("#nv canvas").boundingBox();
     const pl = await page.locator("#nv ._nv_settings").boundingBox();
-    return pl.x >= cv.x + cv.width;
+    return { x: Math.round(pl.x), below: pl.y >= cv.y + cv.height };
   };
-  expect(await clears()).toBe(true);
 
-  // And it follows the canvas when the geometry changes underneath it.
-  await page.evaluate(() => {
-    window.nv.attribWidth = 45;
-    window.nv.hardUpdate();
-  });
-  expect(await clears()).toBe(true);
+  const start = await at();
+  expect(start.below).toBe(true);
+
+  // Column width changes the canvas WIDTH; a panel below must ignore that.
+  for (const w of [40, 8]) {
+    await page.evaluate((v) => {
+      window.nv.attribWidth = v;
+      window.nv.hardUpdate();
+    }, w);
+    expect(await at()).toEqual(start);
+  }
 });
 
-test('settingsPlacement "over" puts it back on the widget', async ({
+test('settingsPlacement "beside" and "over" are still available', async ({
   page,
 }) => {
   await page.goto(FIXTURE);
   await expect(page.locator("#nv canvas")).toHaveCount(1);
+
   await page.evaluate(() => {
-    window.nv.settingsPlacement = "over";
+    window.nv.settingsPlacement = "beside";
   });
   await page.locator("#nv ._nv_gear").click();
+  let cv = await page.locator("#nv canvas").boundingBox();
+  let pl = await page.locator("#nv ._nv_settings").boundingBox();
+  expect(pl.x).toBeGreaterThanOrEqual(cv.x + cv.width);
 
-  const cv = await page.locator("#nv canvas").boundingBox();
-  const pl = await page.locator("#nv ._nv_settings").boundingBox();
+  await page.evaluate(() => {
+    window.nv.settingsPlacement = "over";
+    document.querySelector("#nv ._nv_gear").click(); // close
+    document.querySelector("#nv ._nv_gear").click(); // reopen
+  });
+  cv = await page.locator("#nv canvas").boundingBox();
+  pl = await page.locator("#nv ._nv_settings").boundingBox();
   expect(pl.x).toBeLessThan(cv.x + cv.width);
+});
+
+// Regression: the brush join appended on enter AND update, so every redraw
+// nested another .brush. One redraw per page hid it; a settings slider fires
+// hardUpdate per input event and the widget filled with stale brush rects,
+// each frozen at the width of the geometry it was created under.
+test("redrawing does not accumulate brushes, and their width tracks the columns", async ({
+  page,
+}) => {
+  await page.goto("/test/e2e/fixtures/single.html");
+  await expect(page.locator("#nv canvas")).toHaveCount(1);
+
+  const probe = () =>
+    page.evaluate(() => ({
+      count: document.querySelectorAll("#nv .brush").length,
+      widths: Array.from(document.querySelectorAll("#nv .brush .overlay")).map(
+        (r) => +r.getAttribute("width")
+      ),
+    }));
+
+  const first = await probe();
+  expect(first.count).toBe(1);
+
+  await page.evaluate(() => {
+    for (let i = 0; i < 5; i++) window.nv.hardUpdate();
+  });
+  expect((await probe()).count).toBe(1);
+
+  // Doubling the column width doubles the brush's span.
+  const before = (await probe()).widths[0];
+  await page.evaluate(() => {
+    window.nv.attribWidth = 30;
+    window.nv.hardUpdate();
+  });
+  const after = (await probe()).widths[0];
+  expect(after).toBeGreaterThan(before * 1.5);
 });
 
 test("unticking a column hides it without touching the data", async ({
