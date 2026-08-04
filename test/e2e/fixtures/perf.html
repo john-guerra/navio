@@ -1,0 +1,39 @@
+<!doctype html>
+<meta charset="utf-8" />
+<div id="nv"></div>
+<script src="/node_modules/d3/dist/d3.js"></script>
+<script src="/node_modules/popper.js/dist/umd/popper.js"></script>
+<script src="/dist/navio.js"></script>
+<script>
+  /* global d3, navio */
+  var N = +(new URLSearchParams(location.search).get("n") || 20000);
+  var CATS = ["alpha", "beta", "gamma", "delta", "epsilon"];
+  window.__rows = d3.range(N).map(function (i) {
+    return {
+      id: i + 1,
+      category: CATS[i % CATS.length],
+      group: "g" + (i % 37),
+      value: (i * 37) % 1000,
+      score: Math.sin(i) * 500 + 500,
+    };
+  });
+  window.nv = new navio(d3.select("#nv"), 600);
+  window.nv.id("id");
+  window.nv.data(window.__rows);
+  window.nv.addAllAttribs();
+</script>
+<script>
+  // ?links=N attaches a link set, so recomputeVisibleLinks has real work (#61).
+  var L = +(new URLSearchParams(location.search).get("links") || 0);
+  if (L) {
+    var rows = window.__rows;
+    var links = d3.range(L).map(function (i) {
+      return {
+        source: rows[i % rows.length],
+        target: rows[(i * 7919) % rows.length],
+      };
+    });
+    window.nv.links(links);
+    window.nv.update();
+  }
+</script>

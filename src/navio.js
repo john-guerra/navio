@@ -60,6 +60,10 @@ function navio(selection, _h) {
     dBrushes = [],
     filtersByLevel = [], // The filters applied to each level
     yScales = [],
+    // scale object -> its inverted quantize scale. See invertOrdinalScale (#62).
+    invertScaleCache = new WeakMap(),
+    // Flat [sourceIdx, targetIdx, ...] for links; -1 means unresolved. See #61.
+    linkEndpoints = null,
     xScale,
     x,
     height = _h !== undefined ? _h : 600,
@@ -141,7 +145,11 @@ function navio(selection, _h) {
 
   nv.showSelectedAttrib = true; // Display the attribute that shows if a row is selected
   nv.showSequenceIDAttrib = true; // Display the attribute with the sequence ID
-  nv.DEBUG = false; // Set to true to trace Navio's internals to the console
+  // Trace Navio's internals to the console. Inherited from navio.DEBUG so it
+  // can be switched on BEFORE any instance exists - otherwise everything logged
+  // during construction and the first data() call is already gone by the time
+  // you can reach nv.DEBUG. Still settable per instance afterwards.
+  nv.DEBUG = navio.DEBUG === true;
   nv.stringify = JSON.stringify; // function to use to stringify the data, for speeding up use d => d
 
   // function nozoom(event) {
@@ -486,14 +494,34 @@ function navio(selection, _h) {
     };
   }
 
+  /**
+   * Inverts a band scale: given a pixel offset, which domain entry is there.
+   *
+   * Taken from https://bl.ocks.org/shimizu/808e0f5cadb6a63f28bb00082dc8fe3f
+   *
+   * Called from showTooptip and onSelectByRange, so it runs on every mousemove
+   * during a hover or a brush drag. It used to build a fresh d3.scaleQuantize
+   * each time - and worse, `scale.domain()` on a band scale returns a COPY, so
+   * a 24k-row level allocated a 24k-element array per pointer event. Cached per
+   * scale instead. See #62.
+   */
   function invertOrdinalScale(scale, x) {
-    // Taken from https://bl.ocks.org/shimizu/808e0f5cadb6a63f28bb00082dc8fe3f
-    // custom invert function
-    let domain = scale.domain();
-    let range = scale.range();
-    let qScale = d3.scaleQuantize().domain(range).range(domain);
-
+    let qScale = invertScaleCache.get(scale);
+    if (!qScale) {
+      qScale = d3.scaleQuantize().domain(scale.range()).range(scale.domain());
+      invertScaleCache.set(scale, qScale);
+    }
     return qScale(x);
+  }
+
+  /**
+   * yScales[level] is replaced wholesale on every update, so keying the cache
+   * on the scale object already invalidates those. xScale and levelScale are
+   * mutated in place, though, so their entries have to be dropped explicitly -
+   * a stale one would report the wrong column under the cursor.
+   */
+  function invalidateInvertCache() {
+    invertScaleCache = new WeakMap();
   }
 
   function updateSorting(levelToUpdate, _dataIs) {
@@ -1693,6 +1721,38 @@ function navio(selection, _h) {
     return representatives;
   }
 
+  /**
+   * min/max of an attribute over every row, in one pass.
+   *
+   * Same semantics as d3.extent (skips null/undefined/NaN) but without
+   * materialising an intermediate array. updateColorDomains used to build one
+   * per attribute, so a 7-attribute 100k-row dataset allocated 700k values
+   * every time it ran. See #61.
+   */
+  function extentAt(attrib) {
+    let min, max;
+    for (let j = 0; j < dataIs[0].length; j++) {
+      const v = attribAt(dataIs[0][j], attrib);
+      if (v == null || !(v >= v)) continue; // NaN-safe, matches d3.extent
+      if (min === undefined) {
+        min = max = v;
+      } else {
+        if (v < min) min = v;
+        if (v > max) max = v;
+      }
+    }
+    return [min, max];
+  }
+
+  /** Distinct values in first-appearance order - what scaleOrdinal keeps anyway. */
+  function distinctAt(attrib) {
+    const seen = new Set();
+    for (let j = 0; j < dataIs[0].length; j++) {
+      seen.add(attribAt(dataIs[0][j], attrib));
+    }
+    return Array.from(seen);
+  }
+
   function updateColorDomains() {
     if (nv.DEBUG) console.log("Update color scale domains");
     // colScales = new Map();
@@ -1705,23 +1765,13 @@ function navio(selection, _h) {
       // domain to [undefined, undefined] on every update and flatten the
       // sequential-index column.
       if (scale.__type === "seq" || scale.__type === "date") {
-        scale.domain(
-          d3.extent(
-            dataIs[0].map(function (i) {
-              return attribAt(i, attrib);
-            })
-          )
-        ); //TODO: make it compute it based on the local range
+        scale.domain(extentAt(attrib)); //TODO: make it compute it based on the local range
       } else if (scale.__type === "div") {
-        const [min, max] = d3.extent(
-          dataIs[0].map(function (i) {
-            return attribAt(i, attrib);
-          })
-        );
+        const [min, max] = extentAt(attrib);
         const absMax = Math.max(-min, max); // Assumes diverging point on 0
         scale.domain([-absMax, absMax]);
       } else if (scale.__type === "text" || scale.__type === "ordered") {
-        scale.domain(dataIs[0].map((i) => attribAt(i, attrib)));
+        scale.domain(distinctAt(attrib));
       }
 
       colScales.set(getAttribName(attrib), scale);
@@ -1779,6 +1829,9 @@ function navio(selection, _h) {
       ])
       .paddingInner(0)
       .paddingOuter(0);
+
+    // Every scale above has just had its domain or range rewritten.
+    invalidateInvertCache();
 
     // Update color scales domains
     if (shouldUpdateColorDomains) {
@@ -1871,17 +1924,40 @@ function navio(selection, _h) {
     return val;
   }
 
+  /**
+   * Resolve every link's endpoints to row indices, once.
+   *
+   * Link endpoints are the caller's own row objects (the d3-force convention),
+   * so this is the one place identity crosses the API. Endpoints do not change
+   * unless links() or data() is called, but recomputeVisibleLinks runs on every
+   * filter, sort, brush and reorder - so resolving them per call meant two
+   * WeakMap lookups per link per interaction. -1 marks an endpoint that is not
+   * part of the current data. See #61.
+   */
+  function buildLinkEndpoints() {
+    linkEndpoints = new Int32Array(links.length * 2);
+    for (let i = 0; i < links.length; i++) {
+      const s = indexOfRow(links[i].source),
+        t = indexOfRow(links[i].target);
+      linkEndpoints[i * 2] = s === undefined ? -1 : s;
+      linkEndpoints[i * 2 + 1] = t === undefined ? -1 : t;
+    }
+  }
+
   function recomputeVisibleLinks() {
-    if (links.length > 0) {
-      visibleLinks = links.filter(function (d) {
-        // Link endpoints are the caller's own row objects (the d3-force
-        // convention), so this is the one place identity crosses the API.
-        const s = indexOfRow(d.source),
-          t = indexOfRow(d.target);
-        return s !== undefined && t !== undefined
-          ? selectedFlags[s] && selectedFlags[t]
-          : false;
-      });
+    if (!links.length) return;
+    if (!linkEndpoints || linkEndpoints.length !== links.length * 2) {
+      buildLinkEndpoints();
+    }
+
+    // Reads straight out of typed arrays; no per-link object property access.
+    visibleLinks = [];
+    for (let i = 0; i < links.length; i++) {
+      const s = linkEndpoints[i * 2],
+        t = linkEndpoints[i * 2 + 1];
+      if (s !== -1 && t !== -1 && selectedFlags[s] && selectedFlags[t]) {
+        visibleLinks.push(links[i]);
+      }
     }
   }
 
@@ -2316,6 +2392,9 @@ function navio(selection, _h) {
         Int32Array.from({ length: data.length }, (_unused, i) => i),
       ];
       rowIndex = null;
+      // Row indices are about to change, so any cached link endpoints are
+      // stale - they point into the previous dataset. See #61.
+      linkEndpoints = null;
       dataIs = [
         data.map(function (_, i) {
           return i;
@@ -2565,6 +2644,7 @@ function navio(selection, _h) {
   nv.links = function (_) {
     if (arguments.length) {
       links = _;
+      linkEndpoints = null; // endpoints belong to the old link array
       recomputeVisibleLinks();
       return nv;
     } else {
@@ -2638,6 +2718,7 @@ function navio(selection, _h) {
     rowIndex = null;
     dataIs = [];
     links = [];
+    linkEndpoints = null;
     visibleLinks = [];
     dData = new Map();
     attribsOrdered = [];
@@ -2664,5 +2745,20 @@ navio.getAttribsFromObjectAsFn = getAttribsFromObjectAsFn;
 // So the loaded build can be checked without reading the console - useful from
 // a notebook cell, or from a test.
 navio.version = VERSION;
+
+/**
+ * Default DEBUG for instances created from here on.
+ *
+ * Set it before constructing to capture the tracing that construction and the
+ * first data() call emit:
+ *
+ *   navio.DEBUG = true;            // or globalThis.NAVIO_DEBUG = true
+ *   const nv = new navio(el, 400); // traces from the very first call
+ *
+ * The global is honoured so it can be set before the script even loads - handy
+ * from an Observable cell, or a devtools console followed by a reload.
+ */
+navio.DEBUG =
+  typeof globalThis !== "undefined" && globalThis.NAVIO_DEBUG === true;
 
 export default navio;

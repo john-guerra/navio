@@ -294,6 +294,38 @@ passed to `.data()` or its index into that array.
 The rows present at a level, **in the order they are drawn**. Use this to observe
 the visual ordering produced by sorting.
 
+### Which build am I running?
+
+Navio prints its version once per page load, and exposes it:
+
+```js
+navio.version; // "0.1.5"
+```
+
+Worth checking when loading from a CDN — `https://unpkg.com/navio/dist/navio.min.js`
+follows whatever is latest, and notebooks cache aggressively.
+
+### Debugging
+
+`nv.DEBUG = true` traces Navio's internals to the console. It is per-instance
+and only reachable after construction, so it misses everything logged while the
+widget is being built. To trace from the very first call, set the default
+*before* constructing:
+
+```js
+navio.DEBUG = true;
+const nv = new navio(el, 400); // traces construction and the first data()
+```
+
+or set a global before the script loads at all — useful from a devtools console
+plus a reload, or an Observable cell that runs ahead of the `require`:
+
+```js
+window.NAVIO_DEBUG = true;
+```
+
+Either way the default stays off, so no rebuild is needed to turn tracing on.
+
 ### A note on your data
 
 Navio does not add any properties to the rows you give it. Earlier versions wrote
