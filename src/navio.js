@@ -2352,6 +2352,13 @@ function navio(selection, _h) {
     filtersByLevel = dataIs.map(() => []);
     deleteSubsequentLevels(1, dataIs, { shouldUpdate: false, silent: true });
 
+    // Whether anything below repainted. The teardown above deliberately does
+    // not, so that restoring a value costs one redraw instead of one per level
+    // - but that leaves nothing to repaint when the incoming value has no
+    // filters at all, which is exactly what closing the last level produces.
+    // The peer's data collapsed while its canvas kept drawing the old level.
+    let repainted = false;
+
     for (let level = 0; level < value.length; level++) {
       const specs = Array.isArray(value[level]) ? value[level] : [];
       // getLastLevelFromFilters stops at the first empty level, so anything
@@ -2394,7 +2401,10 @@ function navio(selection, _h) {
       filtersByLevel[level] = rebuilt;
       // Produces dataIs[level + 1], which the next iteration needs.
       applyFiltersAndUpdate(level, { silent: true });
+      repainted = true;
     }
+
+    if (!repainted) nv.updateData(dataIs, colScales);
 
     // The brush is how a range filter is expressed on screen; put it back so a
     // synced widget can be dragged, not just read.

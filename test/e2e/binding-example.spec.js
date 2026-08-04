@@ -88,6 +88,59 @@ test("getFilters never emits holes", async ({ page }) => {
   expect(v.every((level) => Array.isArray(level))).toBe(true);
 });
 
+// Closing the last level with the ✕ button empties the filters, so the value
+// the peer receives has no filters to rebuild. setFilters splices the levels
+// with shouldUpdate:false and then breaks out of its loop before reaching
+// applyFiltersAndUpdate - the only thing that repaints - so the peer's data
+// collapsed while its canvas kept showing the level.
+test("closing a level in one navio closes it in the bound peer", async ({
+  page,
+}) => {
+  await page.goto("/examples/binding/");
+
+  const closeButtonShown = () =>
+    page.evaluate(() =>
+      ["#navioA", "#navioB"].map(
+        (sel) =>
+          document.querySelector(sel).querySelector("#closeButton").style
+            .display
+      )
+    );
+  // filtersByLevel intentionally keeps one empty slot past the last level (see
+  // updateData), so assert on the filters themselves rather than the length.
+  const anyFilters = () =>
+    page.evaluate(() =>
+      ["#navioA", "#navioB"].map((sel) =>
+        document
+          .querySelector(sel)
+          .firstChild.navio.getFilters()
+          .some((lvl) => lvl.length)
+      )
+    );
+
+  await page.evaluate(() =>
+    document
+      .querySelector("#navioA")
+      .firstChild.setValue([
+        [{ type: "value", attrib: "species", value: "Adelie" }],
+      ])
+  );
+  await expect.poll(closeButtonShown).toEqual(["block", "block"]);
+  expect(await anyFilters()).toEqual([true, true]);
+
+  await page.locator("#navioA #closeButton path").click();
+
+  // Both must go back to a single level, chrome included.
+  await expect.poll(closeButtonShown).toEqual(["none", "none"]);
+  expect(await anyFilters()).toEqual([false, false]);
+
+  const selected = await page.evaluate(() => [
+    document.querySelector("#navioA").firstChild.getSelected().length,
+    document.querySelector("#navioB").firstChild.getSelected().length,
+  ]);
+  expect(selected).toEqual([120, 120]);
+});
+
 test("the brush is restored in the bound peer, and is draggable there", async ({
   page,
 }) => {
