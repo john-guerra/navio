@@ -272,7 +272,7 @@ Slower update that recomputes brushes and checks for parameters. Use it if you c
 * recomputeBrushes (defaults true)
 * levelsToUpdate (defaults all levels, should be an array of indices)
 
-<a name="getColorScales" href="#getColorScales">#</a> <i>nv</i>.<b>getColorScales</b>(attr
+<a name="getColorScale" href="#getColorScale">#</a> <i>nv</i>.<b>getColorScale</b>(attr
 ) [<>](https://github.com/john-guerra/navio/blob/master/src/navio.js#L1737 "Source")
 
 Returns the color scale for a certain attribute, make sure to pass an attribute that has been already added

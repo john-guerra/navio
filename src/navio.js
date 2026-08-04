@@ -583,9 +583,15 @@ function navio(selection, _h) {
   /**
    * An attribute value by row INDEX. `__seqId` is derived from the index rather
    * than stored on the row (#88), so it needs resolving here.
+   *
+   * `__seqId` is the index itself, NOT `idOf(index)`. It used to be assigned as
+   * `d.__seqId = i` regardless of any custom id, and it is drawn as the
+   * "sequential Index" column - the visual cue that the data is still in its
+   * original order. Routing it through a caller-supplied id would paint that
+   * column with the wrong values.
    */
   function attribAt(index, attrib) {
-    return attrib === "__seqId" ? idOf(index) : getAttrib(data[index], attrib);
+    return attrib === "__seqId" ? index : getAttrib(data[index], attrib);
   }
 
   /** A row's position within its level, from the side table. */
@@ -1132,7 +1138,8 @@ function navio(selection, _h) {
     }
 
     let itemAttr = invertOrdinalScale(xScale, xOnWidget - levelScale(level));
-    const d = data[dData.get(itemId)];
+    const rowIdx = dData.get(itemId);
+    const d = data[rowIdx];
 
     itemAttr = dAttribs.get(itemAttr);
 
@@ -1149,9 +1156,18 @@ function navio(selection, _h) {
 
     tooltipElement.select(".tool_id").text(itemId);
     tooltipElement.select(".tool_value_name").text(getAttribName(itemAttr));
+    // `selected` and `__seqId` are drawn columns backed by side tables rather
+    // than row properties (#88), so hovering them has to read the same way the
+    // renderer does or the tooltip just says "undefined".
     tooltipElement
       .select(".tool_value_val")
-      .text(nv.stringify(getAttrib(d, itemAttr)));
+      .text(
+        nv.stringify(
+          itemAttr === "selected"
+            ? !!selectedFlags[rowIdx]
+            : attribAt(rowIdx, itemAttr)
+        )
+      );
 
     tooltipElement.style("display", "initial");
 
@@ -1650,24 +1666,28 @@ function navio(selection, _h) {
       if (attrib === "selected") continue;
 
       let scale = colScales.get(attrib);
+      // Through attribAt, not getAttrib: "__seqId" is a "seq" scale but is
+      // derived from the index (#88), so reading it off the row would reset its
+      // domain to [undefined, undefined] on every update and flatten the
+      // sequential-index column.
       if (scale.__type === "seq" || scale.__type === "date") {
         scale.domain(
           d3.extent(
             dataIs[0].map(function (i) {
-              return getAttrib(data[i], attrib);
+              return attribAt(i, attrib);
             })
           )
         ); //TODO: make it compute it based on the local range
       } else if (scale.__type === "div") {
         const [min, max] = d3.extent(
           dataIs[0].map(function (i) {
-            return getAttrib(data[i], attrib);
+            return attribAt(i, attrib);
           })
         );
         const absMax = Math.max(-min, max); // Assumes diverging point on 0
         scale.domain([-absMax, absMax]);
       } else if (scale.__type === "text" || scale.__type === "ordered") {
-        scale.domain(dataIs[0].map((i) => getAttrib(data[i], attrib)));
+        scale.domain(dataIs[0].map((i) => attribAt(i, attrib)));
       }
 
       colScales.set(getAttribName(attrib), scale);
@@ -1994,8 +2014,11 @@ function navio(selection, _h) {
   nv.addSequentialAttrib = function (attr, _scale) {
     const domain =
       data !== undefined && data.length > 0
-        ? d3.extent(data, function (d) {
-            return getAttrib(d, attr);
+        ? // By INDEX, not by row: "__seqId" is derived (#88), so reading it off
+          // the row gives undefined for every row and collapses the domain to
+          // [undefined, undefined] - a flat, unreadable column.
+          d3.extent(data, function (_d, i) {
+            return attribAt(i, attr);
           })
         : [0, 1]; //if we don"t have data, set the default domain
     const scale =

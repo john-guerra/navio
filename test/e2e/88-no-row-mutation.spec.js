@@ -93,3 +93,67 @@ test("the selected column still renders", async ({ page }) => {
   expect(attribs).toContain("selected");
   expect(errs).toEqual([]);
 });
+
+// The __seqId column is how you SEE that the data is in its original order: it
+// draws as a clean gradient, and any other sort visibly scrambles it. Deriving
+// __seqId from the row index (#88) must not flatten that gradient - the colour
+// scale's domain is built from the data, and reading a derived attribute off
+// the row yields undefined for every row.
+test("the sequential ID column still paints a gradient", async ({ page }) => {
+  await page.goto("/test/e2e/fixtures/single.html");
+  await expect(page.locator("#nv canvas")).toHaveCount(1);
+
+  const domain = await page.evaluate(() =>
+    window.nv.getColorScale("__seqId").domain()
+  );
+  expect(domain.every((d) => typeof d === "number" && !Number.isNaN(d))).toBe(
+    true
+  );
+  expect(domain[0]).not.toBe(domain[1]);
+
+  // The top and bottom of the column have to be different colours, or the cue
+  // is gone regardless of what the domain says.
+  const scale = await page.evaluate(() => {
+    const s = window.nv.getColorScale("__seqId");
+    const n = window.nv.getRowsAtLevel(0).length;
+    return [s(0), s(Math.floor(n / 2)), s(n - 1)];
+  });
+  expect(new Set(scale).size).toBe(3);
+  expect(scale.some((c) => /nan/i.test(String(c)))).toBe(false);
+});
+
+// Same failure mode one layer up: the tooltip read values off the row, so the
+// two derived columns reported "undefined" on hover.
+test("hovering the derived columns shows a value, not undefined", async ({
+  page,
+}) => {
+  await page.goto("/test/e2e/fixtures/single.html");
+  await expect(page.locator("#nv canvas")).toHaveCount(1);
+
+  const geom = await page.evaluate(() => ({
+    y0: window.nv.y0,
+    aw: window.nv.attribWidth,
+    count: window.nv.getAttribs().length,
+  }));
+
+  const box = await page.locator("#nv canvas").boundingBox();
+  const y = box.y + geom.y0 + 25;
+
+  // Walk the columns and record what the tooltip calls each one, rather than
+  // assuming getAttribs() order maps onto pixel offsets. `y` is fixed, so every
+  // probe reads the same row and a repeated column just rewrites its own value.
+  const seen = new Map();
+  for (let col = 0; col < geom.count + 2; col++) {
+    await page.mouse.move(box.x + geom.aw * (col + 0.5), y);
+    seen.set(
+      await page.locator(".tool_value_name").innerText(),
+      await page.locator(".tool_value_val").innerText()
+    );
+  }
+
+  expect([...seen.keys()]).toEqual(
+    expect.arrayContaining(["__seqId", "selected"])
+  );
+  expect(seen.get("__seqId")).toMatch(/^\d+$/);
+  expect(seen.get("selected")).toMatch(/^(true|false)$/);
+});
