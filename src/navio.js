@@ -17,6 +17,7 @@ import {
   FilterByValue,
   FilterByValueDifferent,
   FilterByRangeNegative,
+  filterFromValue,
 } from "./filters.js";
 import {
   scaleText,
@@ -60,6 +61,7 @@ function navio(selection, _h) {
     tooltipCoords = { x: -50, y: -50 },
     id = "__seqId",
     updateCallback = function () {},
+    changeListeners = [],
     cursorSubstractData =
       "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iMzJweCIgaGVpZ2h0PSIzMnB4IiB2aWV3Qm94PSIwIDAgMzIgMzIiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+CiAgICA8IS0tIEdlbmVyYXRvcjogU2tldGNoIDU0LjEgKDc2NDkwKSAtIGh0dHBzOi8vc2tldGNoYXBwLmNvbSAtLT4KICAgIDx0aXRsZT5jdXJzb3JTdWJzdHJhY3Q8L3RpdGxlPgogICAgPGRlc2M+Q3JlYXRlZCB3aXRoIFNrZXRjaC48L2Rlc2M+CiAgICA8ZyBpZD0iY3Vyc29yU3Vic3RyYWN0IiBzdHJva2U9Im5vbmUiIHN0cm9rZS13aWR0aD0iMSIgZmlsbD0ibm9uZSIgZmlsbC1ydWxlPSJldmVub2RkIj4KICAgICAgICA8cGF0aCBkPSJNOSwwLjUgTDcsMC41IEw3LDcgTDAuNSw3IEwwLjUsOSBMNyw5IEw3LDE1LjUgTDksMTUuNSBMOSw5IEwxNS41LDkgTDE1LjUsNyBMOSw3IEw5LDAuNSBaIiBpZD0iQ29tYmluZWQtU2hhcGUiIHN0cm9rZT0iI0ZGRkZGRiIgZmlsbD0iIzAwMDAwMCI+PC9wYXRoPgogICAgICAgIDxyZWN0IGlkPSJSZWN0YW5nbGUiIGZpbGw9IiMwMDAwMDAiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDE1LjAwMDAwMCwgMTUuMDAwMDAwKSByb3RhdGUoLTI3MC4wMDAwMDApIHRyYW5zbGF0ZSgtMTUuMDAwMDAwLCAtMTUuMDAwMDAwKSAiIHg9IjE0IiB5PSIxMSIgd2lkdGg9IjIiIGhlaWdodD0iOCI+PC9yZWN0PgogICAgPC9nPgo8L3N2Zz4=",
     cursorAddData =
@@ -510,7 +512,7 @@ function navio(selection, _h) {
   // nv.sortBy used to set dSortBy and call nv.update(), which only redraws -
   // updateSorting was never reached, so the data was never actually reordered
   // while the header still gained its sort arrow. See #81.
-  function applySort(level, attrib, desc) {
+  function applySort(level, attrib, desc, { silent = false } = {}) {
     dSortBy[level] = { attrib, desc };
 
     // A re-sort invalidates range filters further down the chain, since those
@@ -532,9 +534,24 @@ function navio(selection, _h) {
 
     nv.updateData(dataIs, colScales, { levelsToUpdate: [level] });
 
-    updateCallback(nv.getVisible());
+    notifyChange({ silent });
 
     return nv;
+  }
+
+  // Every settled change funnels through here.
+  //
+  // `silent` marks a change Navio made on someone's behalf - setFilters
+  // replaying a value - so a programmatic apply cannot re-enter and re-emit.
+  // The guard has to live in the mutation path rather than in a wrapper,
+  // because applyFiltersAndUpdate and deleteSubsequentLevels notify
+  // unconditionally at the end of their work.
+  function notifyChange({ silent = false } = {}) {
+    // The legacy single-subscriber slot is always called, exactly as before.
+    updateCallback(nv.getVisible());
+    if (silent) return;
+    // Copy first: a listener may unsubscribe itself while we iterate.
+    for (const fn of changeListeners.slice()) fn();
   }
 
   function getAttrib(item, attrib) {
@@ -731,7 +748,7 @@ function navio(selection, _h) {
     return lastLevel;
   }
 
-  function applyFiltersAndUpdate(fromLevel) {
+  function applyFiltersAndUpdate(fromLevel, { silent = false } = {}) {
     if (nv.DEBUG) console.log("applyFiltersAndUpdate ", fromLevel);
 
     const lastLevel = getLastLevelFromFilters();
@@ -784,7 +801,7 @@ function navio(selection, _h) {
 
     if (nv.DEBUG)
       console.log("All filters applied calling updateCallback", dataIs);
-    updateCallback(nv.getVisible());
+    notifyChange({ silent });
   }
 
   function updateBrushes(d, level) {
@@ -1633,7 +1650,7 @@ function navio(selection, _h) {
   function deleteSubsequentLevels(_level, _dataIs, opts) {
     if (dataIs.length <= 1) return;
 
-    let { shouldUpdate } = opts || {};
+    let { shouldUpdate, silent = false } = opts || {};
 
     let level = _level !== undefined ? _level : dataIs.length - 1;
     _dataIs = _dataIs !== undefined ? _dataIs : dataIs;
@@ -1670,7 +1687,7 @@ function navio(selection, _h) {
 
     if (shouldUpdate) {
       nv.updateData(_dataIs, colScales);
-      updateCallback(nv.getVisible());
+      notifyChange({ silent });
     }
 
     hideLoading(this);
@@ -2170,6 +2187,94 @@ function navio(selection, _h) {
     }
   };
 
+  // --- Filter state, serializable ------------------------------------------
+  //
+  // Shape: one entry per level, each an array of filter descriptors. Levels are
+  // a drill-down chain, so entries must be contiguous from 0 - see
+  // docs/ai/FILTERING-MODEL.md.
+  //
+  // A dragged range is a band of rows in the ordering that was on screen, not a
+  // value range on any single attribute, so a range descriptor carries the sort
+  // that produced it. Restoring re-establishes that sort before rebuilding the
+  // range, which is why this needs nv.sortBy to actually sort (#81).
+
+  nv.getFilters = function () {
+    return filtersByLevel.map((levelFilters, level) =>
+      (levelFilters || []).map((f) =>
+        f.toValue({
+          sortAttrib: dSortBy[level]
+            ? getAttribName(dSortBy[level].attrib)
+            : null,
+          sortDesc: dSortBy[level] ? dSortBy[level].desc : false,
+          id,
+        })
+      )
+    );
+  };
+
+  nv.setFilters = function (value) {
+    if (!Array.isArray(value)) {
+      console.warn("navio.setFilters: expected an array of levels, got", value);
+      return nv;
+    }
+    if (!data.length) {
+      console.warn("navio.setFilters: no data loaded yet, ignoring");
+      return nv;
+    }
+
+    const resolveAttrib = (name) =>
+      dAttribs.has(name) ? dAttribs.get(name) : name;
+
+    // Start from a clean chain; every apply below is silent so that restoring
+    // a value emits exactly one change at the end rather than one per level.
+    filtersByLevel = [];
+    deleteSubsequentLevels(1, dataIs, { shouldUpdate: false, silent: true });
+
+    for (let level = 0; level < value.length; level++) {
+      const specs = Array.isArray(value[level]) ? value[level] : [];
+      // getLastLevelFromFilters stops at the first empty level, so anything
+      // beyond a gap would be unreachable anyway.
+      if (!specs.length) break;
+      if (!dataIs[level]) break;
+
+      // Ranges are positions in this level's ordering, so re-establish it
+      // before resolving any boundaries against it.
+      const ranged = specs.find((sp) => sp && sp.sortAttrib);
+      if (ranged) {
+        applySort(level, resolveAttrib(ranged.sortAttrib), !!ranged.sortDesc, {
+          silent: true,
+        });
+      }
+
+      const rows = dataIs[level].map((i) => data[i]);
+      const rebuilt = specs
+        .map((spec) =>
+          filterFromValue(spec, {
+            level,
+            rows,
+            resolveAttrib,
+            getAttrib,
+            getAttribName,
+          })
+        )
+        .filter(Boolean);
+
+      if (rebuilt.length !== specs.length) {
+        console.warn(
+          `navio.setFilters: dropped ${specs.length - rebuilt.length} filter(s) at level ${level} that could not be rebuilt`
+        );
+      }
+      if (!rebuilt.length) break;
+
+      filtersByLevel[level] = rebuilt;
+      // Produces dataIs[level + 1], which the next iteration needs.
+      applyFiltersAndUpdate(level, { silent: true });
+    }
+
+    notifyChange({ silent: false });
+    return nv;
+  };
+
   nv.getSelected = function () {
     return dataIs[dataIs.length - 1]
       .filter(function (d) {
@@ -2199,6 +2304,18 @@ function navio(selection, _h) {
     } else {
       return dSortBy[level];
     }
+  };
+
+  // updateCallback is a single overwritable slot and the documented
+  // integration point, so library code must never register on it - that would
+  // silently clobber whatever the embedding app set. onChange is the additive,
+  // multi-subscriber alternative. Returns an unsubscribe function.
+  nv.onChange = function (fn) {
+    changeListeners.push(fn);
+    return function off() {
+      const i = changeListeners.indexOf(fn);
+      if (i !== -1) changeListeners.splice(i, 1);
+    };
   };
 
   nv.updateCallback = function (_) {
