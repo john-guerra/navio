@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Navio settings panel</title>
+    <style>
+      body {
+        font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        max-width: 900px;
+        margin: 0 auto 120px;
+        padding: 0 16px;
+        color: #1b1e23;
+      }
+      .note {
+        background: #f4f6f8;
+        border-left: 3px solid #b2ddf1;
+        padding: 12px 16px;
+        margin: 20px 0;
+        font-size: 14px;
+      }
+      code {
+        background: #f4f6f8;
+        padding: 1px 4px;
+        border-radius: 3px;
+      }
+      #out {
+        font-family: ui-monospace, Menlo, monospace;
+        font-size: 13px;
+        color: #555;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Navio settings panel</h1>
+
+    <p>
+      The gear in the widget's corner opens a panel for changing options live:
+      which columns are shown, their order, orientation, and the geometry.
+    </p>
+
+    <div class="note">
+      <strong>Hiding is not removing.</strong> A hidden column keeps its type,
+      its colour scale and its place in the order — and, crucially, any
+      selection you have made survives. Try it: brush a range or click a value,
+      then hide the column you filtered on. The selection stays exactly as it
+      was, because filters are materialised when you create them and hiding
+      touches only the layout.
+    </div>
+
+    <div class="note">
+      <strong>The picker is pluggable.</strong> Navio ships a plain checkbox
+      list, but <code>nv.attribPicker</code> takes any
+      <code>(names, {value, onChange, move}) → HTMLElement</code>. This page
+      plugs in
+      <a href="https://observablehq.com/@john-guerra/search-checkbox"
+        >@john-guerra/search-checkbox</a
+      >, which adds a search box and All/None buttons — useful once a dataset
+      has more columns than fit on screen. Navio does not depend on it; the
+      page supplies it.
+    </div>
+
+    <p id="out"></p>
+    <div id="nv"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <script src="https://unpkg.com/popper.js@1.14/dist/umd/popper.min.js"></script>
+    <script src="../../dist/navio.js"></script>
+
+    <script type="module">
+      /* global d3, navio */
+      import { Runtime } from "https://cdn.jsdelivr.net/npm/@observablehq/runtime@5/dist/runtime.js";
+
+      const CATS = ["alpha", "beta", "gamma", "delta"];
+      const rows = d3.range(200).map((i) => ({
+        id: i + 1,
+        category: CATS[i % 4],
+        region: ["north", "south", "east", "west"][(i >> 2) % 4],
+        value: (i * 37) % 100,
+        score: Math.round(Math.sin(i) * 50 + 50),
+        weight: Math.round(Math.cos(i) * 30 + 40),
+      }));
+
+      const nv = new navio(d3.select("#nv"), 420);
+      nv.id("id");
+      nv.data(rows);
+      nv.addAllAttribs();
+
+      const out = document.getElementById("out");
+      const report = () => {
+        out.textContent =
+          `${nv.getVisible().length} of ${rows.length} rows selected  |  ` +
+          `columns shown: ${nv.getVisibleAttribs().length}` +
+          (nv.getHiddenAttribs().length
+            ? `  |  hidden: ${nv.getHiddenAttribs().join(", ")}`
+            : "");
+      };
+      nv.updateCallback(report);
+      report();
+
+      // Load search-checkbox and hand it to Navio as the attribute picker.
+      // Best-effort: if the CDN is unreachable the built-in list is used.
+      try {
+        const define = (
+          await import(
+            "https://api.observablehq.com/@john-guerra/search-checkbox.js?v=3"
+          )
+        ).default;
+        const searchCheckbox = await new Runtime()
+          .module(define)
+          .value("searchCheckbox");
+
+        nv.attribPicker = (names, { value, onChange }) => {
+          const el = searchCheckbox(names, { value, height: 160 });
+          el.addEventListener("input", () => onChange(el.value));
+          return el;
+        };
+        // Re-open cleanly with the new picker in place.
+        nv.hardUpdate();
+      } catch (err) {
+        console.warn("search-checkbox unavailable, using the built-in list", err);
+      }
+    </script>
+  </body>
+</html>

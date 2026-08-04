@@ -327,6 +327,37 @@ window.NAVIO_DEBUG = true;
 
 Either way the default stays off, so no rebuild is needed to turn tracing on.
 
+### Settings panel
+
+A gear in the widget's corner opens a panel for changing options live: which
+columns are shown, their order, orientation, and the geometry.
+
+```js
+nv.settings = false;  // hide the gear entirely (default true)
+```
+
+**Hiding a column is not removing it.** It keeps its type, its colour scale and
+its place in the order — and any selection you have already made survives,
+because filters are materialised when created and hiding touches only the
+layout. Sorting is in place, so hiding the sorted column leaves the order alone
+too.
+
+```js
+nv.setAttribVisible("beak", false);  // hide one
+nv.getVisibleAttribs();              // what is drawn, in order
+nv.getHiddenAttribs();               // names currently hidden
+nv.setHiddenAttribs([]);             // show everything again
+```
+
+None of these emit a change event, so a widget bound with `Inputs.bind` is
+unaffected.
+
+The picker is pluggable — `nv.attribPicker` takes any
+`(names, {value, onChange, move}) => HTMLElement`. See
+[`examples/settings`](examples/settings/index.html), which plugs in
+[@john-guerra/search-checkbox](https://observablehq.com/@john-guerra/search-checkbox)
+for search plus All/None. Navio itself takes no dependency on it.
+
 ### Orientation
 
 ```js
