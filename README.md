@@ -327,6 +327,58 @@ window.NAVIO_DEBUG = true;
 
 Either way the default stays off, so no rebuild is needed to turn tracing on.
 
+### Settings panel
+
+A gear in the widget's corner opens a panel for changing options live: which
+columns are shown, their order, orientation, and the geometry.
+
+```js
+nv.settings = false;             // hide the gear entirely (default true)
+nv.settingsPlacement = "beside"; // or "over"; default "below"
+```
+
+The panel opens **below** the widget rather than over it, so you can watch the
+effect of each control as you change it — Navio's canvas is usually much
+so you can watch the effect of each control as you change it. Below rather than
+beside because column width changes the canvas *width* — a panel below does not
+move while you drag that slider. `"beside"` and `"over"` are also available.
+
+**Hiding a column is not removing it.** It keeps its type, its colour scale and
+its place in the order — and any selection you have already made survives,
+because filters are materialised when created and hiding touches only the
+layout. Sorting is in place, so hiding the sorted column leaves the order alone
+too.
+
+```js
+nv.setAttribVisible("beak", false);  // hide one
+nv.getVisibleAttribs();              // what is drawn, in order
+nv.getHiddenAttribs();               // names currently hidden
+nv.setHiddenAttribs([]);             // show everything again
+```
+
+None of these emit a change event, so a widget bound with `Inputs.bind` is
+unaffected.
+
+Panel changes are remembered in `localStorage` and reapplied on the next load.
+Direct property assignments cannot notify anyone, so call `nv.saveSettings()`
+after those if you want them remembered.
+
+```js
+nv.settingsKey = "my-page";   // storage key; null turns persistence off
+nv.getSettings() / nv.setSettings(cfg)
+nv.getSettingsCode()          // the JS that reproduces the current settings
+nv.clearStoredSettings()
+```
+
+The panel's **Copy config** button puts `getSettingsCode()` on the clipboard, so
+a layout you arrived at by fiddling can be pasted straight into your source.
+
+The picker is pluggable — `nv.attribPicker` takes any
+`(names, {value, onChange, move}) => HTMLElement`. See
+[`examples/settings`](examples/settings/index.html), which plugs in
+[@john-guerra/search-checkbox](https://observablehq.com/@john-guerra/search-checkbox)
+for search plus All/None. Navio itself takes no dependency on it.
+
 ### Orientation
 
 ```js
