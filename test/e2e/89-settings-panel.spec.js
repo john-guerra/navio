@@ -33,6 +33,23 @@ test("the gear opens and closes the panel", async ({ page }) => {
   await expect(gear).toBeFocused();
 });
 
+test("the gear sits at the bottom left and the panel opens upward", async ({
+  page,
+}) => {
+  await page.goto(FIXTURE);
+  await expect(page.locator("#nv canvas")).toHaveCount(1);
+
+  const host = await page.locator("#nv").boundingBox();
+  const gear = await page.locator("#nv ._nv_gear").boundingBox();
+  expect(gear.x).toBeLessThan(host.x + host.width / 2);
+  expect(gear.y).toBeGreaterThan(host.y + host.height / 2);
+
+  await page.locator("#nv ._nv_gear").click();
+  const panel = await page.locator("#nv ._nv_settings").boundingBox();
+  // Opens up from the gear rather than down off the bottom of the widget.
+  expect(panel.y + panel.height).toBeLessThanOrEqual(gear.y + 4);
+});
+
 test("unticking a column hides it without touching the data", async ({
   page,
 }) => {
