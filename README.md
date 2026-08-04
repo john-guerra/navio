@@ -299,7 +299,7 @@ the visual ordering produced by sorting.
 Navio prints its version once per page load, and exposes it:
 
 ```js
-navio.version; // "0.1.5"
+navio.version; // e.g. "0.1.6"
 ```
 
 Worth checking when loading from a CDN — `https://unpkg.com/navio/dist/navio.min.js`

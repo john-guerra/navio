@@ -40,7 +40,15 @@ const VERSION =
 // Announced once per page load, not per instance. Loading the wrong build is
 // easy to do and invisible otherwise - notebooks and CDNs cache aggressively,
 // and unpkg's unpinned URL silently follows whatever is latest.
-if (typeof console !== "undefined" && console.info) {
+//
+// Browser only: importing this module under Node (SSR, a build step, a test that
+// never constructs a widget) should not write to stdout, which a consumer piping
+// JSON would have to filter out.
+if (
+  typeof document !== "undefined" &&
+  typeof console !== "undefined" &&
+  console.info
+) {
   console.info(`navio ${VERSION}`);
 }
 
@@ -62,8 +70,6 @@ function navio(selection, _h) {
     yScales = [],
     // scale object -> its inverted quantize scale. See invertOrdinalScale (#62).
     invertScaleCache = new WeakMap(),
-    // Flat [sourceIdx, targetIdx, ...] for links; -1 means unresolved. See #61.
-    linkEndpoints = null,
     xScale,
     x,
     height = _h !== undefined ? _h : 600,
@@ -196,7 +202,11 @@ function navio(selection, _h) {
       .style("background", nv.tooltipBgColor)
       .style("position", "absolute")
       .style("color", "black")
-      .style("z-index", 4)
+      // High, because the tooltip is a <body> child now: at z-index 4 it painted
+      // underneath ordinary app chrome such as a Bootstrap modal backdrop
+      // (1040). Cannot beat the browser's top layer (dialog.showModal, the
+      // Popover API) - nothing positioned can.
+      .style("z-index", 2147483000)
       .style("border-radius", "4px")
       .style("box-shadow", "0 0 2px rgba(0,0,0,0.5)")
       .style("padding", "10px")
@@ -1621,7 +1631,9 @@ function navio(selection, _h) {
     context.strokeStyle = nv.linkColor;
     context.globalAlpha = Math.min(
       1,
-      Math.max(0.1, 1000 / links[links.length - 1].length)
+      // links.length, not links[last].length - the latter is a link object, so
+      // this evaluated to NaN and canvas silently ignored the assignment.
+      Math.max(0.1, 1000 / links.length)
     ); // More links more transparency
     // context.lineWidth = 0.5;
     for (let link of visibleLinks) {
@@ -1934,30 +1946,17 @@ function navio(selection, _h) {
    * WeakMap lookups per link per interaction. -1 marks an endpoint that is not
    * part of the current data. See #61.
    */
-  function buildLinkEndpoints() {
-    linkEndpoints = new Int32Array(links.length * 2);
-    for (let i = 0; i < links.length; i++) {
-      const s = indexOfRow(links[i].source),
-        t = indexOfRow(links[i].target);
-      linkEndpoints[i * 2] = s === undefined ? -1 : s;
-      linkEndpoints[i * 2 + 1] = t === undefined ? -1 : t;
-    }
-  }
-
   function recomputeVisibleLinks() {
-    if (!links.length) return;
-    if (!linkEndpoints || linkEndpoints.length !== links.length * 2) {
-      buildLinkEndpoints();
-    }
-
-    // Reads straight out of typed arrays; no per-link object property access.
-    visibleLinks = [];
-    for (let i = 0; i < links.length; i++) {
-      const s = linkEndpoints[i * 2],
-        t = linkEndpoints[i * 2 + 1];
-      if (s !== -1 && t !== -1 && selectedFlags[s] && selectedFlags[t]) {
-        visibleLinks.push(links[i]);
-      }
+    if (links.length > 0) {
+      visibleLinks = links.filter(function (d) {
+        // Link endpoints are the caller's own row objects (the d3-force
+        // convention), so this is the one place identity crosses the API.
+        const s = indexOfRow(d.source),
+          t = indexOfRow(d.target);
+        return s !== undefined && t !== undefined
+          ? selectedFlags[s] && selectedFlags[t]
+          : false;
+      });
     }
   }
 
@@ -2392,9 +2391,6 @@ function navio(selection, _h) {
         Int32Array.from({ length: data.length }, (_unused, i) => i),
       ];
       rowIndex = null;
-      // Row indices are about to change, so any cached link endpoints are
-      // stale - they point into the previous dataset. See #61.
-      linkEndpoints = null;
       dataIs = [
         data.map(function (_, i) {
           return i;
@@ -2592,6 +2588,15 @@ function navio(selection, _h) {
   // Legacy support
   nv.getVisible = nv.getSelected;
 
+  /**
+   * The links whose BOTH endpoints are currently selected - the ones Navio
+   * draws. Recomputed on every update; endpoints are resolved from the caller's
+   * own row objects each time, deliberately (see #61 and CLAUDE.md).
+   */
+  nv.getVisibleLinks = function () {
+    return visibleLinks;
+  };
+
   nv.sortBy = function (_attrib, _desc = false, _level = undefined) {
     // The default level is the last one
     let level = Math.max(
@@ -2644,7 +2649,6 @@ function navio(selection, _h) {
   nv.links = function (_) {
     if (arguments.length) {
       links = _;
-      linkEndpoints = null; // endpoints belong to the old link array
       recomputeVisibleLinks();
       return nv;
     } else {
@@ -2718,7 +2722,6 @@ function navio(selection, _h) {
     rowIndex = null;
     dataIs = [];
     links = [];
-    linkEndpoints = null;
     visibleLinks = [];
     dData = new Map();
     attribsOrdered = [];

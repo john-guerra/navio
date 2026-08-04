@@ -107,6 +107,17 @@ branches deleted from the bundle, so `staleSort ? a : b` became `b`. It is a
 closure variable with an explicit setter now. If a branch works in the unit
 tests but not in `dist/`, suspect this.
 
+**Do not cache resolved link endpoints.** `recomputeVisibleLinks` resolves
+`link.source`/`link.target` through `indexOfRow` on every call, which looks
+wasteful — it is not safe to cache. Callers mutate the link array in place: that
+is the whole d3-force convention, where `forceLink` rewrites `source`/`target`
+from ids to node objects after Navio has already seen them. A cache keyed on
+`links.length` misses that entirely, silently drops links, and can make
+`drawLink` dereference `data[undefined]` and abort the redraw. It was tried, it
+regressed, it was reverted; `test/e2e/61-link-endpoints.spec.js` pins it. The
+measured saving was ~4ms out of a ~33ms update where *drawing* the links is the
+real cost.
+
 **Non-ASCII must be escaped in the bundle.** `build/ascii.js` handles string
 literals and template elements; `verify-bundle.js` fails the build if a raw
 glyph escapes. Terser re-decodes `\uXXXX`, hence `ascii_only: true`.
