@@ -3,7 +3,6 @@ import ascii from "./build/ascii.js";
 import node from "@rollup/plugin-node-resolve";
 import commonjs from "rollup-plugin-commonjs";
 import terser from "@rollup/plugin-terser";
-// import babel from "rollup-plugin-babel";
 import meta from "./package.json" with { type: "json" };
 
 // const copyright = `// ${meta.homepage} v${
@@ -21,9 +20,6 @@ export default [
   {
     input: "src/index.js",
     plugins: [
-      // babel({
-      //   exclude: "node_modules/**"
-      // }),
       node({
         jsxnext: true,
         main: true,
@@ -51,9 +47,6 @@ export default [
   {
     input: "src/index.esm.js",
     plugins: [
-      // babel({
-      //   exclude: "node_modules/**"
-      // }),
       node({
         jsxnext: true,
       }),
