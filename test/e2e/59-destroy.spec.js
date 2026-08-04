@@ -9,12 +9,18 @@ test("destroy() removes the instance's tooltip and rendered content", async ({
 }) => {
   await page.goto("/test/e2e/fixtures/single.html");
   await expect(page.locator("#nv canvas")).toHaveCount(1);
-  await expect(page.locator("#nv ._nv_popover")).toHaveCount(1);
+  // The tooltip is a child of <body>, not of the container: Popper resolves a
+  // virtual reference against the document, so the tooltip has to live where
+  // those coordinates mean what Popper thinks they mean. See
+  // tooltip-placement.spec.js.
+  await expect(page.locator("body > ._nv_popover")).toHaveCount(1);
 
   await page.evaluate(() => window.nv.destroy());
 
   await expect(page.locator("#nv canvas")).toHaveCount(0);
-  await expect(page.locator("#nv ._nv_popover")).toHaveCount(0);
+  // Destroying must take the tooltip with it, wherever it lives - that was the
+  // original complaint in #39.
+  await expect(page.locator("body > ._nv_popover")).toHaveCount(0);
 });
 
 test("destroy() detaches only this instance's body listeners", async ({
@@ -42,11 +48,26 @@ test("destroying one instance leaves the other fully working", async ({
 }) => {
   await page.goto("/test/e2e/fixtures/two-instances.html");
 
+  // Tooltips are appended to <body> in mount order, so the second one belongs
+  // to nv2 - the instance that has to survive.
+  const owners = await page.evaluate(() =>
+    Array.from(document.querySelectorAll("body > ._nv_popover")).map((el) =>
+      el.getAttribute("data-navio-instance")
+    )
+  );
+  expect(owners).toHaveLength(2);
+  expect(owners[0]).not.toBe(owners[1]);
+
   await page.evaluate(() => window.nv1.destroy());
 
   await expect(page.locator("#nv1 canvas")).toHaveCount(0);
   await expect(page.locator("#nv2 canvas")).toHaveCount(1);
-  await expect(page.locator("#nv2 ._nv_popover")).toHaveCount(1);
+  // Exactly one tooltip left, and it is the survivor's - not nv1's.
+  await expect(page.locator("body > ._nv_popover")).toHaveCount(1);
+  await expect(page.locator("body > ._nv_popover")).toHaveAttribute(
+    "data-navio-instance",
+    owners[1]
+  );
 
   // The survivor can still filter.
   const stillWorks = await page.evaluate(() => {

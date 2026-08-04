@@ -33,6 +33,8 @@ Other demos:
 * [Simplest example with Networks on SVG](https://john-guerra.github.io/navio/examples/basic/) ([Code](https://github.com/john-guerra/navio/tree/master/examples/basic))
 * [Simple example with Networks on Canvas](https://john-guerra.github.io/navio/examples/senate/) ([Code](https://github.com/john-guerra/navio/tree/master/examples/senate))
 * [IEEEVIS Publications Data](https://john-guerra.github.io/navio/examples/vispubdata/) ([Code](https://github.com/john-guerra/navio/blob/master/examples/vispubdata/index.html)) ([Observable Notebook](https://observablehq.com/@john-guerra/navio))
+* [Inside an Observable notebook](https://navio.dev/examples/observable/) ([Code](https://github.com/john-guerra/navio/blob/master/examples/observable/index.html)) — runs through the real `@observablehq/runtime`, in the cell layout a notebook actually produces
+* [Bound to another widget with `Inputs.bind`](https://navio.dev/examples/binding/) ([Code](https://github.com/john-guerra/navio/blob/master/examples/binding/index.html))
 
 # Comparing
 

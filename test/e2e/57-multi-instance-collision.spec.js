@@ -15,8 +15,17 @@ test("each instance keeps its own tooltip element after a second instance mounts
 
   await page.goto("/test/e2e/fixtures/two-instances.html");
 
-  await expect(page.locator("#nv1 ._nv_popover")).toHaveCount(1);
-  await expect(page.locator("#nv2 ._nv_popover")).toHaveCount(1);
+  // Tooltips live on <body> rather than inside each container (Popper resolves
+  // a virtual reference against the document - see tooltip-placement.spec.js),
+  // so instance ownership is asserted through the stamped id instead of the
+  // DOM ancestry.
+  await expect(page.locator("body > ._nv_popover")).toHaveCount(2);
+  const owners = await page.evaluate(() =>
+    Array.from(document.querySelectorAll("body > ._nv_popover")).map((el) =>
+      el.getAttribute("data-navio-instance")
+    )
+  );
+  expect(new Set(owners).size).toBe(2); // one each, not one shared
   expect(errors).toEqual([]);
 });
 

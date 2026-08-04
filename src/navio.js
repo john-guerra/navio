@@ -140,19 +140,41 @@ function navio(selection, _h) {
   function initTooltipPopper() {
     if (nv.DEBUG)
       console.log("initTooltipPopper, selection", selection, selection.node());
+    if (tooltip && typeof tooltip.destroy === "function") tooltip.destroy();
     if (tooltipElement) tooltipElement.remove();
 
+    // Anything this instance left behind inside the container, from before the
+    // tooltip was moved out to <body>.
     selection.selectAll("._nv_popover").remove();
-    tooltipElement = selection
+
+    // The tooltip lives on <body>, NOT inside the container.
+    //
+    // Popper positions against a virtual reference (there is no DOM node under
+    // the cursor to anchor to), and popper.js v1 falls back to
+    // document.documentElement whenever the reference has no nodeType. So the
+    // offsets it computes are document-relative. If the tooltip sits inside the
+    // container and any ancestor is positioned, the browser resolves those same
+    // numbers against that ancestor instead, and the tooltip lands off by the
+    // ancestor's distance down the page. Observable notebook cells are
+    // position:relative, which is why the tooltip appeared a few hundred pixels
+    // below the cursor there but was fine in the flat example pages.
+    tooltipElement = d3
+      .select(document.body)
       .append("div")
       .attr("class", "_nv_popover")
+      // On <body> the tooltips of several instances are siblings, so stamp the
+      // owner. destroy() works off the closure reference; this makes ownership
+      // inspectable (and testable) from outside.
+      .attr("data-navio-instance", instanceId)
+      .style("top", 0)
+      .style("left", 0)
       // .style("text-shadow", "0 1px 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, -1px 0 0 #fff")
       .style("pointer-events", "none")
       .style("font-family", "sans-serif")
       .style("font-size", nv.tooltipFontSize)
       .style("text-align", "center")
       .style("background", nv.tooltipBgColor)
-      .style("position", "relative")
+      .style("position", "absolute")
       .style("color", "black")
       .style("z-index", 4)
       .style("border-radius", "4px")

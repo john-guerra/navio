@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Navio inside an Observable notebook</title>
+    <style>
+      body {
+        font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        max-width: 800px;
+        margin: 0 auto 400px;
+        padding: 0 16px;
+        color: #1b1e23;
+      }
+      h1 {
+        margin-top: 32px;
+      }
+      /* Observable wraps every cell in a positioned block. That detail is the
+         whole point of this page: it is what broke tooltip placement, and a
+         flat demo page does not reproduce it. */
+      .observablehq {
+        position: relative;
+        margin: 16px 0;
+      }
+      .note {
+        background: #f4f6f8;
+        border-left: 3px solid #b2ddf1;
+        padding: 12px 16px;
+        margin: 24px 0;
+        font-size: 14px;
+      }
+      code {
+        background: #f4f6f8;
+        padding: 1px 4px;
+        border-radius: 3px;
+      }
+      .filler {
+        color: #777;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Navio inside an Observable notebook</h1>
+
+    <p>
+      This page runs Navio through the real
+      <a href="https://github.com/observablehq/runtime"
+        >@observablehq/runtime</a
+      >, in the layout an Observable notebook actually produces: each cell in
+      its own <code>position: relative</code> wrapper, with enough prose above
+      that the widget sits well down the page.
+    </p>
+
+    <div class="note">
+      <strong>Why the padding below matters.</strong> Navio anchors its tooltip
+      to a virtual Popper reference — there is no DOM node under the cursor to
+      attach to. popper.js v1 falls back to
+      <code>document.documentElement</code> for a reference with no
+      <code>nodeType</code>, so the offsets it computes are document-relative.
+      While the tooltip lived inside the Navio container, any positioned
+      ancestor made the browser resolve those numbers against that ancestor
+      instead, and the tooltip landed low by however far down the page the cell
+      sat. Flat example pages never showed it because their container starts at
+      the top of the document. The tooltip is now appended to
+      <code>&lt;body&gt;</code>, which is where Popper already believed it was.
+    </div>
+
+    <p class="filler" id="filler"></p>
+
+    <h2>viewof selection</h2>
+    <div class="observablehq" id="cell-widget"></div>
+
+    <h2>selection</h2>
+    <div class="observablehq" id="cell-count"></div>
+
+    <h2>The first few selected rows</h2>
+    <div class="observablehq" id="cell-table"></div>
+
+    <div class="note">
+      To point the notebook at your working copy instead of npm, serve the repo
+      root and load <code>dist/navio.js</code> from it — which is what
+      <a href="https://observablehq.com/@john-guerra/navio-load"
+        >@john-guerra/navio-load</a
+      >
+      already does:
+      <pre><code>npx http-server . -p 8080 --cors</code></pre>
+      Then in the notebook:
+      <pre><code>navio = {
+  try {
+    return await require(`http://localhost:8080/dist/navio.js?${Date.now()}`);
+  } catch {
+    return require("navio");
+  }
+}</code></pre>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <script src="https://unpkg.com/popper.js@1.14/dist/umd/popper.min.js"></script>
+    <script src="../../dist/navio.js"></script>
+
+    <script type="module">
+      import {
+        Runtime,
+        Inspector,
+      } from "https://cdn.jsdelivr.net/npm/@observablehq/runtime@5/dist/runtime.js";
+
+      /* global d3, navio */
+      const { NavioWidget } = navio;
+
+      // Push the widget down the page the way notebook prose does. This is the
+      // condition that made the bug visible.
+      document.getElementById("filler").textContent =
+        "Notebook prose. ".repeat(220);
+
+      const SPECIES = ["Adelie", "Chinstrap", "Gentoo"];
+      const ISLANDS = ["Torgersen", "Biscoe", "Dream"];
+      const rows = d3.range(180).map((i) => ({
+        id: i + 1,
+        species: SPECIES[i % 3],
+        island: ISLANDS[(i >> 1) % 3],
+        beak: Math.round((32 + ((i * 37) % 271) / 10) * 10) / 10,
+        mass: 2700 + ((i * 137) % 3000),
+      }));
+
+      // A hand-written Observable module. Same shape the notebook compiler
+      // emits: `viewof selection` holds the widget, `selection` tracks its
+      // value through Generators.input.
+      function define(runtime, observer) {
+        const main = runtime.module();
+
+        main.variable().define("data", [], () => rows);
+
+        main
+          .variable(observer("viewof selection"))
+          .define("viewof selection", ["data"], (data) =>
+            NavioWidget(data, { height: 420, id: "id" })
+          );
+
+        main
+          .variable()
+          .define("selection", ["Generators", "viewof selection"], (G, view) =>
+            G.input(view)
+          );
+
+        // `selection` is the widget's .value, which is the FILTER CHAIN - that
+        // is what makes it bindable to another widget. The rows come from
+        // getSelected(). Depending on both means this re-runs on every change
+        // while reading the thing you actually want.
+        main
+          .variable(observer("selection"))
+          .define(
+            "selectionCount",
+            ["selection", "viewof selection", "data"],
+            (filters, view, data) => {
+              const p = document.createElement("p");
+              const levels = filters.filter((l) => l && l.length).length;
+              p.textContent =
+                `${view.getSelected().length} of ${data.length} rows selected` +
+                (levels ? ` (${levels} filter level(s))` : " (no filters yet)");
+              return p;
+            }
+          );
+
+        main
+          .variable(observer("table"))
+          .define("table", ["selection", "viewof selection"], (_filters, view) => {
+            const sel = view.getSelected();
+            const t = document.createElement("table");
+            t.style.borderCollapse = "collapse";
+            const cols = ["id", "species", "island", "beak", "mass"];
+            t.innerHTML =
+              "<thead><tr>" +
+              cols.map((c) => `<th align="left">${c}</th>`).join("") +
+              "</tr></thead>";
+            const body = document.createElement("tbody");
+            for (const row of sel.slice(0, 8)) {
+              const tr = document.createElement("tr");
+              for (const c of cols) {
+                const td = document.createElement("td");
+                td.style.paddingRight = "16px";
+                td.textContent = row[c];
+                tr.appendChild(td);
+              }
+              body.appendChild(tr);
+            }
+            t.appendChild(body);
+            return t;
+          });
+
+        return main;
+      }
+
+      const targets = {
+        "viewof selection": "cell-widget",
+        selection: "cell-count",
+        table: "cell-table",
+      };
+
+      new Runtime().module(define, (name) => {
+        const id = targets[name];
+        return id ? new Inspector(document.getElementById(id)) : true;
+      });
+    </script>
+  </body>
+</html>

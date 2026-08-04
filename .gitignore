@@ -33,3 +33,7 @@ update.sh
 
 # Observable notebook export, unpacked into examples/binding/faceted-search
 docs/facetedSearch/
+
+# Notebook tarballs downloaded for local reproduction. The notebooks are the
+# source of truth on observablehq.com; a stale copy here would only mislead.
+examples/*.tgz
