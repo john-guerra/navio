@@ -10,8 +10,8 @@
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <!-- <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script> -->
   <script src="https://unpkg.com/popper.js@1.14/dist/umd/popper.min.js"></script>
-  <script src="https://unpkg.com/navio/dist/navio.min.js"></script>
-  <!-- <script src="../../dist/navio.js"></script> -->
+  <script src="../../dist/navio.js"></script>
+  <!-- <script src="https://unpkg.com/navio/dist/navio.min.js"></script> -->
 
 <script>
 /* global d3, navio */
@@ -25,14 +25,18 @@ var nn = navio(d3.select("#target"), 600);
 // catColumns.forEach((c) => nn.addCategoricalAttrib(c));
 // seqColumns.forEach((c) => nn.addSequentialAttrib(c));
 
-d3.csv("./Lekagul Sensor Data.csv", type, function (err, data) {
-  if (err) throw err;
-
-  // navio Step 3. Load your data!
-  nn.data(data);
-  nn.addAllAttribs();
-
-});
+// d3 v7: csv() returns a promise and takes (url, row). Passing a third
+// argument makes d3 read `type` as requestInit and the CALLBACK as the row
+// function - so `if (err) throw err` threw every parsed row, one per line.
+d3.csv("./Lekagul Sensor Data.csv", type)
+  .then(function (data) {
+    // navio Step 3. Load your data!
+    nn.data(data);
+    nn.addAllAttribs();
+  })
+  .catch(function (err) {
+    console.error("Could not load the sensor data", err);
+  });
 
 
 var fmt = d3.timeParse("%Y-%m-%d %H:%M:%S");
@@ -40,7 +44,7 @@ function type(row) {
   var split = row["car-id"].split("-");
   row.Timestamp = fmt(row.Timestamp);
   row.hours = row.Timestamp.getHours();
-  row.dayNight = row.hour < 6 || row.hour>18 ? "night": "day";
+  row.dayNight = row.hours < 6 || row.hours > 18 ? "night" : "day";
   row.dayOfTheWeek = row.Timestamp.getDay();
   row.minutes = row.Timestamp.getMinutes();
   row.seconds = row.Timestamp.getSeconds();

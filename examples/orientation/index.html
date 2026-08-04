@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Navio: horizontal and vertical</title>
+    <style>
+      body {
+        font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        margin: 0 auto 80px;
+        max-width: 1100px;
+        padding: 0 16px;
+        color: #1b1e23;
+      }
+      .row {
+        display: flex;
+        gap: 32px;
+        flex-wrap: wrap;
+        align-items: flex-start;
+      }
+      .panel {
+        flex: 1 1 380px;
+      }
+      h2 {
+        font-size: 16px;
+        margin-bottom: 4px;
+      }
+      .note {
+        background: #f4f6f8;
+        border-left: 3px solid #b2ddf1;
+        padding: 12px 16px;
+        margin: 20px 0;
+        font-size: 14px;
+      }
+      code {
+        background: #f4f6f8;
+        padding: 1px 4px;
+        border-radius: 3px;
+      }
+      #out {
+        font-family: ui-monospace, Menlo, monospace;
+        font-size: 13px;
+        color: #555;
+      }
+      button {
+        font: inherit;
+        padding: 4px 10px;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Navio: horizontal and vertical</h1>
+
+    <p>
+      Navio has two logical axes: the <strong>attribute</strong> axis, along
+      which the columns are laid out, and the <strong>record</strong> axis,
+      along which one line per row is drawn.
+      <code>nv.orientation = "horizontal"</code> (the default) puts attributes
+      across and records down; <code>"vertical"</code> transposes them.
+    </p>
+
+    <div class="note">
+      Both widgets below hold the <em>same</em> data and are fully interactive.
+      Try, in each: click a value to filter, drag along the record axis to
+      brush a range (down on the left, across on the right), click a header to
+      sort, and drill down into the second level.
+    </div>
+
+    <p>
+      <button id="toggle" type="button">Flip the right-hand one</button>
+      <span id="out"></span>
+    </p>
+
+    <div class="row">
+      <div class="panel">
+        <h2><code>orientation = "horizontal"</code></h2>
+        <div id="h"></div>
+      </div>
+      <div class="panel">
+        <h2><code>orientation = "vertical"</code></h2>
+        <div id="v"></div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <script src="https://unpkg.com/popper.js@1.14/dist/umd/popper.min.js"></script>
+    <script src="../../dist/navio.js"></script>
+
+    <script>
+      /* global d3, navio */
+      const SPECIES = ["Adelie", "Chinstrap", "Gentoo"];
+      const ISLANDS = ["Torgersen", "Biscoe", "Dream"];
+      const rows = d3.range(150).map((i) => ({
+        id: i + 1,
+        species: SPECIES[i % 3],
+        island: ISLANDS[(i >> 1) % 3],
+        beak: Math.round((32 + ((i * 37) % 271) / 10) * 10) / 10,
+        mass: 2700 + ((i * 137) % 3000),
+      }));
+
+      // Two independent instances over the same array. Navio does not write to
+      // your rows, so sharing them is safe.
+      const nvH = new navio(d3.select("#h"), 420);
+      nvH.id("id");
+      nvH.data(rows);
+      nvH.addAllAttribs();
+
+      const nvV = new navio(d3.select("#v"), 420);
+      nvV.orientation = "vertical";
+      nvV.id("id");
+      nvV.data(rows);
+      nvV.addAllAttribs();
+
+      const out = document.getElementById("out");
+      const report = () => {
+        out.textContent =
+          `horizontal: ${nvH.getVisible().length} selected  |  ` +
+          `vertical: ${nvV.getVisible().length} selected`;
+      };
+      nvH.updateCallback(report);
+      nvV.updateCallback(report);
+      report();
+
+      document.getElementById("toggle").addEventListener("click", () => {
+        // Orientation is read on every draw, so flipping it is a hardUpdate().
+        nvV.orientation =
+          nvV.orientation === "vertical" ? "horizontal" : "vertical";
+        nvV.hardUpdate();
+      });
+    </script>
+  </body>
+</html>

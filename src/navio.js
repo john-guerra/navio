@@ -127,6 +127,9 @@ function navio(selection, _h) {
   // "horizontal" (default): attributes across, records down - the historical
   // layout. "vertical": transposed, attributes down and records across. See #22.
   nv.orientation = "horizontal";
+  // A brush shorter than this many pixels is treated as a click, not a range.
+  // Without it, a click with a little pointer drift did nothing at all.
+  nv.clickTolerance = 4;
   nv.filterFontSize = 8; // Font size of the filters explanations on the bottom
 
   nv.tooltipFontSize = 12; // Font size for the tooltip
@@ -424,6 +427,21 @@ function navio(selection, _h) {
       .on(`keydown.navio-${instanceId}`, changeCursorOnKey)
       .on(`keyup.navio-${instanceId}`, changeCursorOnKey);
 
+    // Focus styling. The controls added for #68 are focusable, and a column
+    // header's <g> spans the full height of the level - so a plain :focus
+    // outline drew a large box around the whole column on every CLICK, which
+    // is both ugly and useless (a mouse user can see what they clicked).
+    // :focus-visible restricts it to keyboard navigation, where it is the
+    // whole point. Scoped to this instance's svg via a <style> child, since
+    // Navio ships no stylesheet.
+    svg.append("style").text(`
+      .attribOverlay:focus, #closeButton path:focus { outline: none; }
+      .attribOverlay:focus-visible, #closeButton path:focus-visible {
+        outline: 2px solid #1a73e8;
+        outline-offset: 1px;
+      }
+    `);
+
     svg.append("g").attr("class", "attribs");
 
     // A canvas-drawn widget is opaque to a screen reader, so describe it and
@@ -435,6 +453,16 @@ function navio(selection, _h) {
         "aria-label",
         "Navio: a column per attribute, a row per record. Sort with the column headers, filter by clicking a value or dragging a range."
       );
+
+    // Same :focus-visible treatment for the HTML filter chips, which live
+    // outside the svg so the svg's <style> does not reach them.
+    selection.append("style").text(`
+      .filterExplanation > div:focus { outline: none; }
+      .filterExplanation > div:focus-visible {
+        outline: 2px solid #1a73e8;
+        outline-offset: 1px;
+      }
+    `);
 
     liveRegion = selection
       .append("div")
@@ -1151,19 +1179,33 @@ function navio(selection, _h) {
 
     function onSelectByRange(event) {
       if (!event.sourceEvent) return; // Only transition after input.
-      if (!event.selection) {
+
+      const sel = event.selection;
+
+      // No selection at all means a plain click, and d3 will deliver the click
+      // event next - onSelectByValue handles it. Acting here too would apply
+      // the filter twice. Measured: a 0px click ends with sel === null and IS
+      // followed by a click; a 2px drag ends with sel === [110, 112] and is
+      // NOT.
+      if (!sel) return;
+
+      // A click with a few pixels of pointer drift lands here instead, as a
+      // hair-thin brush, and no click event follows it - so without this the
+      // gesture did NOTHING: no value filter, no range filter, no feedback.
+      if (Math.abs(sel[1] - sel[0]) < nv.clickTolerance) {
         if (nv.DEBUG)
           console.log(
-            "Empty selection level",
+            "Selection under click tolerance, treating as a click",
             level,
-            event.selection,
-            event.type,
-            event.sourceEvent
+            sel,
+            event.type
           );
-        // return;
-        // event.preventDefault();
-        // onSelectByValueFromCoords(event.sourceEvent.clientX, event.sourceEvent.clientY);
-        return; // Ignore empty selections.
+        // Local coords for the same element the click handler reads from.
+        // onSelectByValueFromCoords clears every brush itself, including the
+        // hair-thin one that got us here.
+        const p = d3.pointer(event.sourceEvent, this);
+        onSelectByValueFromCoords(event.sourceEvent, p[0], p[1]);
+        return;
       }
 
       showLoading(this);
