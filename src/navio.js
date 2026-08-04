@@ -2323,10 +2323,7 @@ function navio(selection, _h) {
       if (y0 === undefined || y1 === undefined) return;
 
       const band = yScales[level].bandwidth();
-      g.call(dBrushes[level].move, [
-        Math.min(y0, y1),
-        Math.max(y0, y1) + band,
-      ]);
+      g.call(dBrushes[level].move, [Math.min(y0, y1), Math.max(y0, y1) + band]);
     });
   }
 
