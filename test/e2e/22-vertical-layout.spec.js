@@ -137,6 +137,68 @@ test("drilling down stacks levels along the attribute axis", async ({
   expect(Math.max(...tops)).toBeGreaterThan(Math.min(...tops) + 20);
 });
 
+test("filter chips and the close button are placed in vertical too", async ({
+  page,
+}) => {
+  await page.goto(V);
+  await expect(page.locator("#nv canvas")).toHaveCount(1);
+
+  await page.evaluate(() =>
+    window.nv.setFilters([
+      [{ type: "value", attrib: "category", value: "alpha" }],
+    ])
+  );
+
+  // The chip renders and sits beside the widget, not on top of it.
+  const chip = page.locator("#nv .filterExplanation").first();
+  await expect(chip).toHaveText(/category == alpha/);
+  const canvas = await page.locator("#nv canvas").boundingBox();
+  const chipBox = await chip.boundingBox();
+  expect(chipBox.x).toBeGreaterThan(canvas.x);
+
+  // The close button sits at the trailing edge of the records, not underneath.
+  const close = await page.locator("#nv #closeButton").boundingBox();
+  expect(close.x).toBeGreaterThan(canvas.x + canvas.width / 2);
+});
+
+test("an existing brush can be dragged along the record axis", async ({
+  page,
+}) => {
+  await page.goto(V);
+  await expect(page.locator("#nv canvas")).toHaveCount(1);
+
+  const box = await page.locator("#nv canvas").boundingBox();
+  const g = await geom(page);
+  const y = box.y + g.aw * 2.5;
+
+  // Create a range.
+  await page.mouse.move(box.x + g.y0 + 30, y);
+  await page.mouse.down();
+  await page.mouse.move(box.x + g.y0 + 120, y, { steps: 8 });
+  await page.mouse.up();
+  const first = await page.evaluate(() =>
+    window.nv.getVisible().map((r) => r.id)
+  );
+  expect(first.length).toBeGreaterThan(0);
+
+  // Grab the middle of the selection and move it.
+  await page.mouse.move(box.x + g.y0 + 75, y);
+  await page.mouse.down();
+  await page.mouse.move(box.x + g.y0 + 160, y, { steps: 8 });
+  await page.mouse.up();
+
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        window.nv
+          .getVisible()
+          .map((r) => r.id)
+          .join(",")
+      )
+    )
+    .not.toBe(first.join(","));
+});
+
 test("horizontal is unchanged by the refactor", async ({ page }) => {
   await page.goto(H);
   await expect(page.locator("#nv canvas")).toHaveCount(1);

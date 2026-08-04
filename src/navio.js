@@ -1504,13 +1504,15 @@ function navio(selection, _h) {
       .style("top", "0")
       .style("left", "0")
       .style("min-width", "200px")
-      .style(
-        "transform",
-        (_, i) =>
-          `translate(${rightBorder(i)}px, ${
-            yScales[i].range()[1] + nv.filterFontSize * 1.2
-          }px)`
-      );
+      .style("transform", (_, i) => {
+        // Sits just past the last column, at the far end of the records - so
+        // both coordinates come from the axes and have to be transposed (#22).
+        const p = toXY(
+          rightBorder(i),
+          yScales[i].range()[1] + nv.filterFontSize * 1.2
+        );
+        return `translate(${p.x}px, ${p.y}px)`;
+      });
 
     const filterExpTexts = filterExpEnter
       // .append("div")
@@ -1812,13 +1814,18 @@ function navio(selection, _h) {
       .select("#closeButton")
       .style("display", dataIs.length === 1 ? "none" : "block")
       .attr("transform", () => {
-        const p = toXY(
+        // Horizontal: below the level, at the start of the records.
+        // Vertical: the same spot transposes to *under* the widget, which
+        // reads badly - put it past the end of the records instead, so it
+        // still sits at the trailing corner of its level.
+        const alongA =
           levelScale(maxLevel) +
-            levelScale.bandwidth() -
-            nv.levelsSeparation +
-            15,
-          yScales[maxLevel].range()[0]
-        );
+          levelScale.bandwidth() -
+          nv.levelsSeparation +
+          15;
+        const p = isVertical()
+          ? toXY(alongA - 15, yScales[maxLevel].range()[1] + 12)
+          : toXY(alongA, yScales[maxLevel].range()[0]);
         return `translate(${p.x}, ${p.y})`;
       });
   }
