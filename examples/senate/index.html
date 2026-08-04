@@ -22,11 +22,18 @@
   <canvas id="nodesText" width="800" height="800" style="position: absolute; z-index: 2;"></canvas>
  -->
 
-    <script src="https://d3js.org/d3.v4.min.js"></script>
-    <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+    <!--
+      d3 v7. Navio is built against v7 and reads `d3` as a global, so serving it
+      v4 broke every interaction: v4 has no d3.pointer, and its listeners get
+      (d, i, nodes) with a global d3.event rather than (event, d) - which is why
+      sorting threw "d3.pointer is not a function" and "reading 'shiftKey' of
+      undefined". d3-scale-chromatic no longer needs loading separately; v7
+      bundles it.
+    -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://unpkg.com/popper.js@1.14/dist/umd/popper.min.js"></script>
-    <script src="https://unpkg.com/navio/dist/navio.min.js"></script>
-    <!-- <script src="../../dist/navio.js"></script> -->
+    <script src="../../dist/navio.js"></script>
+    <!-- <script src="https://unpkg.com/navio/dist/navio.min.js"></script> -->
 
     <script src="lib/js/netClustering.js"></script>
     <script src="lib/js/forceInABox.js"></script>

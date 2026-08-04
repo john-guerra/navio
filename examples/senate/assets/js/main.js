@@ -17,7 +17,17 @@
   //     heightText = canvasText.height;
   var size = d3.scaleLinear().range([2,5]);
 
-  var color = d3.scaleOrdinal(d3.schemeCategory20);
+  // d3.schemeCategory20 was dropped in d3 v5. Inlined here rather than swapped
+  // for a 10-colour scheme so the clusters keep the colours this demo has
+  // always had.
+  var schemeCategory20 = [
+    "#1f77b4", "#aec7e8", "#ff7f0e", "#ffbb78",
+    "#2ca02c", "#98df8a", "#d62728", "#ff9896",
+    "#9467bd", "#c5b0d5", "#8c564b", "#c49c94",
+    "#e377c2", "#f7b6d2", "#7f7f7f", "#c7c7c7",
+    "#bcbd22", "#dbdb8d", "#17becf", "#9edae5"
+  ];
+  var color = d3.scaleOrdinal(schemeCategory20);
 
   var simulation = d3.forceSimulation()
     .force("link", d3.forceLink())
@@ -26,9 +36,14 @@
     .force("y", d3.forceY(height/2).strength(0.15));
     // .force("center", d3.forceCenter(width/2, height/2));
 
-  d3.json("VotacionesSenado2017.json", onLoadJSON);
-  function onLoadJSON(error, graph) {
-    var dicNodes = d3.map();
+  // d3.json takes a callback in v4 and returns a promise from v5 on.
+  d3.json("VotacionesSenado2017.json").then(onLoadJSON).catch(function (error) {
+    throw error;
+  });
+  function onLoadJSON(graph) {
+    // d3.map() went away with d3-collection in v6; a native Map is a drop-in
+    // here except that values() returns an iterator rather than an array.
+    var dicNodes = new Map();
     //mapping nodes
     graph.nodes.forEach(function (n) {
       n.commonVotes = 0;
@@ -71,11 +86,9 @@
     var mincommonVotes = 2;
     var filteredLinks = graph.links;
     var filteredGraph = {
-      nodes: dicNodes.values(),
+      nodes: Array.from(dicNodes.values()),
       links: filteredLinks
     };
-
-    if (error) throw error;
 
     nv.links(filteredGraph.links);
     nv.data(filteredGraph.nodes);
@@ -114,9 +127,10 @@
     graph.nodes.forEach(function (d) {
       d.r = size(d.commonVotes);
     });
-    var clusters = d3.nest()
-      .key(function(d) { return d.cluster; })
-      .entries(visible)
+    // d3.nest() was removed in v6. d3.groups returns [key, values] pairs;
+    // reshaped to {key, values} so the drawing code below is untouched.
+    var clusters = d3.groups(visible, function (d) { return d.cluster; })
+      .map(function (g) { return { key: g[0], values: g[1] }; })
       .sort(function(a, b) { return b.values.length - a.values.length; });
     // var groupingForce = forceInABox()
     //       .links(graph.links)
@@ -179,14 +193,16 @@
       context.restore();
     }
 
-    function dragsubject() {
-      return simulation.find(d3.event.x, d3.event.y);
+    // From d3 v6 the event is passed to the handler instead of living on the
+    // global d3.event, which is what made every one of these read a property
+    // off undefined.
+    function dragsubject(event) {
+      return simulation.find(event.x, event.y);
     }
   }
 
-  function onHover() {
-
-    var mouse = d3.mouse(this);
+  function onHover(event) {
+    var mouse = d3.pointer(event); // d3.mouse(this) before v6
     var d = simulation.find(mouse[0], mouse[1]);
     // eraseNodeText(selected)
     selected = d;
@@ -199,21 +215,21 @@
   //   }
   // }
 
-  function dragstarted() {
-    if (!d3.event.active) simulation.alphaTarget(0.3).restart();
-    d3.event.subject.fx = d3.event.subject.x;
-    d3.event.subject.fy = d3.event.subject.y;
+  function dragstarted(event) {
+    if (!event.active) simulation.alphaTarget(0.3).restart();
+    event.subject.fx = event.subject.x;
+    event.subject.fy = event.subject.y;
   }
 
-  function dragged() {
-    d3.event.subject.fx = d3.event.x;
-    d3.event.subject.fy = d3.event.y;
+  function dragged(event) {
+    event.subject.fx = event.x;
+    event.subject.fy = event.y;
   }
 
-  function dragended() {
-    if (!d3.event.active) simulation.alphaTarget(0);
-    d3.event.subject.fx = null;
-    d3.event.subject.fy = null;
+  function dragended(event) {
+    if (!event.active) simulation.alphaTarget(0);
+    event.subject.fx = null;
+    event.subject.fy = null;
   }
 
   function drawLink(d) {
