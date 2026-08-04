@@ -326,6 +326,25 @@ window.NAVIO_DEBUG = true;
 
 Either way the default stays off, so no rebuild is needed to turn tracing on.
 
+### Accessibility
+
+Navio draws to a canvas, so its content is opaque to assistive technology. The
+controls around it are labelled and keyboard-operable:
+
+| Interaction | Mouse | Keyboard |
+|---|---|---|
+| Sort a column | click the header | focus the header, <kbd>Enter</kbd> |
+| Reorder a column | drag the header | <kbd>Alt</kbd> + <kbd>←</kbd>/<kbd>→</kbd> |
+| Remove a filter | click the chip | focus the chip, <kbd>Enter</kbd> |
+| Close a level | click the ✕ | focus it, <kbd>Enter</kbd> |
+
+Selection and filter changes are announced through an `aria-live` region, and
+header hover transitions are skipped when `prefers-reduced-motion: reduce` is
+set.
+
+Brushing a range still has no keyboard equivalent — see
+[#68](https://github.com/john-guerra/navio/issues/68).
+
 ### A note on your data
 
 Navio does not add any properties to the rows you give it. Earlier versions wrote

@@ -80,6 +80,7 @@ function navio(selection, _h) {
     context,
     tooltip,
     tooltipElement,
+    liveRegion,
     tooltipCoords = { x: -50, y: -50 },
     id = "__seqId",
     updateCallback = function () {},
@@ -422,6 +423,33 @@ function navio(selection, _h) {
 
     svg.append("g").attr("class", "attribs");
 
+    // A canvas-drawn widget is opaque to a screen reader, so describe it and
+    // announce what changes (#68). role=group rather than application: the
+    // controls inside are ordinary buttons and should keep native behaviour.
+    svg
+      .attr("role", "group")
+      .attr(
+        "aria-label",
+        "Navio: a column per attribute, a row per record. Sort with the column headers, filter by clicking a value or dragging a range."
+      );
+
+    liveRegion = selection
+      .append("div")
+      .attr("class", "_nv_live")
+      .attr("role", "status")
+      .attr("aria-live", "polite")
+      .attr("aria-atomic", "true")
+      // Available to assistive tech, absent from the visual layout.
+      .style("position", "absolute")
+      .style("width", "1px")
+      .style("height", "1px")
+      .style("overflow", "hidden")
+      .style("clip", "rect(0 0 0 0)")
+      .style("white-space", "nowrap")
+      .style("border", "0")
+      .style("padding", "0")
+      .style("margin", "-1px");
+
     initTooltipPopper();
 
     svg
@@ -442,7 +470,15 @@ function navio(selection, _h) {
         path.arc(crossSize / 2, crossSize / 2, crossSize * 1.2, 0, Math.PI * 2);
         sel.attr("d", path.toString());
       })
-      .on("click pointerup", () => deleteSubsequentLevels()); //delete last level
+      .on("click pointerup", () => deleteSubsequentLevels()) //delete last level
+      .attr("role", "button")
+      .attr("tabindex", 0)
+      .attr("aria-label", "Close the last filter level")
+      .on("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        deleteSubsequentLevels();
+      });
 
     xScale = d3
       .scaleBand()
@@ -625,9 +661,45 @@ function navio(selection, _h) {
   // The guard has to live in the mutation path rather than in a wrapper,
   // because applyFiltersAndUpdate and deleteSubsequentLevels notify
   // unconditionally at the end of their work.
+  /**
+   * A transition, unless the reader asked for less motion (#68) - or the
+   * selection has no transition() at all, which is the case under some test
+   * harnesses.
+   */
+  function animated(sel, duration = 150) {
+    if (sel.transition === undefined) return sel;
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      return sel;
+    }
+    return sel.transition().duration(duration);
+  }
+
+  /** Send a message to the live region, if there is one yet. */
+  function announce(message) {
+    if (liveRegion) liveRegion.text(message);
+  }
+
+  /** What the current selection and filter chain amount to, in words. */
+  function announceState() {
+    if (!liveRegion || !data.length) return;
+    const shown = nv.getVisible().length;
+    const chips = filtersByLevel
+      .filter((lvl) => lvl && lvl.length)
+      .map((lvl) => lvl.map((f) => f.toStr()).join(" or "));
+    announce(
+      `${shown} of ${data.length} rows selected` +
+        (chips.length ? `. Filters: ${chips.join("; then ")}` : ". No filters")
+    );
+  }
+
   function notifyChange({ silent = false } = {}) {
     // The legacy single-subscriber slot is always called, exactly as before.
     updateCallback(nv.getVisible());
+    announceState();
     if (silent) return;
     // Copy first: a listener may unsubscribe itself while we iterate.
     for (const fn of changeListeners.slice()) fn();
@@ -1361,6 +1433,16 @@ function navio(selection, _h) {
           : []
       );
 
+    const removeFilter = (f) => {
+      const levelFilters = filtersByLevel[f.level];
+      const i = levelFilters.indexOf(f);
+      if (nv.DEBUG) console.log("Click remove filter", i, f);
+      if (i === -1) return; // Already removed (e.g. a stale/duplicate event).
+      levelFilters.splice(i, 1);
+
+      applyFiltersAndUpdate(f.level);
+    };
+
     filterExpTexts
       .enter()
       .append("div")
@@ -1368,15 +1450,17 @@ function navio(selection, _h) {
       // .attr("dy", nv.filterFontSize * 1.2 + 7)
       // .attr("x", 0)
       .style("cursor", "not-allowed")
+      // A chip is a button that removes the filter, so say so. The Ⓧ glyph
+      // alone reads as "circled x" or is skipped entirely (#68).
+      .attr("role", "button")
+      .attr("tabindex", 0)
+      .attr("aria-label", (f) => `Remove filter: ${f.toStr()}`)
       .text((f) => "Ⓧ " + f.toStr())
-      .on("click", (event, f) => {
-        const levelFilters = filtersByLevel[f.level];
-        const i = levelFilters.indexOf(f);
-        if (nv.DEBUG) console.log("Click remove filter", i, f);
-        if (i === -1) return; // Already removed (e.g. a stale/duplicate event).
-        levelFilters.splice(i, 1);
-
-        applyFiltersAndUpdate(f.level);
+      .on("click", (event, f) => removeFilter(f))
+      .on("keydown", (event, f) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        removeFilter(f);
       });
 
     filterExpTexts.exit().remove();
@@ -1431,16 +1515,13 @@ function navio(selection, _h) {
         .on("click", deferEvent(onSortLevel))
         // .on("click", onSortLevel)
         .on("mousemove", function () {
-          let sel = d3.select(this);
-          sel =
-            sel.transition !== undefined ? sel.transition().duration(150) : sel;
-          sel.style("font-size", nv.attribFontSizeSelected + "px");
+          animated(d3.select(this)).style(
+            "font-size",
+            nv.attribFontSizeSelected + "px"
+          );
         })
         .on("mouseout", function () {
-          let sel = d3.select(this);
-          sel =
-            sel.transition !== undefined ? sel.transition().duration(150) : sel;
-          sel.style(
+          animated(d3.select(this)).style(
             "font-size",
             Math.min(nv.attribFontSize, nv.attribWidth) + "px"
           );
@@ -1470,6 +1551,46 @@ function navio(selection, _h) {
       .append("g")
       .attr("class", "attribOverlay")
       .style("cursor", "pointer");
+
+    // Column headers are the widget's primary control: click sorts, drag
+    // reorders. Both were mouse-only. Enter/Space sorts; Alt+Arrow reorders,
+    // which is the keyboard equivalent of the drag (#68).
+    attribOverlayEnter
+      .merge(attribOverlay)
+      .attr("role", "button")
+      .attr("tabindex", 0)
+      .attr("aria-label", (d) => {
+        const sorted =
+          dSortBy[d.level] && dSortBy[d.level].attrib === d.attrib
+            ? dSortBy[d.level].desc
+              ? ", currently sorted descending"
+              : ", currently sorted ascending"
+            : "";
+        return `${d.name}, level ${d.level + 1}${sorted}. Enter to sort, Alt with left or right arrow to move.`;
+      })
+      .on("keydown", function (event, d) {
+        if (event.key === "Enter" || event.key === " ") {
+          // Sort BEFORE preventDefault: onSortLevel treats a
+          // defaultPrevented event as "this was a drag, not a click" and
+          // returns early. preventDefault is only here to stop Space
+          // scrolling the page.
+          onSortLevel.call(this, event, d);
+          event.preventDefault();
+          announce(`Sorted level ${d.level + 1} by ${d.name}`);
+          return;
+        }
+        if (!event.altKey) return;
+        const delta =
+          event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+        if (!delta) return;
+        event.preventDefault();
+        const from = attribsOrdered.indexOf(d.attrib);
+        const to = from + delta;
+        if (from === -1 || to < 0 || to >= attribsOrdered.length) return;
+        moveAttrToPos(d.attrib, to);
+        nv.updateData(dataIs);
+        announce(`Moved ${d.name} to position ${to + 1}`);
+      });
 
     attribOverlayEnter
       .merge(attribOverlay)
@@ -2704,6 +2825,11 @@ function navio(selection, _h) {
 
     if (tooltip && typeof tooltip.destroy === "function") tooltip.destroy();
     tooltip = null;
+
+    if (liveRegion) {
+      liveRegion.remove();
+      liveRegion = null;
+    }
 
     if (tooltipElement) {
       tooltipElement.remove();
