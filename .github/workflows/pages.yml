@@ -73,6 +73,12 @@ jobs:
           echo "dist/navio.js  $(wc -c < ./_site/dist/navio.js) bytes"
           echo "index.html     $(wc -c < ./_site/index.html) bytes"
 
+      # Old demo paths were published URLs before the demos moved under
+      # examples/. Generated here rather than kept in the repo, so the tree
+      # stays clean without breaking external links.
+      - name: Write legacy redirects
+        run: sudo node build/legacy-redirects.js ./_site
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: ./_site
