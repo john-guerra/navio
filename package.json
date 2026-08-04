@@ -1,8 +1,15 @@
 {
   "name": "navio",
-  "version": "0.0.75",
+  "version": "0.1.0",
   "description": "A visualization widget for summarizing and exploring data",
   "type": "module",
+  "files": [
+    "dist",
+    "src",
+    "!src/NavioComponent.jsx",
+    "README.md",
+    "LICENSE"
+  ],
   "main": "dist/navio.min.js",
   "module": "dist/navio.esm.js",
   "browser": "dist/navio.min.js",
@@ -42,7 +49,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "npm run format:check && npm run lint && npm run test && npm run build",
-    "postbuild": "node build/verify-bundle.js"
+    "postbuild": "node build/verify-bundle.js",
+    "prepublishOnly": "npm run check"
   },
   "repository": {
     "type": "git",
