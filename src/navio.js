@@ -517,6 +517,16 @@ function navio(selection, _h) {
     // are expressed as positions in an ordering that no longer holds.
     deleteObsoleteFiltersFromLevel(level + 1);
 
+    // A range filter AT this level keeps its rows - filters are evaluated once,
+    // at creation - but it was authored as a band in the ordering being
+    // replaced, so its label would otherwise describe a range that is no longer
+    // visible anywhere. See #82.
+    if (filtersByLevel[level]) {
+      for (const f of filtersByLevel[level]) {
+        if (f.markSortStale) f.markSortStale();
+      }
+    }
+
     updateSorting(level);
     removeBrushOnLevel(level);
 

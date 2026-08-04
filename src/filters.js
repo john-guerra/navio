@@ -8,6 +8,17 @@ export function FilterByRange(opts) {
     opts.getAttribName ||
     ((attrib) => (typeof attrib === "function" ? attrib.name : attrib));
 
+  // A closure variable rather than a property on the returned object: rollup
+  // folds `obj.flag ? a : b` away when it can see the property initialised to a
+  // literal and never reassigned inside the module, which silently deleted this
+  // branch from the bundle while the source looked correct.
+  let staleSort = false;
+
+  /** Called by navio when this filter's level is re-sorted (#82). */
+  function markSortStale() {
+    staleSort = true;
+  }
+
   function filter(d) {
     return d.__i[level] >= first.__i[level] && d.__i[level] <= last.__i[level];
   }
@@ -17,7 +28,11 @@ export function FilterByRange(opts) {
       lastVal = `${getAttrib(last, itemAttr)}`;
     firstVal = typeof firstVal === typeof "" ? firstVal.slice(0, 5) : firstVal;
     lastVal = typeof lastVal === typeof "" ? lastVal.slice(0, 5) : lastVal;
-    return `${getAttribName(itemAttr)} range including ${firstVal} to ${lastVal}`;
+    const label = `${getAttribName(itemAttr)} range including ${firstVal} to ${lastVal}`;
+    // A brush is a band of rows in the ordering that was on screen at the time.
+    // Once the level is re-sorted the rows stay selected but no longer form a
+    // visible range, so say so rather than describing a range nobody can see.
+    return staleSort ? `${label} (re-sorted since)` : label;
   }
 
   // Records the RAW boundary values, never `__i[level]`. The runtime predicate
@@ -45,6 +60,7 @@ export function FilterByRange(opts) {
     filter,
     toStr,
     toValue,
+    markSortStale,
     type: "range",
   };
 }
@@ -123,6 +139,17 @@ export function FilterByRangeNegative(opts) {
     opts.getAttribName ||
     ((attrib) => (typeof attrib === "function" ? attrib.name : attrib));
 
+  // A closure variable rather than a property on the returned object: rollup
+  // folds `obj.flag ? a : b` away when it can see the property initialised to a
+  // literal and never reassigned inside the module, which silently deleted this
+  // branch from the bundle while the source looked correct.
+  let staleSort = false;
+
+  /** Called by navio when this filter's level is re-sorted (#82). */
+  function markSortStale() {
+    staleSort = true;
+  }
+
   function filter(d) {
     return d.__i[level] < first.__i[level] || d.__i[level] > last.__i[level];
   }
@@ -132,7 +159,9 @@ export function FilterByRangeNegative(opts) {
       lastVal = `${getAttrib(last, itemAttr)}`;
     firstVal = typeof firstVal === typeof "" ? firstVal.slice(0, 5) : firstVal;
     lastVal = typeof lastVal === typeof "" ? lastVal.slice(0, 5) : lastVal;
-    return `${getAttribName(itemAttr)} range excluding ${firstVal} to ${lastVal}`;
+    const label = `${getAttribName(itemAttr)} range excluding ${firstVal} to ${lastVal}`;
+    // See the note in FilterByRange.toStr.
+    return staleSort ? `${label} (re-sorted since)` : label;
   }
 
   // Records the RAW boundary values, never `__i[level]`. The runtime predicate
@@ -160,6 +189,7 @@ export function FilterByRangeNegative(opts) {
     filter,
     toStr,
     toValue,
+    markSortStale,
     type: "negativeRange",
   };
 }
