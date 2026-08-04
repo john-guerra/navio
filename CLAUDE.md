@@ -127,6 +127,14 @@ mapped through `toXY`/`toWH`, and any code reading a pointer must swap axes the
 way `showTooptip` does. A site that hardcodes screen x/y works in horizontal and
 silently misplaces itself in vertical.
 
+**Playwright's `reuseExistingServer` will attach to another project's server.**
+It only checks that *something* answers on the port, not that it is serving this
+repo. A dev server from a sibling project (or another worktree of this one) took
+over 4173 here and the suite ran against 404s and an empty bundle - failures
+that look like real regressions, and, worse, could look like passes. Run
+`NAVIO_TEST_PORT=4190 npx playwright test` when anything else might be up, and
+check the port if results stop making sense.
+
 **Non-ASCII must be escaped in the bundle.** `build/ascii.js` handles string
 literals and template elements; `verify-bundle.js` fails the build if a raw
 glyph escapes. Terser re-decodes `\uXXXX`, hence `ascii_only: true`.

@@ -1136,17 +1136,26 @@ function navio(selection, _h) {
         },
       ]);
 
-    _brush
+    // Append on ENTER only. This used to be
+    //   _brush.enter().merge(_brush).append("g")
+    // which appends to the update selection as well, so every redraw nested
+    // another .brush inside the previous one. Each stale copy kept the width
+    // of the geometry it was born under and was drawn on top of the live one.
+    const brushG = _brush
       .enter()
-      .merge(_brush)
       .append("g")
+      .attr("class", "brush")
+      .merge(_brush);
+
+    brushG
       .call(dBrushes[level]) // brush event must be before click (?) https://observablehq.com/@d3/click-vs-drag?collection=@d3/d3-drag
       .on("mousemove", onMouseOver)
       .on("click", onSelectByValue)
-      .on("mouseout", onMouseOut)
-      .attr("class", "brush")
-      .selectAll("rect")
-      .attr(isVertical() ? "height" : "width", aHi);
+      .on("mouseout", onMouseOut);
+
+    // Re-applied every pass: aHi comes from the current scales, so a
+    // column-width change has to resize these.
+    brushG.selectAll("rect").attr(isVertical() ? "height" : "width", aHi);
 
     _brush.exit().remove();
 
@@ -2927,6 +2936,13 @@ function navio(selection, _h) {
       recomputeBrushes,
       levelsToUpdate,
     });
+
+    // hardUpdate is the "geometry changed" path - attribWidth, orientation,
+    // margins. A brush rectangle is in pixels, so any of those leaves it
+    // pointing at the wrong rows, and an orientation flip leaves it on the
+    // wrong AXIS entirely, which makes it unusable. restoreBrushes re-derives
+    // it from the filter's stored row bounds through the current scales.
+    if (shouldDrawBrushes) restoreBrushes();
   };
 
   // Tears down everything this instance attached outside its own container,
