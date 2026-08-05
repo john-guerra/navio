@@ -4103,6 +4103,7 @@ function navio(selection, _h) {
             getRow: (i) => data[i],
             getPos: posAt,
             getAttribAt: attribAt,
+            getId: idOf,
             resolveAttrib,
             getAttrib,
             getAttribName,
@@ -4198,6 +4199,56 @@ function navio(selection, _h) {
   };
   // Legacy support
   nv.getVisible = nv.getSelected;
+
+  /**
+   * Select an explicit set of rows, replacing whatever chain is in place.
+   *
+   * The inbound half of a two-way binding: getSelected() says what the user
+   * picked here, this says what a peer picked elsewhere. Rows are matched by
+   * nv.id(), so the argument may be this instance's own row objects, another
+   * instance's rows carrying the same id field, or bare id values.
+   *
+   * Selecting everything CLEARS the chain rather than adding a redundant level
+   * - which is exactly what an initial bind against an unfiltered peer sends.
+   */
+  nv.setSelectedRows = function (rows) {
+    if (!Array.isArray(rows)) {
+      console.warn("navio.setSelectedRows: expected an array, got", rows);
+      return nv;
+    }
+    if (!data.length) {
+      console.warn("navio.setSelectedRows: no data loaded yet, ignoring");
+      return nv;
+    }
+
+    let unresolved = 0;
+    const ids = [];
+    for (const r of rows) {
+      // A bare id, already in the form the filter wants.
+      if (r === null || typeof r !== "object") {
+        ids.push(r);
+        continue;
+      }
+      // A custom id lives on the row, so a foreign object resolves fine. The
+      // default id is the row's index into `data`, which only an object we own
+      // can supply - hence the identity lookup.
+      const v = id !== "__seqId" ? getAttrib(r, id) : indexOfRow(r);
+      if (v === undefined) unresolved++;
+      else ids.push(v);
+    }
+    if (unresolved) {
+      console.warn(
+        `navio.setSelectedRows: ${unresolved} row(s) are not in this data` +
+          (id === "__seqId"
+            ? " - they are matched by object identity, so call nv.id() with a" +
+              " shared key to sync rows across instances"
+            : ` under id "${id}"`)
+      );
+    }
+
+    if (ids.length >= data.length) return nv.setFilters([[]]);
+    return nv.setFilters([[{ type: "ids", ids }]]);
+  };
 
   /**
    * The links whose BOTH endpoints are currently selected - the ones Navio

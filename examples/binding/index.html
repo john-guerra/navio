@@ -66,16 +66,18 @@
     <p>
       <code>NavioWidget</code> follows the
       <a href="https://reactivewidgets.org">Reactive Widget</a> contract: it is
-      an HTML element whose <code>.value</code> holds the multi-level filter
-      chain, and which emits an <code>input</code> event whenever you change it.
-      That is all <code>Inputs.bind</code> needs.
+      an HTML element whose <code>.value</code> holds the selected rows, and
+      which emits an <code>input</code> event whenever you change it. That is
+      all <code>Inputs.bind</code> needs.
     </p>
 
     <h2>1. Two Navios, bound</h2>
     <p>
-      Filter either one — the other follows. The binding copies
-      <code>.value</code>, so the whole drill-down chain is reproduced, not just
-      the resulting rows.
+      Filter either one — the other follows. Between two Navios the binding
+      copies the <strong>filter chain</strong> rather than
+      <code>.value</code>: the rows are the output, the chain is how they were
+      chosen, and only the chain reproduces the whole drill-down. Bind on
+      <code>.value</code> and B would show one flat level where A has three.
     </p>
     <div class="row">
       <div class="panel">
@@ -92,15 +94,16 @@
       </div>
     </div>
 
-    <h2>2. Bridging a widget whose value is rows, not filters</h2>
+    <h2>2. Translating another widget's facets into filters</h2>
     <p class="note">
       This is the real
       <a href="https://observablehq.com/@john-guerra/faceted-search"
         >@john-guerra/faceted-search</a
       >, loaded from its Observable notebook export. Its <code>.value</code> is
-      the <em>surviving rows</em>, with the facets on
-      <code>value.filters</code> — so it cannot be bound to Navio directly. But
-      the facets and Navio's filters describe the same thing, and translate.
+      the surviving rows, with the facets on <code>value.filters</code>. Rows
+      alone <em>would</em> bind straight into Navio now — but they arrive as one
+      anonymous set. Translating the facets instead gives Navio the levels it
+      is for: labelled, individually closable, and drillable further.
     </p>
     <p class="note">
       Both facet kinds map across. A <strong>checkbox facet</strong> becomes
@@ -153,13 +156,19 @@
       document.getElementById("navioA").appendChild(a);
       document.getElementById("navioB").appendChild(b);
 
-      // This is all Inputs.bind does, written out: copy the source's value into
-      // the target on every input. Assignment repaints without re-dispatching,
-      // which is what stops a bound pair from looping.
+      // Inputs.bind written out: copy the source's state into the target on
+      // every input. Assignment repaints without re-dispatching, which is what
+      // stops a bound pair from looping.
+      //
+      // Between two Navios the state worth copying is the FILTER CHAIN, not
+      // `.value`. `.value` is the surviving rows - correct for anything
+      // downstream, but it says nothing about the drill-down that produced
+      // them, so binding on it would leave B with one flat level where A has
+      // three, and closing a level in A would not close it in B.
       function bind(target, source) {
-        target.value = source.value;
+        target.setFilters(source.getFilters());
         source.addEventListener("input", () => {
-          target.value = source.value;
+          target.setFilters(source.getFilters());
         });
       }
       bind(b, a);
@@ -167,7 +176,7 @@
 
       const valueOut = document.getElementById("valueOut");
       function showValue() {
-        const v = a.value.filter((level) => level && level.length);
+        const v = a.getFilters().filter((level) => level && level.length);
         valueOut.textContent = v.length
           ? JSON.stringify(v, null, 1)
           : "(no filters yet)";
@@ -244,7 +253,7 @@
       facets.addEventListener("input", () => {
         if (syncing) return;
         syncing = true;
-        c.value = facetsToFilters(facets.value.filters);
+        c.setFilters(facetsToFilters(facets.value.filters));
         syncing = false;
         report();
       });
@@ -255,9 +264,11 @@
           `facets .value : ${facets.value.length} rows`,
           `navio C       : ${c.getSelected().length} of ${c.navio.data().length} selected`,
           ``,
-          `navio C .value:`,
+          `navio C .value : ${c.value.length} rows`,
+          ``,
+          `navio C filters:`,
           JSON.stringify(
-            c.value.filter((l) => l && l.length),
+            c.getFilters().filter((l) => l && l.length),
             null,
             1
           ),

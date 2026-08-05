@@ -277,6 +277,42 @@ export function FilterByRangeNegative(opts) {
 }
 
 /**
+ * An explicit set of rows, named by nv.id().
+ *
+ * This is what an *external* selection means - the checked rows of a table, a
+ * peer widget's brush - and it is the one filter that is not a predicate over
+ * some attribute. Membership is decided against the ids, so it survives
+ * re-sorting and replays onto another instance holding the same ids, unlike a
+ * positional range. See #93.
+ */
+export function FilterByIds(opts) {
+  const wanted = opts.ids instanceof Set ? opts.ids : new Set(opts.ids || []);
+  // Ids are read by row INDEX for the same reason the range filters do it: the
+  // default id is "__seqId", which is derived from the index rather than
+  // stored on the row (#88).
+  const getId = opts.getId || ((i) => i);
+
+  function filter(_row, index) {
+    return wanted.has(getId(index));
+  }
+
+  function toStr() {
+    return `selection of ${wanted.size} row${wanted.size === 1 ? "" : "s"}`;
+  }
+
+  function toValue() {
+    return { type: "ids", ids: Array.from(wanted) };
+  }
+
+  return {
+    filter,
+    toStr,
+    toValue,
+    type: "ids",
+  };
+}
+
+/**
  * Rebuilds a filter from the plain object produced by `toValue()`.
  *
  * Boundaries are resolved by VALUE against the rows currently present, not by
@@ -303,7 +339,15 @@ export function filterFromValue(value, ctx = {}) {
     resolveAttrib = (name) => name,
     getAttrib,
     getAttribName,
+    getId,
   } = ctx;
+
+  // Handled before the attribute is resolved: an id set names rows directly and
+  // carries no attribute at all, so the check below would reject it.
+  if (value.type === "ids") {
+    if (!Array.isArray(value.ids) && !(value.ids instanceof Set)) return null;
+    return FilterByIds({ ids: value.ids, getId });
+  }
 
   const itemAttr = resolveAttrib(value.attrib);
   if (itemAttr === undefined || itemAttr === null) return null;

@@ -4,6 +4,11 @@ import { test, expect } from "@playwright/test";
 // NavioWidget as a Reactive Widget (https://reactivewidgets.org) - an
 // HTMLElement carrying `.value` and emitting `input` - and two of them staying
 // in sync through a plain Inputs.bind-style binding.
+//
+// `.value` is the SELECTED ROWS (#93). It used to be the filter chain, which
+// made `viewof selected = navio(data)` hand every downstream Observable cell a
+// list of filter descriptors where it expected data. The chain is still
+// reachable through getFilters()/snapshot(), and assigning one still applies it.
 
 /** Click a cell in the first widget's canvas. */
 async function clickCell(page, rowIndex) {
@@ -31,6 +36,8 @@ async function clickCell(page, rowIndex) {
   );
 }
 
+const idsOf = (v) => v.map((d) => d.id).sort();
+
 test("the widget is an HTMLElement with a value, as the contract requires", async ({
   page,
 }) => {
@@ -42,6 +49,7 @@ test("the widget is an HTMLElement with a value, as the contract requires", asyn
     valueIsArray: Array.isArray(window.w1.value),
     hasSetValue: typeof window.w1.setValue === "function",
     hasGetSelected: typeof window.w1.getSelected === "function",
+    hasGetFilters: typeof window.w1.getFilters === "function",
     hasDestroy: typeof window.w1.destroy === "function",
     rendered: !!window.w1.querySelector("canvas"),
   }));
@@ -52,12 +60,25 @@ test("the widget is an HTMLElement with a value, as the contract requires", asyn
     valueIsArray: true,
     hasSetValue: true,
     hasGetSelected: true,
+    hasGetFilters: true,
     hasDestroy: true,
     rendered: true,
   });
 });
 
-test("a user interaction emits input and updates value", async ({ page }) => {
+// Nothing filtered means everything is selected. Starting at [] told every
+// downstream cell the user had picked no rows at all.
+test("value starts as the whole dataset, not empty", async ({ page }) => {
+  await page.goto("/test/e2e/fixtures/reactive.html");
+  const v = await page.evaluate(() => window.w1.value);
+  expect(idsOf(v)).toEqual([1, 2, 3, 4, 5]);
+  // Rows, not filter descriptors - this is what viewof hands the next cell.
+  expect(v[0]).toMatchObject({ category: expect.any(String) });
+});
+
+test("a user interaction emits input and updates value to the rows", async ({
+  page,
+}) => {
   await page.goto("/test/e2e/fixtures/reactive.html");
   expect(await page.evaluate(() => window.inputEvents)).toBe(0);
 
@@ -65,15 +86,16 @@ test("a user interaction emits input and updates value", async ({ page }) => {
 
   expect(await page.evaluate(() => window.inputEvents)).toBeGreaterThan(0);
   const value = await page.evaluate(() => window.w1.value);
-  expect(value[0][0]).toMatchObject({
-    type: "value",
-    attrib: "category",
-    value: "a",
-  });
+  expect(idsOf(value)).toEqual([1, 3]);
   expect(await page.evaluate(() => window.selectedOf(window.w1))).toBe("1 3");
+
+  // The chain that produced them is still available, just not as the value.
+  expect(await page.evaluate(() => window.w1.getFilters()[0][0])).toMatchObject(
+    { type: "value", attrib: "category", value: "a" }
+  );
 });
 
-test("assigning value applies the filters without re-dispatching", async ({
+test("assigning rows selects them, without re-dispatching", async ({
   page,
 }) => {
   await page.goto("/test/e2e/fixtures/reactive.html");
@@ -90,6 +112,44 @@ test("assigning value applies the filters without re-dispatching", async ({
   expect(emitted.selected).toBe("1 3");
   // A programmatic set must not look like a user change, or bindings loop.
   expect(emitted.n).toBe(0);
+});
+
+test("assigning a filter chain still applies it, and value settles on rows", async ({
+  page,
+}) => {
+  await page.goto("/test/e2e/fixtures/reactive.html");
+
+  const got = await page.evaluate(() => {
+    // Both accepted forms: the bare chain and the { filters } wrapper.
+    window.w2.value = [[{ type: "value", attrib: "category", value: "b" }]];
+    const bare = window.w2.value.map((d) => d.id).sort();
+    window.w2.value = {
+      filters: [[{ type: "value", attrib: "category", value: "a" }]],
+    };
+    return { bare, wrapped: window.w2.value.map((d) => d.id).sort() };
+  });
+
+  expect(got.bare).toEqual([2, 5]);
+  expect(got.wrapped).toEqual([1, 3]);
+});
+
+test("setFilters is the way in for a chain, getFilters the way out", async ({
+  page,
+}) => {
+  await page.goto("/test/e2e/fixtures/reactive.html");
+
+  const round = await page.evaluate(() => {
+    window.w1.setFilters([[{ type: "value", attrib: "category", value: "a" }]]);
+    const chain = window.w1.getFilters();
+    window.w2.setFilters(chain);
+    return {
+      ids: window.selectedOf(window.w2),
+      valueIsRows: window.w1.value.every((d) => "category" in d),
+    };
+  });
+
+  expect(round.ids).toBe("1 3");
+  expect(round.valueIsRows).toBe(true);
 });
 
 test("two bound widgets stay in sync and the binding converges", async ({
@@ -136,9 +196,47 @@ test("binding does not loop: one interaction settles in one pass", async ({
   expect(counts.b).toBe(0);
 });
 
-test("snapshot returns filters and rows together, without being the bound value", async ({
+// The round trip an Observable bind actually performs: rows out of one widget,
+// straight back into another as its value, and no filter chain in sight.
+test("a row list from a peer round-trips through value", async ({ page }) => {
+  await page.goto("/test/e2e/fixtures/reactive.html");
+
+  const got = await page.evaluate(() => {
+    window.w2.value = window.rows.filter((d) => d.value > 15);
+    return {
+      selected: window.selectedOf(window.w2),
+      chain: window.w2.getFilters()[0][0].type,
+    };
+  });
+
+  expect(got.selected).toBe("2 3 5");
+  expect(got.chain).toBe("ids");
+});
+
+// Selecting everything is what an initial bind against an unfiltered peer
+// sends; it must clear the chain rather than stack a redundant level.
+test("selecting every row clears the chain instead of adding a level", async ({
   page,
 }) => {
+  await page.goto("/test/e2e/fixtures/reactive.html");
+
+  const got = await page.evaluate(() => {
+    window.w2.value = window.rows.filter((d) => d.value > 15);
+    const filtered = window.w2.navio.getFilters().flat().length;
+    window.w2.value = window.rows.slice();
+    return {
+      filtered,
+      after: window.w2.navio.getFilters().flat().length,
+      selected: window.selectedOf(window.w2),
+    };
+  });
+
+  expect(got.filtered).toBe(1);
+  expect(got.after).toBe(0);
+  expect(got.selected).toBe("1 2 3 4 5");
+});
+
+test("snapshot returns filters and rows together", async ({ page }) => {
   await page.goto("/test/e2e/fixtures/reactive.html");
   await clickCell(page, 0);
 
@@ -147,13 +245,13 @@ test("snapshot returns filters and rows together, without being the bound value"
     return {
       filterCount: s.filters[0].length,
       ids: s.selection.map((d) => d.id).sort(),
-      valueIsJustFilters: Array.isArray(window.w1.value),
+      valueIsRows: window.w1.value.every((d) => "category" in d),
     };
   });
 
   expect(snap.filterCount).toBe(1);
   expect(snap.ids).toEqual([1, 3]);
-  expect(snap.valueIsJustFilters).toBe(true);
+  expect(snap.valueIsRows).toBe(true);
 });
 
 test("destroy tears the widget down", async ({ page }) => {

@@ -489,11 +489,30 @@ import { NavioWidget } from "navio";
 const w = NavioWidget(data, { height: 600 });
 document.body.appendChild(w);
 
-// The rows surviving every level of the drill-down
-w.addEventListener("input", () => render(w.getSelected()));
+w.addEventListener("input", () => render(w.value));
 ```
 
-`.value` is the **multi-level filter chain**, one entry per level:
+`.value` is the **array of selected rows** — the ones surviving every level of
+the drill-down. That is what makes it work as an Observable `viewof`:
+
+```javascript
+viewof selected = NavioWidget(data, { height: 400 })
+Inputs.table(selected)                            // the rows, as expected
+Inputs.bind(Inputs.table(data), viewof selected)  // and it binds both ways
+```
+
+Assigning rows selects them. They are matched by `nv.id()`, so a peer holding
+the same data round-trips; with the default id they are matched by object
+identity, so call `nv.id("someKey")` to sync across instances.
+
+```javascript
+w.value = data.filter((d) => d.mass > 4000); // selects them, emits nothing
+```
+
+### The filter chain
+
+The rows are the *output*; what Navio actually manipulates is a multi-level
+**filter chain**, one entry per level:
 
 ```javascript
 [
@@ -502,21 +521,20 @@ w.addEventListener("input", () => render(w.getSelected()));
 ]
 ```
 
-It is JSON-safe, so it can go in a URL or `localStorage`, and assigning it back
-restores the whole chain:
+This, not the row list, is the form that replays faithfully onto another
+instance: rows are projections through *this* instance's arrays, whereas the
+chain describes how they were chosen. It is also JSON-safe, so it can go in a
+URL or `localStorage`.
 
 ```javascript
-w.value = JSON.parse(saved);          // applies the filters, emits nothing
-Inputs.bind(otherNavio, w);           // keeps two Navios in sync
+w.getFilters();                       // the chain
+w.setFilters(JSON.parse(saved));      // restore it; assigning one works too
+w.value = { filters: chain };         //   ...either form
+w.snapshot();                         // { filters, selection } in one read
 ```
 
-**Why the filters and not the selected rows?** On a bind hop the receiver has to
-apply the *filters* against its own data - the sender's row objects are
-projections through the sender's own arrays and cannot be reused. Putting them
-in `.value` would send, on every hop, the one field the receiver is obliged to
-throw away. The selection stays a getter, and it is fresh by the time `input`
-fires. Use `w.snapshot()` if you want `{ filters, selection }` together in one
-non-reactive read.
+Assigning a chain (or a `{ filters }` wrapper) applies it and `.value` settles
+back on the rows it produced. Anything else is read as rows.
 
 The classic `navio(selection, height)` API is unchanged; this is additive.
 

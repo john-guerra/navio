@@ -142,20 +142,22 @@
             G.input(view)
           );
 
-        // `selection` is the widget's .value, which is the FILTER CHAIN - that
-        // is what makes it bindable to another widget. The rows come from
-        // getSelected(). Depending on both means this re-runs on every change
-        // while reading the thing you actually want.
+        // `selection` is the widget's .value, which is the SELECTED ROWS. That
+        // is the whole point of a viewof: the next cell gets data, not a
+        // description of how it was chosen. The filter chain is still there on
+        // the view, for anything that needs to replay it elsewhere.
         main
           .variable(observer("selection"))
           .define(
             "selectionCount",
             ["selection", "viewof selection", "data"],
-            (filters, view, data) => {
+            (selection, view, data) => {
               const p = document.createElement("p");
-              const levels = filters.filter((l) => l && l.length).length;
+              const levels = view
+                .getFilters()
+                .filter((l) => l && l.length).length;
               p.textContent =
-                `${view.getSelected().length} of ${data.length} rows selected` +
+                `${selection.length} of ${data.length} rows selected` +
                 (levels ? ` (${levels} filter level(s))` : " (no filters yet)");
               return p;
             }
@@ -163,8 +165,7 @@
 
         main
           .variable(observer("table"))
-          .define("table", ["selection", "viewof selection"], (_filters, view) => {
-            const sel = view.getSelected();
+          .define("table", ["selection"], (sel) => {
             const t = document.createElement("table");
             t.style.borderCollapse = "collapse";
             const cols = ["id", "species", "island", "beak", "mass"];

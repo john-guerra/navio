@@ -5,30 +5,30 @@ import navio from "./navio.js";
 /**
  * Navio as a Reactive Widget (https://reactivewidgets.org).
  *
- * Returns an HTMLElement whose `.value` is the multi-level filter chain, and
- * which emits an `input` event whenever the user changes it. That makes it
- * bindable to any other reactive widget, and usable as an Observable `viewof`.
+ * Returns an HTMLElement whose `.value` is the array of SELECTED ROWS, and
+ * which emits an `input` event whenever the selection changes. That is the
+ * contract every reactive widget shares - and what Observable's `viewof` reads,
+ * so this works directly:
  *
- *     const w = NavioWidget(data, { height: 600, attribWidth: 20 });
+ *     viewof selected = navio(data, { height: 400 })
+ *     Table(selected)                       // the rows, as you would expect
+ *     Inputs.bind(Inputs.table(data), viewof selected)
  *
  * Every nv.* option is accepted here; see nv.getOptions() for the full set.
- * `value`, `attribs` and `autodetect` are the widget's own, everything else is
- * passed to navio() and applied before construction.
- *     document.body.appendChild(w);
- *     w.addEventListener("input", () => render(w.getSelected()));
+ * `value`, `filters`, `attribs` and `autodetect` are the widget's own,
+ * everything else is passed to navio() and applied before construction.
  *
- * `.value` is the filter chain rather than the selected rows, deliberately.
- * On a bind hop the receiver has to apply the *filters* against its own data -
- * the sender's row objects are projections through the sender's own arrays and
- * are unusable on the other side. Shipping them would send, on every hop, the
- * one field the receiver is obliged to discard. The selection stays available
- * through getSelected()/getVisible(), which are fresh by the time `input`
- * fires. See issue #60 for the full argument.
+ * The multi-level FILTER CHAIN - which is what Navio actually manipulates, and
+ * the only form that replays faithfully onto another instance - stays available
+ * through getFilters()/setFilters() and snapshot(). Assigning `.value` a
+ * `{ filters }` wrapper, or a chain (an array of arrays), applies it as filters;
+ * anything else is read as rows. Rows are matched by nv.id(), so a bind against
+ * a peer over the same data round-trips. See issues #60 and #93.
  *
  * The existing `navio(selection, height)` API is untouched; this is additive.
  */
 export default function NavioWidget(data, options = {}) {
-  const { value = [], attribs, autodetect = true, ...rest } = options;
+  const { value, filters, attribs, autodetect = true, ...rest } = options;
 
   const container = document.createElement("div");
   // Everything else goes to the constructor rather than being assigned
@@ -44,37 +44,78 @@ export default function NavioWidget(data, options = {}) {
     if (autodetect) nv.addAllAttribs(attribs);
   }
 
-  // Applying a value must not echo back out as a new user change. The helper's
-  // own contract already covers the common case - assigning `.value` calls
-  // showValue() without dispatching - but a hand-rolled bidirectional binding
-  // could still drive us in a loop, so guard the apply itself.
+  // Applying a value must not echo back out as a new user change. The helper
+  // dispatches `input` on the element and then listens for it itself, so every
+  // setValue() lands back in showValue() one tick later - with rows as the
+  // value that would rebuild the user's drill-down as a flat id set. Comparing
+  // by identity is enough: getSelected() returns a fresh array each time, so
+  // only the array we just emitted can be the echo of our own change.
   let applying = false;
+  let lastEmitted;
 
-  function showValue() {
-    if (applying) return;
+  /** Is this a filter chain rather than a list of rows? */
+  const isChain = (v) =>
+    v && typeof v === "object" && !Array.isArray(v) && Array.isArray(v.filters)
+      ? true
+      : Array.isArray(v) && v.length > 0 && Array.isArray(v[0]);
+
+  /**
+   * Bring `.value` back in line with the selection, WITHOUT dispatching.
+   * Assigning `.value` must stay silent - that is what keeps a bind from
+   * looping - but the value it settles on still has to be the rows, not the
+   * chain the caller happened to hand us.
+   */
+  function syncValue() {
     applying = true;
     try {
-      // Accept either the bare chain or a { filters } wrapper, so a value
-      // round-tripped through snapshot() still applies.
-      const v = widget.value;
-      const filters = Array.isArray(v) ? v : v && v.filters;
-      if (filters) nv.setFilters(filters);
+      lastEmitted = nv.getSelected();
+      widget.value = lastEmitted;
     } finally {
       applying = false;
     }
   }
 
-  const widget = ReactiveWidget(container, { value, showValue });
+  function showValue() {
+    const v = widget.value;
+    if (applying || v === lastEmitted) return;
+    applying = true;
+    try {
+      if (isChain(v)) nv.setFilters(Array.isArray(v) ? v : v.filters);
+      else if (Array.isArray(v)) nv.setSelectedRows(v);
+    } finally {
+      applying = false;
+    }
+    syncValue();
+  }
+
+  const widget = ReactiveWidget(container, {
+    // Nothing filtered yet means everything is selected. Starting at [] told
+    // every downstream cell the user had selected no rows at all.
+    value: value === undefined ? nv.getSelected() : value,
+    showValue,
+  });
 
   // User-driven changes emit; programmatic ones already returned above.
   nv.onChange(() => {
     if (applying) return;
-    widget.setValue(nv.getFilters());
+    lastEmitted = nv.getSelected();
+    widget.setValue(lastEmitted);
   });
 
-  /** The rows surviving every level. Fresh whenever `input` has just fired. */
+  /** The rows surviving every level - the same array as `.value`. */
   widget.getSelected = () => nv.getSelected();
   widget.getVisible = () => nv.getVisible();
+
+  /**
+   * The multi-level filter chain. This, not the row list, is what survives a
+   * hop to another instance: rows are projections through this instance's own
+   * arrays, whereas the chain describes how they were chosen.
+   */
+  widget.getFilters = () => nv.getFilters();
+  widget.setFilters = (f) => {
+    widget.value = { filters: f };
+    return widget;
+  };
 
   /**
    * One-shot, non-reactive read of both halves of the state, for when you want
@@ -93,8 +134,10 @@ export default function NavioWidget(data, options = {}) {
     return widget;
   };
 
-  // Render whatever initial value was supplied.
-  showValue();
+  // Render whatever initial state was supplied. A chain is the more specific of
+  // the two, so it wins when both are given.
+  if (filters) widget.value = { filters };
+  else if (value !== undefined) showValue();
 
   return widget;
 }

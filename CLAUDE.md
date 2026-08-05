@@ -83,6 +83,19 @@ A one-level widget reports `[[], []]`. Test for "no filters" with
 `every(l => !l.length)`, never `length === 1`. An earlier fix tried to truncate
 it and was silently undone by the next redraw.
 
+**`NavioWidget.value` is the selected ROWS; the filter chain is separate.**
+`.value` used to be the chain, which broke the one thing the reactive-widget
+contract is for — `viewof selected = navio(data)` handed every downstream
+Observable cell a list of filter descriptors where it expected data. The chain
+lives on `getFilters()`/`setFilters()`/`snapshot()`. Both are needed and neither
+substitutes: rows are projections through *this* instance's arrays, so binding
+two Navios on `.value` gives the peer one flat level where the source has three.
+Bind Navio-to-Navio on the chain, Navio-to-anything-else on `.value`. A knock-on:
+assigning `.value` used to re-apply a widget's own filters back to itself on
+every user change, which quietly snapped its brush rect to row edges. It no
+longer does, so a source and a synced peer can differ by up to one row visually
+while selecting exactly the same rows.
+
 **Element ids are not unique across instances.** `#level0`, `#closeButton` and
 friends are emitted per instance. `d3.select("#level0")` returns the *first*
 instance's node. Scope to the instance (`selection.select(...)`,

@@ -166,6 +166,15 @@ external widget's range facet maps onto. The two are not interchangeable:
 - **`valueRange`** — a range over values. Portable, survives re-sorting, and
   cannot be produced by dragging.
 
+A third portable kind sits alongside them. **`FilterByIds`** (`type: "ids"`)
+names rows outright rather than describing them, matching on `nv.id()`. It is
+what an *external* selection means — a bound table's checked rows — and it is
+the only filter with no attribute at all, so `filterFromValue` handles it before
+resolving one. It is how `nv.setSelectedRows(rows)` is expressed, and hence how
+assigning `.value` on a `NavioWidget` lands. Selecting *every* row clears the
+chain instead of adding a redundant level, because that is exactly what an
+initial bind against an unfiltered peer sends.
+
 `itemAttr` on a range filter is the level's **sort** attribute captured at
 creation time, and it is read only by `toStr()` for the chip label — the
 predicate itself never touches it. That is why the chip goes stale after a
