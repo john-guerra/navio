@@ -163,6 +163,11 @@ function navio(selection, _h) {
   //            column-width slider - the default for that reason.
   //   "beside" to the right of the canvas; moves as the canvas widens.
   //   "over"   compact overlay on the widget, for layouts with no room.
+  //   "modal"  a real modal <dialog>: the browser centres it in the viewport
+  //            and puts it in the TOP LAYER, so no ancestor's overflow can
+  //            clip it and nothing on the page can paint over it. The only
+  //            placement that survives being embedded in a scrolling
+  //            container; the trade is that the page is inert while it is up.
   nv.settingsPlacement = "below";
   // Swap the settings panel's attribute picker. See defaultAttribPicker for
   // the contract; examples/settings plugs in @john-guerra/search-checkbox.
@@ -1172,8 +1177,7 @@ function navio(selection, _h) {
       }
     }
     nv.hardUpdate();
-    if (settingsPanel && settingsPanel.style("display") !== "none")
-      drawSettingsPanel();
+    if (settingsIsOpen()) drawSettingsPanel();
     return nv;
   };
 
@@ -1334,19 +1338,30 @@ function navio(selection, _h) {
       .text("⚙")
       .on("click", () => toggleSettings());
 
+    // A real <dialog>. In the three anchored placements it is opened with
+    // show() and positioned by placeSettingsPanel, exactly as the plain div
+    // was. `settingsPlacement: "modal"` opens it with showModal() instead,
+    // which hands the whole job to the browser: the TOP LAYER, so no ancestor
+    // can clip or out-paint it; centring; a ::backdrop; Escape; and a real
+    // focus trap. Measured, an `overflow: hidden` wrapper clipped the old
+    // absolutely-positioned panel by 347px, and nothing but the top layer
+    // gets out of that.
     settingsPanel = selection
-      .append("div")
+      .append("dialog")
       .attr("class", "_nv_settings")
-      .attr("role", "dialog")
       .attr("aria-label", "Widget settings")
       .attr("data-navio-instance", instanceId)
+      // The UA stylesheet gives dialog `position:absolute; inset:0; margin:auto`,
+      // which would centre it inside the container and fight the anchoring
+      // below. Modal mode resets these again in openSettingsPanel.
+      .style("margin", "0")
+      .style("inset", "auto")
       .style("position", "absolute")
       .style("bottom", "26px")
       .style("left", "2px")
       // Above the filter explanations, which are z-index 5 - they were being
       // painted over the panel.
       .style("z-index", 6)
-      .style("display", "none")
       // Bounded by the SCREEN, not by the widget.
       //
       // This was `70%`, and a percentage max-height resolves against the
@@ -1368,6 +1383,14 @@ function navio(selection, _h) {
       .style("box-shadow", "0 2px 10px rgba(0,0,0,0.25)")
       .style("font", "13px sans-serif")
       .style("text-align", "left")
+      // Escape reaches us as `cancel` on a modal dialog, and as a keydown on a
+      // non-modal one. Both close, and both hand focus back to the gear, so a
+      // keyboard user is never dropped at the top of the document.
+      .on("cancel", (event) => {
+        event.preventDefault(); // close it ourselves, so aria-expanded follows
+        toggleSettings(false);
+        settingsButton.node().focus();
+      })
       .on("keydown", (event) => {
         if (event.key === "Escape") {
           event.stopPropagation();
@@ -1376,6 +1399,9 @@ function navio(selection, _h) {
           return;
         }
         if (event.key !== "Tab") return;
+        // A modal dialog traps focus itself; doing it again here would fight
+        // the browser. Only the anchored, non-modal placements need this.
+        if (isModalSettings()) return;
         // Focus stays inside while the dialog is open.
         const items = focusablePanelItems();
         if (!items.length) return;
@@ -1391,6 +1417,16 @@ function navio(selection, _h) {
       });
   }
 
+  /** Does this placement hand positioning and dismissal to the browser? */
+  function isModalSettings() {
+    return nv.settingsPlacement === "modal";
+  }
+
+  /** Is the panel showing? The dialog's own `open` state is the truth. */
+  function settingsIsOpen() {
+    return !!(settingsPanel && settingsPanel.node().open);
+  }
+
   /**
    * Put the panel beside the drawn widget rather than on top of it, so the
    * effect of every control stays visible while you change it.
@@ -1404,6 +1440,22 @@ function navio(selection, _h) {
   function placeSettingsPanel() {
     if (!settingsPanel) return;
 
+    // "modal" is the whole point of using a real <dialog>: the browser centres
+    // it in the VIEWPORT and puts it in the top layer, so it cannot be clipped
+    // by a scrolling ancestor or out-painted by anything on the page. Hand the
+    // UA styles back and get out of the way.
+    if (isModalSettings()) {
+      settingsPanel
+        .style("position", null)
+        .style("margin", null)
+        .style("inset", null)
+        .style("top", null)
+        .style("bottom", null)
+        .style("left", null)
+        .style("right", null);
+      return;
+    }
+
     const host = selection.node(),
       cv = canvas;
     if (!host || !cv) return;
@@ -1412,6 +1464,9 @@ function navio(selection, _h) {
 
     // Reset both axes each time; the modes anchor differently.
     settingsPanel
+      .style("position", "absolute")
+      .style("margin", "0")
+      .style("inset", "auto")
       .style("top", null)
       .style("bottom", null)
       .style("left", null)
@@ -1447,16 +1502,31 @@ function navio(selection, _h) {
 
   function toggleSettings(force) {
     if (!settingsPanel) return;
-    const open =
-      force !== undefined ? force : settingsPanel.style("display") === "none";
-    if (open) drawSettingsPanel();
-    settingsPanel.style("display", open ? "block" : "none");
-    if (open) placeSettingsPanel();
-    settingsButton.attr("aria-expanded", open ? "true" : "false");
-    if (open) {
-      const items = focusablePanelItems();
-      if (items.length) items[0].focus();
+    const node = settingsPanel.node(),
+      open = force !== undefined ? force : !node.open;
+
+    if (!open) {
+      if (node.open) node.close();
+      settingsButton.attr("aria-expanded", "false");
+      return;
     }
+
+    drawSettingsPanel();
+    // Placement has to be settled BEFORE opening: modal mode gives the UA
+    // styles back, and the anchored modes take them away. Opening first would
+    // paint one frame in the wrong place.
+    placeSettingsPanel();
+    if (!node.open) {
+      if (isModalSettings()) node.showModal();
+      else node.show();
+    }
+    settingsButton.attr("aria-expanded", "true");
+
+    // show()/showModal() focus the first focusable child themselves, but the
+    // anchored modes are opened without the browser's autofocus handling in
+    // some paths - keep this so both behave the same.
+    const items = focusablePanelItems();
+    if (items.length) items[0].focus();
   }
 
   function settingsSection(parent, title) {
@@ -1606,6 +1676,32 @@ function navio(selection, _h) {
       .append("option")
       .attr("value", (d) => d)
       .property("selected", (d) => d === nv.orientation)
+      .text((d) => d);
+
+    // Where this very panel opens. Changing it has to reopen the dialog,
+    // because modal and non-modal are two different open() calls - a live
+    // switch cannot just restyle what is already showing.
+    const place = layout
+      .append("label")
+      .style("display", "flex")
+      .style("align-items", "center")
+      .style("gap", "6px")
+      .style("margin-bottom", "6px");
+    place.append("span").style("flex", "1").text("Settings panel");
+    const placeSel = place.append("select").on("change", function () {
+      nv.settingsPlacement = this.value;
+      persistSettings();
+      toggleSettings(false);
+      toggleSettings(true);
+      announce(`Settings panel ${this.value}`);
+    });
+    placeSel
+      .selectAll("option")
+      .data(["below", "beside", "over", "modal"])
+      .enter()
+      .append("option")
+      .attr("value", (d) => d)
+      .property("selected", (d) => d === nv.settingsPlacement)
       .text((d) => d);
 
     for (const opt of LIVE_OPTIONS) {
@@ -3187,8 +3283,7 @@ function navio(selection, _h) {
       nv.updateData(dataIs);
       // The panel lists the same order, so it has to follow a drag made on the
       // widget itself - otherwise the two disagree until it is reopened.
-      if (settingsPanel && settingsPanel.style("display") !== "none")
-        drawSettingsPanel();
+      if (settingsIsOpen()) drawSettingsPanel();
       persistSettings();
     }
   }
@@ -4563,8 +4658,7 @@ function navio(selection, _h) {
     if (shouldDrawBrushes) restoreBrushes();
 
     // The canvas may have changed size under an open panel.
-    if (settingsPanel && settingsPanel.style("display") !== "none")
-      placeSettingsPanel();
+    if (settingsIsOpen()) placeSettingsPanel();
   };
 
   // Tears down everything this instance attached outside its own container,

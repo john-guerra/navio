@@ -364,15 +364,22 @@ A gear in the widget's corner opens a panel for changing options live: which
 columns are shown, their order, orientation, and the geometry.
 
 ```js
-nv.settings = false;             // hide the gear entirely (default true)
-nv.settingsPlacement = "beside"; // or "over"; default "below"
+nv.settings = false;            // hide the gear entirely (default true)
+nv.settingsPlacement = "modal"; // "below" (default) | "beside" | "over" | "modal"
 ```
 
-The panel opens **below** the widget rather than over it, so you can watch the
-effect of each control as you change it — Navio's canvas is usually much
-so you can watch the effect of each control as you change it. Below rather than
-beside because column width changes the canvas *width* — a panel below does not
-move while you drag that slider. `"beside"` and `"over"` are also available.
+The panel is a real `<dialog>`. Three of the four placements anchor it to the
+widget so you can watch the effect of each control as you change it: `"below"`
+is the default because column width changes the canvas *width*, and a panel
+below therefore does not move while you drag that slider; `"beside"` sits to
+the right of the canvas; `"over"` is a compact overlay for layouts with no room.
+
+`"modal"` opens it with `showModal()` and hands the whole job to the browser —
+centring, `Escape`, a focus trap, a `::backdrop`, and the **top layer**. Use it
+when the widget is embedded somewhere that clips: an ancestor with
+`overflow: hidden` cuts off an absolutely positioned panel at *any* z-index, and
+the top layer is the only way out. The trade is that the page is inert while the
+panel is up. You can also switch placement from inside the panel itself.
 
 **Hiding a column is not removing it.** It keeps its type, its colour scale and
 its place in the order — and any selection you have already made survives,
