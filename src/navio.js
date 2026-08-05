@@ -112,6 +112,9 @@ function navio(selection, _h) {
     // change, reorder and header drag - a <details> element's own state would
     // spring back open each time.
     collapsedSections = new Set(),
+    // True while a pointer is held down on a control inside the settings
+    // panel, so the panel cannot reposition itself mid-drag.
+    panelPointerHeld = false,
     // What this widget looked like before any stored settings landed on it -
     // the state Reset goes back to. Captured once, the first time there are
     // attributes to capture.
@@ -1443,6 +1446,18 @@ function navio(selection, _h) {
       // browser - the button has to follow. Making the dialog's own event the
       // single source of truth is why a peer can close this panel directly and
       // still leave a correct aria-expanded behind.
+      // Held while a control inside the panel is being dragged. placeSettings-
+      // Panel bails out meanwhile, so a slider cannot walk away from the
+      // cursor that is holding it. Released on the document because a drag
+      // very often ends outside the element it started on.
+      .on("pointerdown", () => {
+        panelPointerHeld = true;
+        if (typeof document !== "undefined")
+          document.addEventListener("pointerup", releasePanelPointer, {
+            once: true,
+            capture: true,
+          });
+      })
       .on("close", () => {
         if (settingsButton) settingsButton.attr("aria-expanded", "false");
         if (typeof document !== "undefined")
@@ -1498,6 +1513,13 @@ function navio(selection, _h) {
   function placeSettingsPanel() {
     if (!settingsPanel) return;
 
+    // Never move the panel out from under a pointer that is holding one of its
+    // own controls. Dragging "Size along records" from 420 to 1180 grew the
+    // widget by 760px, and a below-placed panel follows the canvas bottom - so
+    // the slider ran down the page away from the cursor and off the screen.
+    // From the user's side the panel simply vanished mid-drag.
+    if (panelPointerHeld) return;
+
     const host = selection.node(),
       cv = canvas;
     if (!host || !cv) return;
@@ -1531,7 +1553,32 @@ function navio(selection, _h) {
     // slider is dragged - which is the point.
     settingsPanel
       .style("left", "2px")
-      .style("top", `${Math.round(c.bottom - h.top) + 30}px`);
+      .style(
+        "top",
+        `${clampToViewport(Math.round(c.bottom - h.top) + 30, h)}px`
+      );
+  }
+
+  /**
+   * A last resort for a panel that would land entirely off the bottom of the
+   * window - a 1200px `height` on a laptop puts a below-placed panel past the
+   * fold with nothing on screen to say where it went.
+   *
+   * Deliberately NOT a general "keep it fully visible" clamp. The panel is
+   * 70vh at full stretch, so a fits-entirely rule fires almost always and drags
+   * the panel up over the canvas, which is what "below" exists to avoid. Only
+   * step in when there is effectively nothing left to see, and then show just
+   * enough of the top edge to be findable and scrollable to.
+   */
+  function clampToViewport(top, hostRect) {
+    if (typeof window === "undefined") return top;
+    const KEEP_VISIBLE = 60;
+    const absoluteTop = hostRect.top + top;
+    if (absoluteTop <= window.innerHeight - KEEP_VISIBLE) return top;
+    return Math.max(
+      0,
+      Math.round(window.innerHeight - KEEP_VISIBLE - hostRect.top)
+    );
   }
 
   function focusablePanelItems() {
@@ -1569,8 +1616,12 @@ function navio(selection, _h) {
     }
 
     drawSettingsPanel();
-    placeSettingsPanel();
+    // Show FIRST, then place. A closed <dialog> is display:none and measures
+    // zero, and the placement now needs the panel's own height to keep it
+    // inside the viewport - placing first meant the clamp did nothing on open
+    // and then yanked the panel ~190px the first time anything repositioned it.
     if (!node.open) node.show();
+    placeSettingsPanel();
     settingsButton.attr("aria-expanded", "true");
 
     focusFirstPanelItem();
@@ -1584,6 +1635,12 @@ function navio(selection, _h) {
     if (typeof document !== "undefined") {
       document.addEventListener("pointerdown", dismissOnOutsidePointer, true);
     }
+  }
+
+  /** End a panel drag, and settle the position the drag was holding still. */
+  function releasePanelPointer() {
+    panelPointerHeld = false;
+    if (settingsIsOpen()) placeSettingsPanel();
   }
 
   /** Close the panel when a pointer goes down outside it and outside the gear. */
