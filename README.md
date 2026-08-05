@@ -393,7 +393,11 @@ nv.getAttribTypes();                  // the switchable set, for a picker
 ```
 
 Reorder by dragging an attribute name in the panel, or with the ↑ ↓ buttons
-(which is the keyboard path).
+(which is the keyboard path). Dragging a column header on the widget itself
+works too, and the panel follows it.
+
+**Sorting vs reordering:** a click on a header sorts, a drag reorders. They are
+separated by distance (`nv.clickTolerance`), so no modifier key is needed.
 
 ```js
 nv.setAttribVisible("beak", false);  // hide one

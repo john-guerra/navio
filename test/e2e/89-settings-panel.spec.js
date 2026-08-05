@@ -479,3 +479,129 @@ test("setAttribType rejects an unknown type", async ({ page }) => {
     "cat"
   );
 });
+
+test("a plain click sorts and a plain drag reorders - no modifier", async ({
+  page,
+}) => {
+  await page.goto(
+    "/test/e2e/fixtures/vertical.html?orientation=horizontal&n=40"
+  );
+  await expect(page.locator("#nv canvas")).toHaveCount(1);
+
+  const box = await page.locator("#nv canvas").boundingBox();
+  const g = await page.evaluate(() => ({ aw: window.nv.attribWidth }));
+  const rows = () =>
+    page.evaluate(() =>
+      window.nv
+        .getRowsAtLevel(0)
+        .map((r) => r.id)
+        .join(",")
+    );
+  const cols = () =>
+    page.evaluate(() =>
+      window.nv
+        .getAttribs()
+        .map((a) => (typeof a === "function" ? a.name : a))
+        .join(",")
+    );
+
+  // Click: sorts, does not reorder. Shift used to be required for the drag,
+  // which was undiscoverable; a distance threshold separates them now.
+  const r0 = await rows();
+  const c0 = await cols();
+  await page.mouse.click(box.x + g.aw * 4.5, box.y + 88);
+  await expect.poll(rows).not.toBe(r0);
+  expect(await cols()).toBe(c0);
+
+  // Drag: reorders.
+  await page.mouse.move(box.x + g.aw * 4.5, box.y + 88);
+  await page.mouse.down();
+  await page.mouse.move(box.x + g.aw * 1.5, box.y + 88, { steps: 12 });
+  await page.mouse.up();
+  await expect.poll(cols).not.toBe(c0);
+  expect((await cols()).split(",").sort()).toEqual(c0.split(",").sort());
+});
+
+test("dragging a header updates the open panel", async ({ page }) => {
+  await page.goto(
+    "/test/e2e/fixtures/vertical.html?orientation=horizontal&n=40"
+  );
+  await expect(page.locator("#nv canvas")).toHaveCount(1);
+  await page.locator("#nv ._nv_gear").click();
+
+  const panelOrder = () =>
+    page.evaluate(() =>
+      Array.from(
+        document.querySelectorAll("#nv ._nv_settings label[draggable]")
+      )
+        .map((l) => l.textContent)
+        .join(",")
+    );
+  const before = await panelOrder();
+
+  const box = await page.locator("#nv canvas").boundingBox();
+  const aw = await page.evaluate(() => window.nv.attribWidth);
+  await page.mouse.move(box.x + aw * 4.5, box.y + 88);
+  await page.mouse.down();
+  await page.mouse.move(box.x + aw * 1.5, box.y + 88, { steps: 12 });
+  await page.mouse.up();
+
+  // The panel lists the same order, so it must follow.
+  await expect.poll(panelOrder).not.toBe(before);
+});
+
+test("Show none hides every column, Show all brings them back", async ({
+  page,
+}) => {
+  await page.goto(FIXTURE);
+  await expect(page.locator("#nv canvas")).toHaveCount(1);
+  await page.locator("#nv ._nv_gear").click();
+
+  const shown = () => page.evaluate(() => window.nv.getVisibleAttribs().length);
+  const all = await shown();
+
+  await page.locator('#nv ._nv_settings button:text-is("Show none")').click();
+  await expect.poll(shown).toBe(0);
+
+  await page.locator('#nv ._nv_settings button:text-is("Show all")').click();
+  await expect.poll(shown).toBe(all);
+});
+
+test("filter explanations clear the panel and each other", async ({ page }) => {
+  await page.goto(
+    "/test/e2e/fixtures/vertical.html?orientation=horizontal&n=40"
+  );
+  await expect(page.locator("#nv canvas")).toHaveCount(1);
+  await page.locator("#nv ._nv_gear").click();
+  await page.evaluate(() =>
+    window.nv.setFilters([
+      [{ type: "value", attrib: "category", value: "alpha" }],
+    ])
+  );
+
+  const boxes = await page.evaluate(() => {
+    const ex = Array.from(
+      document.querySelectorAll("#nv .filterExplanation")
+    ).map((e) => {
+      const b = e.getBoundingClientRect();
+      return { left: b.left, right: b.right, top: b.top };
+    });
+    const p = document.querySelector("#nv ._nv_settings");
+    return {
+      ex,
+      panelZ: +getComputedStyle(p).zIndex,
+      exZ: +getComputedStyle(document.querySelector("#nv .explanations"))
+        .zIndex,
+      gear: document.querySelector("#nv ._nv_gear").getBoundingClientRect()
+        .bottom,
+    };
+  });
+
+  // The panel is drawn over the explanations, not under them.
+  expect(boxes.panelZ).toBeGreaterThan(boxes.exZ);
+  // Level 0's explanation ends before level 1's begins.
+  expect(boxes.ex.length).toBeGreaterThan(1);
+  expect(boxes.ex[0].right).toBeLessThanOrEqual(boxes.ex[1].left);
+  // And it clears the gear, which shares the bottom-left corner.
+  expect(boxes.ex[0].top).toBeGreaterThanOrEqual(boxes.gear - 1);
+});

@@ -1236,7 +1236,7 @@ function navio(selection, _h) {
       .style("position", "absolute")
       .style("bottom", "2px")
       .style("left", "2px")
-      .style("z-index", 3)
+      .style("z-index", 6)
       .style("line-height", "1")
       .style("padding", "3px 6px")
       .text("⚙")
@@ -1251,7 +1251,9 @@ function navio(selection, _h) {
       .style("position", "absolute")
       .style("bottom", "26px")
       .style("left", "2px")
-      .style("z-index", 4)
+      // Above the filter explanations, which are z-index 5 - they were being
+      // painted over the panel.
+      .style("z-index", 6)
       .style("display", "none")
       .style("max-height", "70%")
       .style("overflow-y", "auto")
@@ -1805,13 +1807,23 @@ function navio(selection, _h) {
       .text("\u2193")
       .on("click", (event, n) => move(n, 1));
 
-    wrap
+    const bulk = wrap
+      .append("div")
+      .style("display", "flex")
+      .style("gap", "6px")
+      .style("margin-top", "6px");
+    bulk
       .append("button")
       .attr("type", "button")
       .call(styleButton)
-      .style("margin-top", "6px")
       .text("Show all")
       .on("click", () => onChange(names.slice()));
+    bulk
+      .append("button")
+      .attr("type", "button")
+      .call(styleButton)
+      .text("Show none")
+      .on("click", () => onChange([]));
 
     return wrap.node();
   }
@@ -2534,8 +2546,15 @@ function navio(selection, _h) {
   // `selection`/`dataIs` from the closure rather than taking the level-overlay
   // selections the other draw* helpers do, so it needs no arguments.
   function drawFilterExplanationsHTML() {
-    const lastAttrib = xScale.domain()[xScale.domain().length - 1],
-      rightBorder = (level) => x(lastAttrib, level) + xScale.bandwidth() + 2;
+    // Each level's filters sit under THAT level's columns, left-aligned with
+    // it. They used to start at the level's right edge, which put them in the
+    // gap between levels - about 25px wide - so a 200px min-width ran straight
+    // across the level beside it. Left-aligning gives a full level's width.
+    const levelLeft = (level) => levelScale(level);
+    const explanationWidth = (level) =>
+      level < dataIs.length - 1
+        ? Math.max(70, levelLeft(level + 1) - levelLeft(level) - 8)
+        : Math.max(220, xScale.range()[1]);
 
     const filterExps = selection
       .select("div.explanations")
@@ -2550,14 +2569,23 @@ function navio(selection, _h) {
       .style("position", "absolute")
       .style("top", "0")
       .style("left", "0")
-      .style("min-width", "200px")
+      // Bounded by the distance to the next level's explanation, so a long
+      // filter label wraps instead of running across the level beside it.
+      // min-width used to be 200px with levels only ~75px apart, which
+      // guaranteed the overlap.
+      // An explicit width, not just max-width: the parent .explanations div is
+      // absolutely positioned with no width of its own, so the available width
+      // for shrink-to-fit is 0 and the text collapsed to its longest single
+      // word (37px for a 117px budget) no matter what max-width said.
+      .style("width", (_, i) => `${explanationWidth(i)}px`)
+      .style("overflow-wrap", "break-word")
       .style("transform", (_, i) => {
         // Sits just past the last column, at the far end of the records - so
         // both coordinates come from the axes and have to be transposed (#22).
-        const p = toXY(
-          rightBorder(i),
-          yScales[i].range()[1] + nv.filterFontSize * 1.2
-        );
+        // Below the count label (range()[1] + 15) AND below the settings gear,
+        // which occupies the container's bottom-left corner - the same place
+        // level 0's explanation wants.
+        const p = toXY(levelLeft(i), yScales[i].range()[1] + 30);
         return `translate(${p.x}px, ${p.y}px)`;
       });
 
@@ -2655,6 +2683,12 @@ function navio(selection, _h) {
         .call(
           d3
             .drag()
+            // Below this many pixels d3 does not suppress the click, so a
+            // click still sorts and only a real drag reorders. That is what
+            // the Shift requirement used to stand in for - and Shift was
+            // undiscoverable, and inconsistent with the settings panel where
+            // a plain drag works.
+            .clickDistance(nv.clickTolerance)
             .container(attribOverlayEnter.merge(attribOverlay).node())
             .on("start", attribDragstarted)
             .on("drag", attribDragged)
@@ -2817,7 +2851,6 @@ function navio(selection, _h) {
 
   function attribDragstarted(event, d) {
     if (nv.DEBUG) console.log("attrib drag start", d);
-    if (!event.sourceEvent.shiftKey) return;
 
     d3.select(this.parentNode).attr("transform", (dd) =>
       draggedHeaderTransform(event, dd)
@@ -2825,8 +2858,6 @@ function navio(selection, _h) {
   }
 
   function attribDragged(event) {
-    if (!event.sourceEvent.shiftKey) return;
-
     d3.select(this.parentNode).attr("transform", (dd) =>
       draggedHeaderTransform(event, dd)
     );
@@ -2834,7 +2865,6 @@ function navio(selection, _h) {
 
   function attribDragended(event, d) {
     if (nv.DEBUG) console.log("attrib drag end", d);
-    if (!event.sourceEvent.shiftKey) return;
 
     let attrDraggedInto = invertOrdinalScale(
       xScale,
@@ -2852,6 +2882,11 @@ function navio(selection, _h) {
       pos = attribsOrdered.indexOf(attrDraggedInto);
       moveAttrToPos(d.attrib, pos);
       nv.updateData(dataIs);
+      // The panel lists the same order, so it has to follow a drag made on the
+      // widget itself - otherwise the two disagree until it is reopened.
+      if (settingsPanel && settingsPanel.style("display") !== "none")
+        drawSettingsPanel();
+      persistSettings();
     }
   }
 
