@@ -318,7 +318,9 @@ nv.setOptions({ ... }) // apply to a live instance and redraw
 ```
 
 An unrecognised key warns rather than being silently ignored — `attribWidht: 20`
-used to land as a dead property and do nothing.
+used to land as a dead property and do nothing. So does naming a column that is
+not in your data (`nv.addCategoricalAttrib("speceis")` used to draw a stripe of
+nulls) or sorting by one that was never added.
 
 **Renamed:** `maxNumDistictForCategorical` and `maxNumDistictForOrdered` were
 misspelled; they are now `maxNumDistinct...`. The old names still work and warn.

@@ -146,3 +146,87 @@ test("setOptions warns for options that are read once", async ({ page }) => {
   // The live one still applied.
   expect(await page.evaluate(() => window.a.attribWidth)).toBe(30);
 });
+
+test("id is a real option, not an unknown one", async ({ page }) => {
+  const warnings = [];
+  page.on("console", (m) => {
+    if (m.type() === "warning") warnings.push(m.text());
+  });
+  await page.goto(FIXTURE);
+  await expect(page.locator("#w canvas")).toHaveCount(1);
+
+  // nv.id is an accessor defined late in the closure, so a naive schema
+  // snapshot rejects it - and assigning it would replace the function.
+  expect(warnings.join("\n")).not.toMatch(/unknown option "id"/);
+  expect(await page.evaluate(() => window.w.navio.id())).toBe("id");
+});
+
+// Requested: a misspelled COLUMN should say so, not draw a stripe of nulls.
+test("adding an attribute that is not in the data warns", async ({ page }) => {
+  const warnings = [];
+  page.on("console", (m) => {
+    if (m.type() === "warning") warnings.push(m.text());
+  });
+  await page.goto(FIXTURE);
+  await expect(page.locator("#a canvas")).toHaveCount(1);
+
+  await page.evaluate(() => window.a.addCategoricalAttrib("caat"));
+
+  expect(warnings.join("\n")).toMatch(/"caat" is not in the data/);
+  // It still lists what IS available, so the typo is obvious.
+  expect(warnings.join("\n")).toMatch(/Available: .*\bcat\b/);
+});
+
+test("a real attribute does not warn", async ({ page }) => {
+  const warnings = [];
+  page.on("console", (m) => {
+    if (m.type() === "warning") warnings.push(m.text());
+  });
+  await page.goto(FIXTURE);
+  await expect(page.locator("#a canvas")).toHaveCount(1);
+
+  await page.evaluate(() => {
+    window.a.data(window.rows); // reset so "v" is addable
+    window.a.addSequentialAttrib("v");
+  });
+  expect(warnings.join("\n")).not.toMatch(/is not in the data/);
+});
+
+test("sorting by an attribute that was never added warns and does nothing", async ({
+  page,
+}) => {
+  const warnings = [];
+  page.on("console", (m) => {
+    if (m.type() === "warning") warnings.push(m.text());
+  });
+  await page.goto(FIXTURE);
+  await expect(page.locator("#a canvas")).toHaveCount(1);
+
+  const before = await page.evaluate(() =>
+    window.a
+      .getRowsAtLevel(0)
+      .map((r) => r.id)
+      .join(",")
+  );
+  await page.evaluate(() => window.a.sortBy("nope"));
+
+  expect(warnings.join("\n")).toMatch(/"nope" is not one of the attributes/);
+  const after = await page.evaluate(() =>
+    window.a
+      .getRowsAtLevel(0)
+      .map((r) => r.id)
+      .join(",")
+  );
+  expect(after).toBe(before);
+
+  // And a real one still sorts.
+  await page.evaluate(() => window.a.sortBy("v", true));
+  expect(
+    await page.evaluate(() =>
+      window.a
+        .getRowsAtLevel(0)
+        .map((r) => r.id)
+        .join(",")
+    )
+  ).not.toBe(before);
+});

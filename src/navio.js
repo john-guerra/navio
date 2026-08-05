@@ -276,10 +276,21 @@ function navio(selection, _h) {
    * passing extra keys, and silence is what let `attribWidht: 999` sit there
    * doing nothing. `height` and `data` are handled by the caller, not here.
    */
+  // Getter/setter APIs rather than plain properties, so they are applied by
+  // CALLING them. They are defined further down the closure, after
+  // OPTION_NAMES is snapshotted, so without this list `{ id: "id" }` - the
+  // commonest thing anyone configures - would be rejected as unknown. Worse,
+  // assigning it would replace the accessor function with a string.
+  const ACCESSOR_OPTIONS = new Set(["id", "updateCallback", "links"]);
+
   function applyOptions(options = {}) {
     if (!options || typeof options !== "object") return;
     for (const [key, value] of Object.entries(options)) {
       if (key === "height" || key === "data" || key === "value") continue;
+      if (ACCESSOR_OPTIONS.has(key)) {
+        nv[key](value);
+        continue;
+      }
       if (!OPTION_NAMES.has(key) && !(key in RENAMED)) {
         console.warn(
           `navio: unknown option "${key}" - ignored. ` +
@@ -296,6 +307,8 @@ function navio(selection, _h) {
   nv.getOptions = function () {
     const out = {};
     for (const key of OPTION_NAMES) out[key] = nv[key];
+    // The accessor-backed ones, read through their getters.
+    out.id = nv.id();
     return out;
   };
 
@@ -322,11 +335,6 @@ function navio(selection, _h) {
     nv.hardUpdate();
     return nv;
   };
-
-  // Construction-time options, applied now that the defaults and the schema
-  // both exist - and before init(), so the ones read during construction
-  // (tooltip*, settings*) see the caller's values rather than the defaults.
-  if (_options) applyOptions(_options);
 
   // function nozoom(event) {
   //   if (nv.DEBUG) console.log("nozoom");
@@ -3238,6 +3246,26 @@ function navio(selection, _h) {
     return nv;
   };
 
+  /**
+   * Is this attribute actually present in the data?
+   *
+   * Checks a sample rather than every row: a column can legitimately be null
+   * in the first few records without being absent. Returns true when there is
+   * no data yet - the caller is allowed to declare attributes first.
+   */
+  function attribExistsInData(attr) {
+    if (!data.length) return true;
+    const name = getAttribName(attr);
+    // Derived columns are not row properties. See #88.
+    if (name === "__seqId" || name === "selected") return true;
+    if (typeof attr === "function") return true; // an accessor computes its own
+    const sample = Math.min(data.length, nv.howManyItemsShouldSearchForNotNull);
+    for (let i = 0; i < sample; i++) {
+      if (data[i] != null && name in data[i]) return true;
+    }
+    return false;
+  }
+
   nv.addAttrib = function (attr, scale) {
     if (scale === undefined) {
       scale = d3.scaleOrdinal(d3.schemeCategory10);
@@ -3245,6 +3273,15 @@ function navio(selection, _h) {
     if (dAttribs.has(getAttribName(attr))) {
       console.warn(`navio.addAttrib: attribute ${attr} already added`);
       return;
+    }
+    // A misspelled column used to be added silently and drawn as a stripe of
+    // nulls, which looks like a data problem rather than a typo.
+    if (!attribExistsInData(attr)) {
+      const known = Object.keys(data[0] || {});
+      console.warn(
+        `navio.addAttrib: "${getAttribName(attr)}" is not in the data. ` +
+          `The column will be empty. Available: ${known.join(", ")}`
+      );
     }
     attribsOrdered.push(attr);
     dAttribs.set(getAttribName(attr), attr);
@@ -3792,9 +3829,17 @@ function navio(selection, _h) {
     );
 
     if (_attrib !== undefined) {
-      // if (attribsOrdered.indexOf(_attrib)===-1) {
-      //   throw `sortBy: ${_attrib} is not in the list of attributes`
-      // }
+      // Sorting by a column that was never added silently did nothing - the
+      // comparator read undefined for every row, so the order came out
+      // unchanged and looked like a Navio bug rather than a typo.
+      if (!dAttribs.has(getAttribName(_attrib))) {
+        console.warn(
+          `navio.sortBy: "${getAttribName(_attrib)}" is not one of the ` +
+            `attributes. Nothing was sorted. Available: ` +
+            `${Array.from(dAttribs.keys()).join(", ")}`
+        );
+        return nv;
+      }
       return applySort(level, _attrib, _desc);
     } else {
       return dSortBy[level];
@@ -3947,6 +3992,13 @@ function navio(selection, _h) {
 
     return nv;
   };
+
+  // Construction-time options. Applied HERE, not next to the schema: the
+  // accessor-backed ones (nv.id, nv.updateCallback, nv.links) are defined
+  // further down the closure and do not exist yet up there. This is still
+  // before init(), which is what reads the construction-time options
+  // (tooltip*, settings*), so they land in time.
+  if (_options) applyOptions(_options);
 
   init();
   return nv;
