@@ -96,6 +96,20 @@ every user change, which quietly snapped its brush rect to row edges. It no
 longer does, so a source and a synced peer can differ by up to one row visually
 while selecting exactly the same rows.
 
+**A percentage `max-height` resolves against the widget, not the screen.** The
+settings panel was capped at `70%`, which is 70% of the Navio container — 140px
+on a 200px-tall widget, so the panel rendered as a scrolling sliver cut off
+mid-list. In an Observable notebook, with a block of code immediately below, that
+reads exactly like the panel being painted *under* the next cell, and the obvious
+fix (raise the z-index) does nothing. `test/e2e/93-stacking.spec.js` reproduces
+observablehq.com's real cell nesting — `.notebook` is `position:relative;
+z-index:0`, cells are `position:relative` with `z-index:auto`, CodeMirror's
+`.cm-scroller` is `position:relative; z-index:0` — and shows the panel wins at
+any z-index down to 1. It also pins the diagnosis: if that test ever fails, the
+problem really has become one of stacking. Note too that observablehq.com renders
+the whole notebook body inside one sandboxed cross-origin iframe, so nothing
+Navio draws can escape a cell by z-index anyway.
+
 **Element ids are not unique across instances.** `#level0`, `#closeButton` and
 friends are emitted per instance. `d3.select("#level0")` returns the *first*
 instance's node. Scope to the instance (`selection.select(...)`,

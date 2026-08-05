@@ -415,6 +415,13 @@ Panel changes are remembered in `localStorage` and reapplied on the next load.
 Direct property assignments cannot notify anyone, so call `nv.saveSettings()`
 after those if you want them remembered.
 
+The key is scoped to the **page** — `navio.settings.<origin><pathname>.<slot>` —
+so a widget in one notebook no longer inherits the column layout of a widget in
+an unrelated one. Within a page, instances are told apart by the container's own
+`id` when it has one, falling back to construction order. The query string and
+hash are deliberately left out, so filtering the page or following a `#anchor`
+is still the same widget.
+
 ```js
 nv.settingsKey = "my-page";   // storage key; null turns persistence off
 nv.getSettings() / nv.setSettings(cfg)

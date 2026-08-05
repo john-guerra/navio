@@ -212,3 +212,73 @@ test("horizontal is unchanged by the refactor", async ({ page }) => {
   );
   expect(xs).toEqual([...xs].sort((a, b) => a - b));
 });
+
+// The container used to be set to the `height` option in both orientations.
+// `height` is the extent along the RECORD axis, which is the screen height only
+// when the widget is horizontal - so a vertical widget reserved a tall band of
+// empty space below itself, and adding or hiding a column never changed it.
+test("in vertical the container fits the attributes, not the record extent", async ({
+  page,
+}) => {
+  await page.goto(V);
+  await expect(page.locator("#nv canvas")).toHaveCount(1);
+
+  const m = await page.evaluate(() => {
+    const h = document.querySelector("#nv").getBoundingClientRect();
+    const c = document.querySelector("#nv canvas").getBoundingClientRect();
+    return {
+      heightOption: window.nv.height(),
+      containerH: Math.round(h.height),
+      canvasH: Math.round(c.height),
+      canvasW: Math.round(c.width),
+      slack: Math.round(h.bottom - c.bottom),
+    };
+  });
+
+  // `height` became the WIDTH: records run across.
+  expect(m.canvasW).toBe(m.heightOption);
+  // And the container is exactly as tall as the columns need, with nothing
+  // left over underneath.
+  expect(m.containerH).toBe(m.canvasH);
+  expect(m.containerH).toBeLessThan(m.heightOption / 2);
+  expect(m.slack).toBe(0);
+});
+
+test("hiding a column shortens the vertical container", async ({ page }) => {
+  await page.goto(V);
+  await expect(page.locator("#nv canvas")).toHaveCount(1);
+
+  const containerH = () =>
+    page.evaluate(() =>
+      Math.round(document.querySelector("#nv").getBoundingClientRect().height)
+    );
+  const before = await containerH();
+
+  await page.evaluate(() => {
+    const names = window.nv
+      .getAttribs()
+      .map((a) => (typeof a === "function" ? a.name : a));
+    window.nv.setAttribVisible(names[names.length - 1], false);
+  });
+
+  await expect.poll(containerH).toBeLessThan(before);
+  // By exactly one attribute band.
+  expect(before - (await containerH())).toBe(
+    await page.evaluate(() => window.nv.attribWidth)
+  );
+});
+
+test("horizontal keeps the container at the height option", async ({
+  page,
+}) => {
+  await page.goto(H);
+  await expect(page.locator("#nv canvas")).toHaveCount(1);
+
+  const m = await page.evaluate(() => ({
+    heightOption: window.nv.height(),
+    containerH: Math.round(
+      document.querySelector("#nv").getBoundingClientRect().height
+    ),
+  }));
+  expect(m.containerH).toBe(m.heightOption);
+});

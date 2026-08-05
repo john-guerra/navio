@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Navio in an Observable-shaped page</title>
+    <style>
+      body {
+        font:
+          14px system-ui,
+          sans-serif;
+        margin: 0;
+        padding: 20px;
+      }
+      /* The nesting observablehq.com actually produces, read off the live page.
+         Only the properties that affect stacking are reproduced. */
+      .notebook {
+        position: relative;
+        z-index: 0; /* creates a stacking context */
+        max-width: 900px;
+      }
+      .node {
+        position: relative; /* z-index auto - NOT a stacking context */
+        margin-bottom: 8px;
+      }
+      .cm-editor {
+        position: relative;
+        background: #f7f7f7;
+        border-radius: 4px;
+      }
+      .cm-scroller {
+        position: relative;
+        z-index: 0; /* creates a stacking context */
+        padding: 10px 14px;
+        font-family: ui-monospace, Menlo, monospace;
+        line-height: 1.5;
+      }
+      .tok-comment {
+        color: #7c8a94;
+      }
+      .tok-kw {
+        color: #a626a4;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="notebook">
+      <div class="node" id="widgetCell">
+        <div id="nv"></div>
+      </div>
+
+      <div class="node" id="codeCell">
+        <div class="cm-editor">
+          <div class="cm-scroller">
+            <div><span class="tok-kw">viewof</span> selected = navio(data)</div>
+            <div class="tok-comment">// a code cell below the widget - the</div>
+            <div class="tok-comment">// thing the settings panel has to</div>
+            <div class="tok-comment">// paint over when it opens downward</div>
+            <div class="tok-comment">// line 5</div>
+            <div class="tok-comment">// line 6</div>
+            <div class="tok-comment">// line 7</div>
+            <div class="tok-comment">// line 8</div>
+            <div class="tok-comment">// line 9</div>
+            <div class="tok-comment">// line 10</div>
+            <div class="tok-comment">// line 11</div>
+            <div class="tok-comment">// line 12</div>
+            <div class="tok-comment">// line 13</div>
+            <div class="tok-comment">// line 14</div>
+            <div class="tok-comment">// line 15</div>
+            <div class="tok-comment">// line 16</div>
+            <div class="tok-comment">// line 17</div>
+            <div class="tok-comment">// line 18</div>
+            <div class="tok-comment">// line 19</div>
+            <div class="tok-comment">// line 20</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="/node_modules/d3/dist/d3.js"></script>
+    <script src="/node_modules/popper.js/dist/umd/popper.js"></script>
+    <script src="/dist/navio.js"></script>
+    <script>
+      /* global d3, navio */
+      const CATS = ["alpha", "beta", "gamma"];
+      const rows = d3.range(60).map((i) => ({
+        id: i + 1,
+        category: CATS[i % 3],
+        value: (i * 37) % 100,
+        score: (i * 13) % 50,
+      }));
+
+      const params = new URLSearchParams(location.search);
+      window.nv = new navio(d3.select("#nv"), {
+        height: 200,
+        settingsPlacement: params.get("placement") || "below",
+      });
+      window.nv.id("id");
+      window.nv.data(rows);
+      window.nv.addAllAttribs();
+    </script>
+  </body>
+</html>

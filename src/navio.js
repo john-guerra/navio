@@ -1178,15 +1178,35 @@ function navio(selection, _h) {
   };
 
   /**
-   * Where panel settings are remembered between page loads. Set to null to
-   * turn persistence off. instanceId keeps two Navios on one page apart -
-   * which assumes they are constructed in the same order each load, so name
-   * the key yourself if that is not true for your page.
+   * Where panel settings are remembered between page loads. Set
+   * `nv.settingsKey = null` to turn persistence off, or to a string to name the
+   * bucket yourself.
+   *
+   * The key is scoped to the PAGE, not just to the instance. It used to be
+   * `navio.settings.<n>`, which is the same string on every page of an origin -
+   * so the first Navio in one notebook silently inherited the column layout of
+   * the first Navio in a completely different one. The pathname is the coarsest
+   * thing that separates them; the query and hash are deliberately left out so
+   * that filtering the page, or following a link with #anchor, does not look
+   * like a different widget.
+   *
+   * Within a page, instances are told apart by the container's own id when it
+   * has one - stable across reloads however the page is built - falling back to
+   * construction order.
    */
+  function settingsSlot() {
+    const host = selection && selection.node && selection.node();
+    const domId = host && host.id;
+    return domId ? `#${domId}` : `${instanceId}`;
+  }
+
   function settingsStorageKey() {
-    return nv.settingsKey === undefined
-      ? `navio.settings.${instanceId}`
-      : nv.settingsKey;
+    if (nv.settingsKey !== undefined) return nv.settingsKey;
+    const page =
+      typeof location !== "undefined"
+        ? `${location.origin}${location.pathname}`
+        : "";
+    return `navio.settings.${page}.${settingsSlot()}`;
   }
 
   function persistSettings() {
@@ -1327,7 +1347,18 @@ function navio(selection, _h) {
       // painted over the panel.
       .style("z-index", 6)
       .style("display", "none")
-      .style("max-height", "70%")
+      // Bounded by the SCREEN, not by the widget.
+      //
+      // This was `70%`, and a percentage max-height resolves against the
+      // containing block - the Navio container, whose height is the `height`
+      // option. On a 200px-tall widget that is 140px: four checkboxes and a
+      // scrollbar, cut off mid-list. In an Observable notebook, where the cell
+      // below is a block of code, the result reads as the panel being painted
+      // under the next cell, which is why this looked like a z-index problem.
+      // It is not - see test/e2e/93-stacking.spec.js, which reproduces
+      // observablehq.com's cell nesting and shows the panel wins at any
+      // z-index down to 1.
+      .style("max-height", "70vh")
       .style("overflow-y", "auto")
       .style("min-width", "230px")
       .style("padding", "10px 12px")
@@ -3559,6 +3590,17 @@ function navio(selection, _h) {
     context.scale(scale, scale);
 
     svg.attr("width", ctxWidth).attr("height", ctxHeight);
+
+    // The container follows the canvas rather than the `height` option.
+    //
+    // `height` is the extent along the RECORD axis, which is the screen height
+    // only when the widget is horizontal. Vertical transposes it: records run
+    // across, and what determines the screen height is the ATTRIBUTE extent -
+    // the columns plus their headers. init() set the container to `height`
+    // regardless, so a vertical widget reserved a tall band of empty space
+    // below itself, and adding or hiding a column never changed it. In
+    // horizontal ctxHeight IS height, so nothing moves.
+    selection.style("height", ctxHeight + "px");
   }
 
   nv.initData = function (mData, mColScales) {
