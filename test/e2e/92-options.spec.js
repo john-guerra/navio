@@ -230,3 +230,68 @@ test("sorting by an attribute that was never added warns and does nothing", asyn
     )
   ).not.toBe(before);
 });
+
+// Reported: sorting by the sequential index did nothing. The comparator read
+// getAttrib(row, "__seqId"), but #88 removed __seqId from rows - so it compared
+// undefined to undefined for every pair and the order never changed. Same for
+// the "selected" column.
+test("the derived columns can be sorted by", async ({ page }) => {
+  await page.goto(FIXTURE);
+  await expect(page.locator("#a canvas")).toHaveCount(1);
+
+  const ids = () =>
+    page.evaluate(() =>
+      window.a
+        .getRowsAtLevel(0)
+        .map((r) => r.id)
+        .join(",")
+    );
+  const natural = await ids();
+
+  await page.evaluate(() => window.a.sortBy("__seqId", true));
+  const desc = await ids();
+  expect(desc).not.toBe(natural);
+  // Descending sequential index is the natural order reversed.
+  expect(desc).toBe(natural.split(",").reverse().join(","));
+
+  await page.evaluate(() => window.a.sortBy("__seqId", false));
+  expect(await ids()).toBe(natural);
+
+  // "selected" is the other side-table column; sorting by it must also move.
+  await page.evaluate(() =>
+    window.a.setFilters([[{ type: "value", attrib: "cat", value: "a" }]])
+  );
+  // Level 0 explicitly: sortBy defaults to the LAST level, which after
+  // filtering is level 1, and this assertion reads level 0.
+  await page.evaluate(() => window.a.sortBy("selected", true, 0));
+  expect(await ids()).not.toBe(natural);
+});
+
+// The label is a rotated <text> and SVG hit-tests text by its glyphs, so the
+// only clickable part was a thin diagonal strip - clicking the obvious spot
+// above a column missed entirely.
+test("clicking anywhere in a header's band sorts that column", async ({
+  page,
+}) => {
+  await page.goto(FIXTURE);
+  await expect(page.locator("#a canvas")).toHaveCount(1);
+
+  const ids = () =>
+    page.evaluate(() =>
+      window.a
+        .getRowsAtLevel(0)
+        .map((r) => r.id)
+        .join(",")
+    );
+  await page.evaluate(() => window.a.sortBy("v"));
+  const before = await ids();
+
+  // The CENTRE of the label's bounding box, which for a rotated label is empty
+  // space between the glyphs.
+  const box = await page
+    .locator('#a .attribOverlay[aria-label^="__seqId,"] text')
+    .boundingBox();
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+
+  await expect.poll(ids).not.toBe(before);
+});

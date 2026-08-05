@@ -773,3 +773,28 @@ test("a drag onto another column reorders and does not sort", async ({
   await expect.poll(cols).not.toBe(c0);
   expect(await rows()).toBe(r0); // reordering is not sorting
 });
+
+// Reported: the two gears in the binding example rendered further down the
+// page instead of on their widgets. NavioWidget builds its container with
+// createElement and constructs Navio before the caller appends it, and
+// getComputedStyle on a DETACHED node returns "" rather than "static" - so the
+// "make the container a positioning context" guard silently did nothing and
+// the absolutely-positioned gear escaped to whichever ancestor was positioned.
+test("a widget built detached still positions its gear on itself", async ({
+  page,
+}) => {
+  await page.goto("/examples/binding/");
+  await expect(page.locator("#navioA canvas")).toHaveCount(1);
+  await expect(page.locator("#navioB canvas")).toHaveCount(1);
+
+  for (const id of ["#navioA", "#navioB"]) {
+    const canvas = await page.locator(`${id} canvas`).boundingBox();
+    const gear = await page.locator(`${id} ._nv_gear`).boundingBox();
+    expect(gear, `${id} has a gear`).not.toBeNull();
+    // Bottom-left of its OWN widget, not somewhere else on the page.
+    expect(gear.x).toBeGreaterThanOrEqual(canvas.x - 30);
+    expect(gear.x).toBeLessThan(canvas.x + canvas.width);
+    expect(gear.y).toBeGreaterThan(canvas.y);
+    expect(gear.y).toBeLessThanOrEqual(canvas.y + canvas.height + 30);
+  }
+});

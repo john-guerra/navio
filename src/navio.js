@@ -809,16 +809,14 @@ function navio(selection, _h) {
     let before = performance.now();
 
     const sort = dSortBy[levelToUpdate];
+    // attribAt, not getAttrib: "__seqId" and "selected" are drawn columns
+    // backed by side tables rather than row properties (#88), so reading them
+    // off the row gives undefined for EVERY row - the comparator then returned
+    // 0 throughout and sorting by the sequential index silently did nothing.
     _dataIs[levelToUpdate].sort(function (a, b) {
       return sort.desc
-        ? d3DescendingNull(
-            getAttrib(data[a], sort.attrib),
-            getAttrib(data[b], sort.attrib)
-          )
-        : d3AscendingNull(
-            getAttrib(data[a], sort.attrib),
-            getAttrib(data[b], sort.attrib)
-          );
+        ? d3DescendingNull(attribAt(a, sort.attrib), attribAt(b, sort.attrib))
+        : d3AscendingNull(attribAt(a, sort.attrib), attribAt(b, sort.attrib));
     });
     assignIndexes(_dataIs[levelToUpdate], levelToUpdate);
 
@@ -958,7 +956,12 @@ function navio(selection, _h) {
    * column with the wrong values.
    */
   function attribAt(index, attrib) {
-    return attrib === "__seqId" ? index : getAttrib(data[index], attrib);
+    if (attrib === "__seqId") return index;
+    // Also a drawn column backed by a side table, so it needs resolving here
+    // for the same reason - otherwise sorting by it compares undefined to
+    // undefined and does nothing.
+    if (attrib === "selected") return !!selectedFlags[index];
+    return getAttrib(data[index], attrib);
   }
 
   /**
@@ -1223,9 +1226,21 @@ function navio(selection, _h) {
     // The container must be a positioning context for the panel to sit in its
     // corner. Only set it when it would otherwise be static, so an embedder's
     // own positioning is left alone.
+    // The gear and panel are absolutely positioned, so the container has to be
+    // a positioning context or they fly off to whichever ancestor is.
+    //
+    // getComputedStyle on a DETACHED element returns "" rather than "static",
+    // and NavioWidget builds its container with createElement and constructs
+    // Navio before the caller appends it - so this check silently did nothing
+    // there, and the two gears in the binding example landed further down the
+    // page. Fall back to the inline style when the node is not in the document
+    // yet.
     const host = selection.node();
-    if (host && getComputedStyle(host).position === "static") {
-      selection.style("position", "relative");
+    if (host) {
+      const pos = host.isConnected
+        ? getComputedStyle(host).position
+        : host.style.position;
+      if (!pos || pos === "static") selection.style("position", "relative");
     }
 
     settingsButton = styleButton(selection.append("button"))
@@ -2640,7 +2655,46 @@ function navio(selection, _h) {
     filterExps.exit().remove();
   }
 
-  function drawAttribHeaders(attribOverlay, attribOverlayEnter) {
+  /** Grow or restore a column's label. Driven by the hit rect, not the text. */
+  function growHeaderLabel(hitNode, d, grown) {
+    const label = d3.select(hitNode.parentNode).select("text");
+    if (label.empty()) return;
+    animated(label).style(
+      "font-size",
+      grown
+        ? nv.attribFontSizeSelected + "px"
+        : Math.min(nv.attribFontSize, nv.attribWidth) + "px"
+    );
+  }
+
+  function drawAttribHeaders(attribOverlay, attribOverlayEnter, headerHit) {
+    // Sort and reorder are bound to BOTH the hit rect and the glyphs.
+    //
+    // The rect alone is not enough: a rotated label overhangs its neighbours,
+    // so clicking the visible word "name" would land in the next column's
+    // strip and sort that instead. The glyphs alone were the original bug -
+    // SVG hit-tests text by its ink, so most of the header was dead. The text
+    // is drawn after the rect and therefore on top, so the glyphs win where
+    // they overlap and the strip catches everything else.
+    const bindHeader = (sel) =>
+      sel
+        .call(
+          d3
+            .drag()
+            .container(attribOverlayEnter.merge(attribOverlay).node())
+            .on("start", attribDragstarted)
+            .on("drag", attribDragged)
+            .on("end", attribDragended)
+        )
+        .on("mousemove", function (event, d) {
+          growHeaderLabel(this, d, true);
+        })
+        .on("mouseout", function (event, d) {
+          growHeaderLabel(this, d, false);
+        });
+
+    bindHeader(headerHit);
+
     if (nv.showAttribTitles) {
       attribOverlayEnter
         .append("text")
@@ -2682,28 +2736,7 @@ function navio(selection, _h) {
           // d3.select(this).dispatch("mousemove");
           return Math.min(nv.attribFontSize, nv.attribWidth) + "px";
         })
-        .call(
-          d3
-            .drag()
-            .container(attribOverlayEnter.merge(attribOverlay).node())
-            .on("start", attribDragstarted)
-            .on("drag", attribDragged)
-            .on("end", attribDragended)
-        )
-        // No click handler: sorting is decided in attribDragended, which is
-        // the only place that sees the whole gesture. See the note there.
-        .on("mousemove", function () {
-          animated(d3.select(this)).style(
-            "font-size",
-            nv.attribFontSizeSelected + "px"
-          );
-        })
-        .on("mouseout", function () {
-          animated(d3.select(this)).style(
-            "font-size",
-            Math.min(nv.attribFontSize, nv.attribWidth) + "px"
-          );
-        })
+        .call(bindHeader)
         // Rotating the label only makes sense when it has to fit a narrow
         // column; along the record axis there is room to read it upright.
         .attr("transform", () =>
@@ -2800,7 +2833,70 @@ function navio(selection, _h) {
         ).height;
       });
 
-    drawAttribHeaders(attribOverlay, attribOverlayEnter);
+    // A hit area for each column header.
+    //
+    // The label is a rotated <text> and SVG hit-tests text by its GLYPHS, so
+    // the only clickable part was a thin diagonal strip - clicking the obvious
+    // spot above a column missed entirely. This gives each column its own
+    // strip of the header band. fill:transparent, not fill:none, which is not
+    // hit-testable.
+    //
+    // They live in their own group placed BEFORE the columns rather than
+    // inside each column's <g>. SVG has no z-index, so a later sibling paints
+    // over an earlier one: with the rects inside the groups, column N+1's rect
+    // covered column N's label - and a rotated label overhangs to the right,
+    // so clicking the visible word sorted the wrong column. One layer beneath
+    // everything keeps the labels on top, where they win over their own text.
+    const hitLayer = levelOverlayEnter
+      .merge(levelOverlay)
+      .selectAll("g._nv_header_hits")
+      .data([0]);
+    const hitLayerG = hitLayer
+      .enter()
+      .insert("g", ":first-child")
+      .attr("class", "_nv_header_hits")
+      .merge(hitLayer);
+
+    const hits = hitLayerG.selectAll("rect").data(
+      function () {
+        const level = d3.select(this.parentNode).datum();
+        return attribs.map((a) => ({
+          attrib: a,
+          name: getAttribName(a),
+          level: typeof level === "number" ? level : 0,
+        }));
+      },
+      (d) => d.name
+    );
+    hits.exit().remove();
+
+    const headerHit = hits
+      .enter()
+      .append("rect")
+      .attr("class", "_nv_header_hit")
+      .merge(hits)
+      .attr("fill", "transparent")
+      .style("cursor", "pointer")
+      .attr("transform", (d) => {
+        const p = toXY(x(d.name, d.level), yScales[d.level].range()[0]);
+        return `translate(${p.x}, ${p.y})`;
+      })
+      .attr("x", (d) => toXY(0, -(yScales[d.level].range()[0] - nv.margin)).x)
+      .attr("y", (d) => toXY(0, -(yScales[d.level].range()[0] - nv.margin)).y)
+      .attr(
+        "width",
+        (d) =>
+          toWH(xScale.bandwidth(), yScales[d.level].range()[0] - nv.margin)
+            .width
+      )
+      .attr(
+        "height",
+        (d) =>
+          toWH(xScale.bandwidth(), yScales[d.level].range()[0] - nv.margin)
+            .height
+      );
+
+    drawAttribHeaders(attribOverlay, attribOverlayEnter, headerHit);
 
     attribOverlay.exit().remove();
   }
@@ -2891,8 +2987,9 @@ function navio(selection, _h) {
     if (nv.DEBUG) console.log("attrib drag start", d);
     dragOrigin = { x: event.x, y: event.y };
 
-    // Dim the column being moved, so it reads as "in flight".
-    d3.select(this).style("opacity", 0.45);
+    // Dim the LABEL being moved, so it reads as "in flight". `this` is the
+    // transparent hit rect now, and dimming that shows nothing.
+    d3.select(this.parentNode).select("text").style("opacity", 0.45);
     d3.select(this.parentNode).attr("transform", (dd) =>
       draggedHeaderTransform(event, dd)
     );
@@ -2909,7 +3006,7 @@ function navio(selection, _h) {
     if (nv.DEBUG) console.log("attrib drag end", d);
 
     hideDropIndicator();
-    d3.select(this).style("opacity", null);
+    d3.select(this.parentNode).select("text").style("opacity", null);
 
     // Click vs drag is decided HERE, from the distance the pointer travelled,
     // and nowhere else.
