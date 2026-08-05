@@ -895,3 +895,76 @@ test("the focus ring hugs the label and stays out of the way while dragging", as
   await page.mouse.up();
   await page.keyboard.up("Shift");
 });
+
+// The Reset BUTTON, not nv.clearStoredSettings(). The button only cleared
+// localStorage, which changes nothing you can see until the page is reloaded -
+// so it read as doing nothing at all. The existing coverage called the API and
+// reloaded, which is exactly why the gap survived.
+test("the Reset button puts the widget back, without a reload", async ({
+  page,
+}) => {
+  await page.goto(FIXTURE);
+  await expect(page.locator("#nv canvas")).toHaveCount(1);
+  await page.evaluate(() => window.nv.clearStoredSettings());
+
+  const state = () =>
+    page.evaluate(() => ({
+      aw: window.nv.attribWidth,
+      o: window.nv.orientation,
+      hidden: window.nv.getHiddenAttribs(),
+      type: window.nv.getAttribType("category"),
+    }));
+
+  const before = await state();
+
+  await page.locator("#nv ._nv_gear").click();
+  await page.evaluate(() => {
+    window.nv.attribWidth = 28;
+    window.nv.orientation = "vertical";
+    window.nv.setAttribVisible("category", false);
+    window.nv.setAttribType("value", "text");
+    window.nv.saveSettings();
+  });
+  expect(await state()).not.toEqual(before);
+
+  await page.locator('#nv ._nv_settings button:text-is("Reset")').click();
+
+  // Back immediately, in the live widget.
+  await expect.poll(state).toEqual(before);
+  // ...and nothing left on disk to come back on the next load. The <details>
+  // sections fire `toggle` when the panel is rebuilt, which used to persist
+  // the settings again the instant Reset cleared them.
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          Object.keys(localStorage).filter((k) =>
+            k.startsWith("navio.settings")
+          ).length
+      )
+    )
+    .toBe(0);
+});
+
+test("Reset leaves the selection alone", async ({ page }) => {
+  await page.goto(FIXTURE);
+  await expect(page.locator("#nv canvas")).toHaveCount(1);
+  await page.evaluate(() => window.nv.clearStoredSettings());
+
+  await page.evaluate(() =>
+    window.nv.setFilters([[{ type: "value", attrib: "category", value: "a" }]])
+  );
+  const selected = await page.evaluate(() => window.nv.getSelected().length);
+  expect(selected).toBeGreaterThan(0);
+
+  await page.locator("#nv ._nv_gear").click();
+  await page.evaluate(() => (window.nv.attribWidth = 30));
+  await page.locator('#nv ._nv_settings button:text-is("Reset")').click();
+
+  // Settings and filters are separate APIs on purpose; resetting a layout must
+  // not throw away a selection the user has already made.
+  await expect.poll(() => page.evaluate(() => window.nv.attribWidth)).toBe(15);
+  expect(await page.evaluate(() => window.nv.getSelected().length)).toBe(
+    selected
+  );
+});

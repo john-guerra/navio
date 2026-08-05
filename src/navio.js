@@ -112,6 +112,10 @@ function navio(selection, _h) {
     // change, reorder and header drag - a <details> element's own state would
     // spring back open each time.
     collapsedSections = new Set(),
+    // What this widget looked like before any stored settings landed on it -
+    // the state Reset goes back to. Captured once, the first time there are
+    // attributes to capture.
+    defaultSettings = null,
     // Screen pixels the filter chips need BELOW the canvas. The chips are drawn
     // past the end of the record axis, which is outside the canvas, so both
     // boxes have to be told to cover them - see applyContainerSize.
@@ -1267,7 +1271,13 @@ function navio(selection, _h) {
    * them to. Runs at most once; after that the panel owns the state.
    */
   function maybeRestoreSettings() {
-    if (!pendingSettings || !attribsOrdered.length) return;
+    if (!attribsOrdered.length) return;
+    // Snapshot BEFORE anything stored is applied: the defaults are what the
+    // caller constructed, not what a previous session left behind. Taken here
+    // rather than at construction because there are no attributes to record
+    // until data() and addAllAttribs have run.
+    if (!defaultSettings) defaultSettings = nv.getSettings();
+    if (!pendingSettings) return;
     const cfg = pendingSettings;
     pendingSettings = null;
     nv.setSettings(cfg);
@@ -1283,7 +1293,28 @@ function navio(selection, _h) {
     return nv;
   };
 
-  /** Forget the stored settings and go back to the defaults for this page. */
+  /**
+   * Put the widget back the way it started, and forget what was saved.
+   *
+   * This is what the panel's Reset button does. Clearing storage alone - which
+   * is all it used to do - changes nothing you can see until the page is
+   * reloaded, so the button read as broken. Filters and the selection are
+   * deliberately untouched: they are getFilters()/setFilters(), and keeping
+   * the two apart is what lets a layout be reset without throwing away a
+   * selection the user has already made.
+   */
+  nv.resetSettings = function () {
+    nv.clearStoredSettings();
+    collapsedSections = new Set();
+    if (defaultSettings) nv.setSettings(defaultSettings);
+    else nv.hardUpdate();
+    if (settingsIsOpen()) drawSettingsPanel();
+    // setSettings does not write, and nothing else should either: the point of
+    // Reset is that a reload comes back to the defaults too.
+    return nv;
+  };
+
+  /** Forget the stored settings on disk, leaving the live widget alone. */
   nv.clearStoredSettings = function () {
     const key = settingsStorageKey();
     if (key && typeof localStorage !== "undefined") {
@@ -1619,6 +1650,11 @@ function navio(selection, _h) {
       .property("open", !collapsedSections.has(title))
       .style("margin", "8px 0 4px")
       .on("toggle", function () {
+        // `toggle` also fires when WE set .open while rebuilding the panel, and
+        // the panel is rebuilt on every type change, reorder and header drag.
+        // Persisting on those would write the settings straight back to disk
+        // the moment Reset cleared them. Only a real change counts.
+        if (this.open === !collapsedSections.has(title)) return;
         if (this.open) collapsedSections.delete(title);
         else collapsedSections.add(title);
         persistSettings();
@@ -1986,10 +2022,10 @@ function navio(selection, _h) {
       .attr("type", "button")
       .call(styleButton)
       .text("Reset")
-      .attr("title", "Forget the saved settings for this page")
+      .attr("title", "Put this widget back the way it started")
       .on("click", () => {
-        nv.clearStoredSettings();
-        announce("Saved settings cleared; reload to see the defaults");
+        nv.resetSettings();
+        announce("Settings reset");
       });
 
     footer
