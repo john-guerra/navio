@@ -1,8 +1,8 @@
 import { test, expect } from "@playwright/test";
 
-// The filter chips are drawn 30px past the end of the RECORD axis, to clear the
-// count labels and the settings gear. In horizontal that is past the bottom of
-// the canvas, and two separate boxes have to grow to cover them:
+// The filter chips are drawn past the end of the RECORD axis, clear of the
+// count labels. In horizontal that can reach past the bottom of the canvas, and
+// two separate boxes have to grow to cover them:
 //
 //   - the container, or whatever follows the widget in normal flow paints over
 //     them (a paragraph, the next notebook cell);
@@ -24,7 +24,14 @@ const boxes = (page) =>
   page.evaluate(() => {
     const r = (el) => {
       const b = el.getBoundingClientRect();
-      return { top: b.top, bottom: b.bottom, left: b.left, height: b.height };
+      return {
+        top: b.top,
+        bottom: b.bottom,
+        left: b.left,
+        right: b.right,
+        width: b.width,
+        height: b.height,
+      };
     };
     const host = document.querySelector("#nv");
     return {
@@ -48,8 +55,10 @@ test("the chips fit inside the widget instead of spilling below it", async ({
   const b = await boxes(page);
   expect(b.chips).toHaveLength(2);
   for (const chip of b.chips) {
-    // Below the canvas - that is where they belong.
-    expect(chip.top).toBeGreaterThanOrEqual(b.canvas.bottom);
+    // Below the records. Not below the CANVAS - the canvas box extends past
+    // the last row, and a chip sitting in that blank band is the point: it is
+    // as close to the widget as it can get without covering data.
+    expect(chip.top).toBeGreaterThan(b.canvas.top + 200);
     // ...but inside BOTH boxes. Either one falling short slices them.
     expect(chip.bottom).toBeLessThanOrEqual(b.host.bottom);
     expect(chip.bottom).toBeLessThanOrEqual(b.wrapper.bottom);
@@ -108,12 +117,18 @@ test("each chip sits under the level it belongs to", async ({ page }) => {
   await expect(page.locator("#nv .filterExplanation > div")).toHaveCount(2);
 
   const b = await boxes(page);
-  // Left-aligned with its level, so the two chips are a level apart rather
-  // than stacked on the same x.
-  const gap = b.chips[1].left - b.chips[0].left;
-  expect(gap).toBeGreaterThan(50);
-  // And the first is at the left edge of the widget, not floating mid-canvas.
-  expect(b.chips[0].left - b.host.left).toBeLessThan(60);
+  // filtersByLevel[i] is what PRODUCED level i+1, so its chip belongs in the
+  // gap between the two - not at level i's own left edge, which reads as a
+  // label on the level the filter came FROM.
+  const levelStep = b.canvas.width / 3; // three levels across the canvas
+  expect(b.chips[0].left - b.canvas.left).toBeGreaterThan(levelStep * 0.6);
+  expect(b.chips[0].left - b.canvas.left).toBeLessThan(levelStep);
+
+  // Consecutive chips tile rather than overlap - the constraint the earlier
+  // right-edge layout broke by giving each one a 200px min-width against a
+  // 40px gap.
+  expect(b.chips[0].right).toBeLessThanOrEqual(b.chips[1].left);
+  expect(b.chips[1].left - b.chips[0].left).toBeGreaterThan(50);
 });
 
 test("the widget gives the space back when the filters go", async ({

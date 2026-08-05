@@ -654,7 +654,7 @@ test("filter explanations clear the panel and each other", async ({ page }) => {
       document.querySelectorAll("#nv .filterExplanation")
     ).map((e) => {
       const b = e.getBoundingClientRect();
-      return { left: b.left, right: b.right, top: b.top };
+      return { left: b.left, right: b.right, top: b.top, bottom: b.bottom };
     });
     const p = document.querySelector("#nv ._nv_settings");
     return {
@@ -662,8 +662,7 @@ test("filter explanations clear the panel and each other", async ({ page }) => {
       panelZ: +getComputedStyle(p).zIndex,
       exZ: +getComputedStyle(document.querySelector("#nv .explanations"))
         .zIndex,
-      gear: document.querySelector("#nv ._nv_gear").getBoundingClientRect()
-        .bottom,
+      gear: document.querySelector("#nv ._nv_gear").getBoundingClientRect(),
     };
   });
 
@@ -672,8 +671,16 @@ test("filter explanations clear the panel and each other", async ({ page }) => {
   // Level 0's explanation ends before level 1's begins.
   expect(boxes.ex.length).toBeGreaterThan(1);
   expect(boxes.ex[0].right).toBeLessThanOrEqual(boxes.ex[1].left);
-  // And it clears the gear, which shares the bottom-left corner.
-  expect(boxes.ex[0].top).toBeGreaterThanOrEqual(boxes.gear - 1);
+  // And it clears the gear. A chip now starts in the gap AFTER its level, so
+  // it is clear of the bottom-left corner horizontally and no longer has to be
+  // pushed below the gear to avoid it.
+  const g = boxes.gear;
+  expect(
+    boxes.ex[0].left < g.right &&
+      boxes.ex[0].right > g.left &&
+      boxes.ex[0].top < g.bottom &&
+      boxes.ex[0].bottom > g.top
+  ).toBe(false);
 });
 
 // Dragging a header only showed the label following the pointer, which says

@@ -2915,14 +2915,23 @@ function navio(selection, _h) {
   // `selection`/`dataIs` from the closure rather than taking the level-overlay
   // selections the other draw* helpers do, so it needs no arguments.
   function drawFilterExplanationsHTML() {
-    // Each level's filters sit under THAT level's columns, left-aligned with
-    // it. They used to start at the level's right edge, which put them in the
-    // gap between levels - about 25px wide - so a 200px min-width ran straight
-    // across the level beside it. Left-aligning gives a full level's width.
-    const levelLeft = (level) => levelScale(level);
+    // A chip starts in the gap AFTER its level.
+    //
+    // filtersByLevel[i] is the filter that produced level i+1 - applyFilters
+    // reads it at i and writes the result to i+1 - so the chip describes the
+    // step between the two, and the inter-level gap is where that step is.
+    // Anchoring it to level i's own left edge instead read as a label on level
+    // i, which is the level the filter came FROM, not the one it made.
+    //
+    // Width runs from one gap to the next, so consecutive chips tile rather
+    // than overlap. That is the constraint the earlier layout got wrong in the
+    // other direction: chips did start at the level's right edge once, but
+    // were given a 200px min-width against a 40px gap, so each one ran across
+    // its neighbour.
+    const levelRight = (level) => levelScale(level) + xScale.range()[1] + 4;
     const explanationWidth = (level) =>
       level < dataIs.length - 1
-        ? Math.max(70, levelLeft(level + 1) - levelLeft(level) - 8)
+        ? Math.max(70, levelRight(level + 1) - levelRight(level) - 8)
         : Math.max(220, xScale.range()[1]);
 
     const filterExps = selection
@@ -2949,12 +2958,12 @@ function navio(selection, _h) {
       .style("width", (_, i) => `${explanationWidth(i)}px`)
       .style("overflow-wrap", "break-word")
       .style("transform", (_, i) => {
-        // Sits just past the last column, at the far end of the records - so
-        // both coordinates come from the axes and have to be transposed (#22).
-        // Below the count label (range()[1] + 15) AND below the settings gear,
-        // which occupies the container's bottom-left corner - the same place
-        // level 0's explanation wants.
-        const p = toXY(levelLeft(i), yScales[i].range()[1] + 30);
+        // Both coordinates come from the axes, so they transpose together
+        // (#22). The record-axis offset used to be 30 to clear the settings
+        // gear as well as the count label; now that a chip starts past its
+        // level's last column it is nowhere near the gear in the corner, so it
+        // only has to clear the count, and the widget keeps the difference.
+        const p = toXY(levelRight(i), yScales[i].range()[1] + 16);
         return `translate(${p.x}px, ${p.y}px)`;
       });
 
