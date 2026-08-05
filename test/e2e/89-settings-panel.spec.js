@@ -605,3 +605,86 @@ test("filter explanations clear the panel and each other", async ({ page }) => {
   // And it clears the gear, which shares the bottom-left corner.
   expect(boxes.ex[0].top).toBeGreaterThanOrEqual(boxes.gear - 1);
 });
+
+// Dragging a header only showed the label following the pointer, which says
+// what you are moving but not where it will end up.
+test("dragging a header shows where it will land", async ({ page }) => {
+  await page.goto(
+    "/test/e2e/fixtures/vertical.html?orientation=horizontal&n=40"
+  );
+  await expect(page.locator("#nv canvas")).toHaveCount(1);
+
+  const indicator = () =>
+    page.evaluate(() => {
+      const l = document.querySelector("#nv ._nv_drop_indicator");
+      return {
+        shown: getComputedStyle(l).display !== "none",
+        x1: +l.getAttribute("x1"),
+        y1: +l.getAttribute("y1"),
+        y2: +l.getAttribute("y2"),
+      };
+    });
+
+  // Hidden until a drag starts.
+  expect((await indicator()).shown).toBe(false);
+
+  const box = await page.locator("#nv canvas").boundingBox();
+  const aw = await page.evaluate(() => window.nv.attribWidth);
+  await page.mouse.move(box.x + aw * 1.5, box.y + 88);
+  await page.mouse.down();
+  await page.mouse.move(box.x + aw * 4.5, box.y + 88, { steps: 10 });
+
+  const mid = await indicator();
+  expect(mid.shown).toBe(true);
+  expect(mid.x1).toBeGreaterThan(0);
+  // It spans the level, so it reads as an insertion point between columns.
+  expect(mid.y2 - mid.y1).toBeGreaterThan(100);
+  // And the column in flight is dimmed. The drag is bound to the <text>, not
+  // to the focusable <g>, so that is what carries the style.
+  const dimmed = () =>
+    page.evaluate(
+      () =>
+        Array.from(document.querySelectorAll("#nv .attribOverlay text")).filter(
+          (t) => +getComputedStyle(t).opacity < 1
+        ).length
+    );
+  expect(await dimmed()).toBe(1);
+
+  await page.mouse.up();
+  expect((await indicator()).shown).toBe(false);
+  expect(await dimmed()).toBe(0);
+});
+
+test("the indicator points at the edge the column actually lands on", async ({
+  page,
+}) => {
+  await page.goto(
+    "/test/e2e/fixtures/vertical.html?orientation=horizontal&n=40"
+  );
+  await expect(page.locator("#nv canvas")).toHaveCount(1);
+
+  const box = await page.locator("#nv canvas").boundingBox();
+  const aw = await page.evaluate(() => window.nv.attribWidth);
+  const moved = await page.evaluate(() => window.nv.getAttribs()[0]);
+
+  await page.mouse.move(box.x + aw * 1.5, box.y + 88);
+  await page.mouse.down();
+  await page.mouse.move(box.x + aw * 4.5, box.y + 88, { steps: 10 });
+  const x1 = await page.evaluate(
+    () => +document.querySelector("#nv ._nv_drop_indicator").getAttribute("x1")
+  );
+  await page.mouse.up();
+
+  // Where the indicator sat is where the column's edge ended up.
+  const edge = await page.evaluate((name) => {
+    const g = Array.from(document.querySelectorAll("#nv .attribOverlay")).find(
+      (e) => (e.getAttribute("aria-label") || "").startsWith(name + ",")
+    );
+    const t = g.getAttribute("transform").match(/translate\(([-\d.]+)/);
+    return +t[1];
+  }, moved);
+
+  expect(
+    Math.abs(edge + (await page.evaluate(() => window.nv.attribWidth)) - x1)
+  ).toBeLessThan(aw + 4);
+});

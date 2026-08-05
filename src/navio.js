@@ -660,6 +660,17 @@ function navio(selection, _h) {
 
     initTooltipPopper();
 
+    // Where a dragged column would land. Above the columns, below the
+    // headers, and pointer-transparent so it never eats the drag.
+    svg
+      .append("line")
+      .attr("class", "_nv_drop_indicator")
+      .style("display", "none")
+      .style("pointer-events", "none")
+      .style("stroke", "#1a73e8")
+      .style("stroke-width", 3)
+      .style("stroke-linecap", "round");
+
     svg
       .append("g")
       .attr("id", "closeButton")
@@ -2849,28 +2860,72 @@ function navio(selection, _h) {
     return `translate(${p.x}, ${p.y})`;
   }
 
+  /** The attribute the pointer is currently over, during a header drag. */
+  function dropTargetFor(event, d) {
+    const name = invertOrdinalScale(
+      xScale,
+      dragAlongA(event) + nv.attribFontSize / 2 - levelScale(d.level)
+    );
+    return dAttribs.get(name);
+  }
+
+  /**
+   * Show where the dragged column will land: a line at the edge it will be
+   * inserted against, spanning the level. Without it the only feedback was the
+   * header label following the pointer, which says what you are dragging but
+   * not where it is going.
+   */
+  function showDropIndicator(event, d) {
+    const target = dropTargetFor(event, d);
+    const line = svg.select("._nv_drop_indicator");
+    if (target === undefined || target === d.attrib) {
+      line.style("display", "none");
+      return;
+    }
+    const from = attribsOrdered.indexOf(d.attrib),
+      to = attribsOrdered.indexOf(target);
+    // Insert after the target when moving right, before it when moving left,
+    // so the line sits on the side the column is actually coming from.
+    const a =
+      x(getAttribName(target), d.level) + (to > from ? xScale.bandwidth() : 0);
+    const p0 = toXY(a, yScales[d.level].range()[0]),
+      p1 = toXY(a, yScales[d.level].range()[1]);
+    line
+      .style("display", null)
+      .attr("x1", p0.x)
+      .attr("y1", p0.y)
+      .attr("x2", p1.x)
+      .attr("y2", p1.y);
+  }
+
+  function hideDropIndicator() {
+    svg.select("._nv_drop_indicator").style("display", "none");
+  }
+
   function attribDragstarted(event, d) {
     if (nv.DEBUG) console.log("attrib drag start", d);
 
+    // Dim the column being moved, so it reads as "in flight".
+    d3.select(this).style("opacity", 0.45);
     d3.select(this.parentNode).attr("transform", (dd) =>
       draggedHeaderTransform(event, dd)
     );
   }
 
-  function attribDragged(event) {
+  function attribDragged(event, d) {
     d3.select(this.parentNode).attr("transform", (dd) =>
       draggedHeaderTransform(event, dd)
     );
+    showDropIndicator(event, d);
   }
 
   function attribDragended(event, d) {
     if (nv.DEBUG) console.log("attrib drag end", d);
 
-    let attrDraggedInto = invertOrdinalScale(
-      xScale,
-      dragAlongA(event) + nv.attribFontSize / 2 - levelScale(d.level)
-    );
-    attrDraggedInto = dAttribs.get(attrDraggedInto);
+    hideDropIndicator();
+    d3.select(this).style("opacity", null);
+
+    const attrDraggedInto = dropTargetFor(event, d);
 
     let pos;
     d3.select(this.parentNode).attr("transform", function (dd) {
