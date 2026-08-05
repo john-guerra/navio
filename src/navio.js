@@ -104,6 +104,13 @@ function navio(selection, _h) {
     settingsButton,
     settingsPanel,
     pendingSettings = null,
+    // The scrolling wrapper between the container and the canvas. It has to be
+    // reachable outside init(): it CLIPS, so its height is part of the layout.
+    divNavio = null,
+    // Screen pixels the filter chips need BELOW the canvas. The chips are drawn
+    // past the end of the record axis, which is outside the canvas, so both
+    // boxes have to be told to cover them - see applyContainerSize.
+    explanationsPad = 0,
     tooltipCoords = { x: -50, y: -50 },
     id = "__seqId",
     updateCallback = function () {},
@@ -568,12 +575,16 @@ function navio(selection, _h) {
 
     selection.selectAll("*").remove();
 
-    const divNavio = selection
+    divNavio = selection
       // .on("touchstart", nozoom)
       // .on("touchmove", nozoom)
       .style("height", height + "px")
       .attr("class", "navio")
       .append("div")
+      // Lets a widget with many levels scroll sideways. Note that this CLIPS
+      // vertically too: CSS forces the other axis to `auto` when one axis is
+      // not `visible`, so `overflow-x: auto` alone is never what it looks
+      // like. applyContainerSize sizes this box to include the filter chips.
       .style("overflow-x", "auto")
       .style("position", "relative");
 
@@ -2856,6 +2867,30 @@ function navio(selection, _h) {
 
     filterExpTexts.exit().remove();
     filterExps.exit().remove();
+
+    // How far the chips reach below the canvas, so the container can cover
+    // them. Measured rather than computed: a long filter label wraps to two or
+    // three lines inside its level's width, and only layout knows how many.
+    //
+    // In VERTICAL the chips go out to the side instead - toXY puts the record
+    // axis on x - so they never reach past the canvas bottom and this is 0,
+    // which is exactly right: the container is a block and already has the
+    // width.
+    const cvBottom = canvas.getBoundingClientRect().bottom;
+    let lowest = cvBottom;
+    selection.selectAll("div.filterExplanation").each(function () {
+      const r = this.getBoundingClientRect();
+      if (r.height) lowest = Math.max(lowest, r.bottom);
+    });
+    // The margin is breathing room UNDER the chips, so it only applies when
+    // there are chips below the canvas at all - otherwise every vertical
+    // widget, where they go out to the side, grew by a margin for nothing.
+    const over = Math.ceil(lowest - cvBottom),
+      pad = over > 0 ? over + nv.margin : 0;
+    if (pad !== explanationsPad) {
+      explanationsPad = pad;
+      applyContainerSize();
+    }
   }
 
   /** Grow or restore a column's label. Driven by the hit rect, not the text. */
@@ -3715,16 +3750,47 @@ function navio(selection, _h) {
 
     svg.attr("width", ctxWidth).attr("height", ctxHeight);
 
-    // The container follows the canvas rather than the `height` option.
-    //
-    // `height` is the extent along the RECORD axis, which is the screen height
-    // only when the widget is horizontal. Vertical transposes it: records run
-    // across, and what determines the screen height is the ATTRIBUTE extent -
-    // the columns plus their headers. init() set the container to `height`
-    // regardless, so a vertical widget reserved a tall band of empty space
-    // below itself, and adding or hiding a column never changed it. In
-    // horizontal ctxHeight IS height, so nothing moves.
-    selection.style("height", ctxHeight + "px");
+    applyContainerSize();
+
+    // Keep the gear against the bottom of the CANVAS, not of the container.
+    // The container grows to cover the filter chips, and a gear anchored to
+    // its bottom edge would jump down the page every time a filter was added
+    // and back up when it was removed.
+    if (settingsButton)
+      settingsButton.style("bottom", null).style("top", ctxHeight - 22 + "px");
+  }
+
+  /**
+   * Size the container to the canvas PLUS whatever the filter chips need.
+   *
+   * `height` is the extent along the RECORD axis, which is the screen height
+   * only when the widget is horizontal. Vertical transposes it: records run
+   * across, and what determines the screen height is the ATTRIBUTE extent -
+   * the columns plus their headers. init() set the container to `height`
+   * regardless, so a vertical widget reserved a tall band of empty space below
+   * itself, and adding or hiding a column never changed it.
+   *
+   * The chips are a separate problem in the OTHER direction. They are drawn 30px
+   * past the end of the record axis - clear of the count labels and the gear -
+   * which in horizontal is past the bottom of the canvas. TWO boxes have to
+   * grow to cover them, and missing either one leaves the chips half-drawn:
+   *
+   *   - the container, or content in normal flow below the widget (the next
+   *     paragraph, the next notebook cell) simply paints on top of them;
+   *   - divNavio, which CLIPS. It carries `overflow-x: auto` for wide widgets,
+   *     and CSS forces the other axis to `auto` whenever one axis is not
+   *     `visible` - so it clips vertically as well, which is invisible in the
+   *     stylesheet and was the reason growing the container alone did nothing.
+   *
+   * Measured before the fix: chips at y=428..443, container ending at 428,
+   * divNavio ending at 432, elementFromPoint returning the paragraph below.
+   */
+  function applyContainerSize() {
+    const alongA = levelScale.range()[1] + nv.margin + nv.x0,
+      { height: ctxHeight } = toWH(alongA, height),
+      full = ctxHeight + explanationsPad + "px";
+    selection.style("height", full);
+    if (divNavio) divNavio.style("height", full);
   }
 
   nv.initData = function (mData, mColScales) {
