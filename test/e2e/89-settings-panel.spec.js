@@ -805,3 +805,48 @@ test("a widget built detached still positions its gear on itself", async ({
     expect(gear.y).toBeLessThanOrEqual(canvas.y + canvas.height + 30);
   }
 });
+
+// The focusable element is the column's <g>, which spans the whole level - a
+// ring on it drew a big box down the widget. And Shift-clicking to drag counts
+// as keyboard-ish focus in Chrome, so the ring reappeared for the whole drag.
+test("the focus ring hugs the label and stays out of the way while dragging", async ({
+  page,
+}) => {
+  await page.goto(
+    "/test/e2e/fixtures/vertical.html?orientation=horizontal&n=40"
+  );
+  await expect(page.locator("#nv canvas")).toHaveCount(1);
+
+  const outlines = () =>
+    page.evaluate(() => {
+      const g = document.activeElement;
+      const t = g && g.querySelector ? g.querySelector("text") : null;
+      return {
+        group: g && g.getAttribute ? getComputedStyle(g).outlineStyle : null,
+        label: t ? getComputedStyle(t).outlineStyle : null,
+      };
+    });
+
+  // Keyboard focus: a ring, and on the LABEL - which is inside the rotated
+  // group, so it rotates with the text instead of boxing the column.
+  await page.locator('#nv .attribOverlay[aria-label^="value,"]').focus();
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Shift+Tab");
+  expect(await outlines()).toEqual({ group: "none", label: "solid" });
+
+  // Mid Shift-drag: nothing. The dimmed label and the drop indicator already
+  // say what is moving.
+  const lbl = await page
+    .locator('#nv .attribOverlay[aria-label^="value,"] text')
+    .boundingBox();
+  await page.keyboard.down("Shift");
+  await page.mouse.move(lbl.x + lbl.width / 2, lbl.y + lbl.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(lbl.x + lbl.width / 2 - 40, lbl.y + lbl.height / 2, {
+    steps: 8,
+  });
+  expect(await outlines()).toEqual({ group: "none", label: "none" });
+
+  await page.mouse.up();
+  await page.keyboard.up("Shift");
+});

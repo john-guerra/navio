@@ -606,8 +606,26 @@ function navio(selection, _h) {
     // whole point. Scoped to this instance's svg via a <style> child, since
     // Navio ships no stylesheet.
     svg.append("style").text(`
-      .attribOverlay:focus, #closeButton path:focus { outline: none; }
-      .attribOverlay:focus-visible, #closeButton path:focus-visible {
+      /* The focusable element is the column's <g>, which spans the whole
+         level - a ring on it draws a large box down the widget. Put the ring
+         on the LABEL instead: it is inside the rotated group, so the outline
+         rotates with the text and hugs it. */
+      .attribOverlay:focus,
+      .attribOverlay:focus-visible,
+      #closeButton path:focus {
+        outline: none;
+      }
+      .attribOverlay:focus-visible text {
+        outline: 2px solid #1a73e8;
+        outline-offset: 2px;
+      }
+      /* Shift-clicking to drag counts as keyboard-ish focus in Chrome, so the
+         ring would appear for the whole drag. It says nothing useful there -
+         the dimmed label and the drop indicator already show what is moving. */
+      .attribOverlay._nv_dragging text {
+        outline: none;
+      }
+      #closeButton path:focus-visible {
         outline: 2px solid #1a73e8;
         outline-offset: 1px;
       }
@@ -3061,9 +3079,11 @@ function navio(selection, _h) {
   function attribDragstarted(event, d) {
     if (nv.DEBUG) console.log("attrib drag start", d);
 
-    // Dim the LABEL being moved, so it reads as "in flight". `this` is the
-    // transparent hit rect now, and dimming that shows nothing.
-    d3.select(this.parentNode).select("text").style("opacity", 0.45);
+    // Dim the LABEL being moved, so it reads as "in flight".
+    d3.select(this.parentNode)
+      .classed("_nv_dragging", true)
+      .select("text")
+      .style("opacity", 0.45);
     d3.select(this.parentNode).attr("transform", (dd) =>
       draggedHeaderTransform(event, dd)
     );
@@ -3080,7 +3100,10 @@ function navio(selection, _h) {
     if (nv.DEBUG) console.log("attrib drag end", d);
 
     hideDropIndicator();
-    d3.select(this.parentNode).select("text").style("opacity", null);
+    d3.select(this.parentNode)
+      .classed("_nv_dragging", false)
+      .select("text")
+      .style("opacity", null);
 
     // Click vs drag is decided HERE, from the distance the pointer travelled,
     // and nowhere else.

@@ -1,6 +1,6 @@
 {
   "name": "navio",
-  "version": "0.1.20",
+  "version": "0.1.21",
   "description": "A visualization widget for summarizing and exploring data",
   "type": "module",
   "files": [
