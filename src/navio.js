@@ -103,6 +103,7 @@ function navio(selection, _h) {
     liveRegion,
     settingsButton,
     settingsPanel,
+    dragOrigin = { x: 0, y: 0 },
     pendingSettings = null,
     tooltipCoords = { x: -50, y: -50 },
     id = "__seqId",
@@ -760,16 +761,6 @@ function navio(selection, _h) {
     // d3.select("._nv_loading").remove();
     d3.select(ele).style("cursor", null);
     svg.style("cursor", null);
-  }
-
-  function deferEvent(cbk) {
-    return function (event, d, i, all) {
-      showLoading(this);
-      requestAnimationFrame(() => {
-        cbk(event, d, i, all);
-        hideLoading(this);
-      });
-    };
   }
 
   /**
@@ -2694,19 +2685,13 @@ function navio(selection, _h) {
         .call(
           d3
             .drag()
-            // Below this many pixels d3 does not suppress the click, so a
-            // click still sorts and only a real drag reorders. That is what
-            // the Shift requirement used to stand in for - and Shift was
-            // undiscoverable, and inconsistent with the settings panel where
-            // a plain drag works.
-            .clickDistance(nv.clickTolerance)
             .container(attribOverlayEnter.merge(attribOverlay).node())
             .on("start", attribDragstarted)
             .on("drag", attribDragged)
             .on("end", attribDragended)
         )
-        .on("click", deferEvent(onSortLevel))
-        // .on("click", onSortLevel)
+        // No click handler: sorting is decided in attribDragended, which is
+        // the only place that sees the whole gesture. See the note there.
         .on("mousemove", function () {
           animated(d3.select(this)).style(
             "font-size",
@@ -2904,6 +2889,7 @@ function navio(selection, _h) {
 
   function attribDragstarted(event, d) {
     if (nv.DEBUG) console.log("attrib drag start", d);
+    dragOrigin = { x: event.x, y: event.y };
 
     // Dim the column being moved, so it reads as "in flight".
     d3.select(this).style("opacity", 0.45);
@@ -2925,7 +2911,46 @@ function navio(selection, _h) {
     hideDropIndicator();
     d3.select(this).style("opacity", null);
 
+    // Click vs drag is decided HERE, from the distance the pointer travelled,
+    // and nowhere else.
+    //
+    // It used to be split between d3.drag().clickDistance() and a DOM click
+    // handler on the label, and the two disagreed: a header label is a rotated
+    // <text>, so a few pixels of drift put mouseup on a different element and
+    // the browser dispatched `click` to the common ancestor, which has no
+    // handler. Between 3px and the drag threshold, a click did NOTHING - it
+    // neither sorted nor reordered. d3.drag captures the pointer, so its end
+    // event always fires on the right element no matter where the pointer
+    // wandered, which makes it the only reliable place to make this call.
+    // The rule is about WHERE the gesture ended, not how far it travelled:
+    //
+    //   landed on another column -> reorder
+    //   landed on its own column -> sort (this is a click, however shaky)
+    //   landed on nothing, having moved -> cancelled, do nothing
+    //
+    // Distance alone left a dead zone. A column is only ~15px wide, so a 5px
+    // wobble is past any sane click threshold while still being nowhere near
+    // another column: it counted as a drag, found no new home, and silently
+    // did neither thing.
     const attrDraggedInto = dropTargetFor(event, d);
+    const travelled = Math.hypot(
+      event.x - dragOrigin.x,
+      event.y - dragOrigin.y
+    );
+
+    if (attrDraggedInto === undefined && travelled >= nv.clickTolerance) {
+      return; // dragged off the columns and released - treat as a cancel
+    }
+
+    if (attrDraggedInto === undefined || attrDraggedInto === d.attrib) {
+      const el = this;
+      showLoading(el);
+      requestAnimationFrame(() => {
+        onSortLevel(null, d);
+        hideLoading(el);
+      });
+      return;
+    }
 
     let pos;
     d3.select(this.parentNode).attr("transform", function (dd) {
@@ -2933,7 +2958,7 @@ function navio(selection, _h) {
       return `translate(${p.x}, ${p.y})`;
     });
 
-    if (attrDraggedInto !== d.attrib) {
+    {
       pos = attribsOrdered.indexOf(attrDraggedInto);
       moveAttrToPos(d.attrib, pos);
       nv.updateData(dataIs);

@@ -688,3 +688,88 @@ test("the indicator points at the edge the column actually lands on", async ({
     Math.abs(edge + (await page.evaluate(() => window.nv.attribWidth)) - x1)
   ).toBeLessThan(aw + 4);
 });
+
+// Reported: "I cannot sort columns". A header label is a rotated <text>, so a
+// few pixels of pointer drift put mouseup on a different element and the
+// browser dispatched `click` to the common ancestor, which has no handler.
+// Between ~3px and the drag threshold a click did NOTHING - neither sorted nor
+// reordered. Click vs drag is now one decision, made from where the gesture
+// ENDED, so there is no gap.
+test("a shaky click on a header still sorts, at every drift", async ({
+  page,
+}) => {
+  for (const drift of [0, 3, 5, 7]) {
+    await page.goto(
+      "/test/e2e/fixtures/vertical.html?orientation=horizontal&n=40"
+    );
+    await expect(page.locator("#nv canvas")).toHaveCount(1);
+
+    const box = await page.locator("#nv canvas").boundingBox();
+    const aw = await page.evaluate(() => window.nv.attribWidth);
+    const rows = () =>
+      page.evaluate(() =>
+        window.nv
+          .getRowsAtLevel(0)
+          .map((r) => r.id)
+          .join(",")
+      );
+    const cols = () =>
+      page.evaluate(() =>
+        window.nv
+          .getAttribs()
+          .map((a) => (typeof a === "function" ? a.name : a))
+          .join(",")
+      );
+    const r0 = await rows();
+    const c0 = await cols();
+
+    // Hover first, the way a hand does - the label grows on hover.
+    const X = box.x + aw * 4.5;
+    await page.mouse.move(X, box.y + 88);
+    await page.mouse.down();
+    if (drift) await page.mouse.move(X + drift, box.y + 88, { steps: 3 });
+    await page.mouse.up();
+
+    await expect
+      .poll(rows, { message: `drift ${drift}px should still sort` })
+      .not.toBe(r0);
+    // ...and must not quietly reorder instead.
+    expect(await cols()).toBe(c0);
+  }
+});
+
+test("a drag onto another column reorders and does not sort", async ({
+  page,
+}) => {
+  await page.goto(
+    "/test/e2e/fixtures/vertical.html?orientation=horizontal&n=40"
+  );
+  await expect(page.locator("#nv canvas")).toHaveCount(1);
+
+  const box = await page.locator("#nv canvas").boundingBox();
+  const aw = await page.evaluate(() => window.nv.attribWidth);
+  const rows = () =>
+    page.evaluate(() =>
+      window.nv
+        .getRowsAtLevel(0)
+        .map((r) => r.id)
+        .join(",")
+    );
+  const cols = () =>
+    page.evaluate(() =>
+      window.nv
+        .getAttribs()
+        .map((a) => (typeof a === "function" ? a.name : a))
+        .join(",")
+    );
+  const r0 = await rows();
+  const c0 = await cols();
+
+  await page.mouse.move(box.x + aw * 1.5, box.y + 88);
+  await page.mouse.down();
+  await page.mouse.move(box.x + aw * 4.5, box.y + 88, { steps: 10 });
+  await page.mouse.up();
+
+  await expect.poll(cols).not.toBe(c0);
+  expect(await rows()).toBe(r0); // reordering is not sorting
+});
