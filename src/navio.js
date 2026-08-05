@@ -584,6 +584,19 @@ function navio(selection, _h) {
   }
 
   function init() {
+    // An array here is data, not a container. d3.select() wraps it without
+    // complaint, so the mistake only surfaces one call later as
+    // "this.querySelectorAll is not a function" - a message naming nothing the
+    // caller typed. The UMD default export IS this factory (see src/index.js),
+    // which makes navio(data, opts) an easy and invisible slip in a notebook.
+    if (Array.isArray(selection)) {
+      throw new TypeError(
+        "navio(selection, options) expects a d3 selection, an element or a " +
+          "selector string, but received an array. To pass rows directly, " +
+          "use navio.NavioWidget(data, options)."
+      );
+    }
+
     // Try to support strings and elements
     selection =
       typeof selection === typeof "" ? d3.select(selection) : selection;
