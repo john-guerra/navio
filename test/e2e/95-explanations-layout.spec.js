@@ -131,7 +131,7 @@ test("each chip sits under the level it belongs to", async ({ page }) => {
   expect(b.chips[1].left - b.chips[0].left).toBeGreaterThan(50);
 });
 
-test("the widget gives the space back when the filters go", async ({
+test("the widget takes only the room the chips need, and gives it back", async ({
   page,
 }) => {
   await page.goto(FIXTURE);
@@ -140,8 +140,23 @@ test("the widget gives the space back when the filters go", async ({
 
   await page.evaluate((f) => window.nv.setFilters(f), TWO_LEVELS);
   await expect(page.locator("#nv .filterExplanation > div")).toHaveCount(2);
-  const filtered = (await boxes(page)).host.height;
-  expect(filtered).toBeGreaterThan(bare);
+
+  // How much it grows is font-dependent and must NOT be asserted. Now that the
+  // chips sit 16px past the records instead of 30, they land inside the blank
+  // band at the bottom of the canvas on some platforms and need no extra room
+  // at all - an earlier version of this test demanded growth and went red on
+  // CI, where the chip was one pixel shorter than on macOS. The invariant is
+  // that the widget covers them without reserving more than it has to.
+  const b = await boxes(page);
+  expect(b.host.height).toBeGreaterThanOrEqual(bare);
+  for (const chip of b.chips) {
+    expect(chip.bottom).toBeLessThanOrEqual(b.host.bottom);
+    expect(chip.bottom).toBeLessThanOrEqual(b.wrapper.bottom);
+  }
+  // Never more than the chips actually reach, plus one margin.
+  expect(
+    b.host.bottom - Math.max(...b.chips.map((c) => c.bottom))
+  ).toBeLessThan(30);
 
   await page.evaluate(() => window.nv.setFilters([[]]));
   await expect(page.locator("#nv .filterExplanation > div")).toHaveCount(0);
