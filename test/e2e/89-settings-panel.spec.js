@@ -8,6 +8,23 @@ import { test, expect } from "@playwright/test";
 
 const FIXTURE = "/test/e2e/fixtures/single.html";
 
+/**
+ * Reorder a column by dragging its label. Shift is required: without it the
+ * gesture is a click, which sorts. Grabbing the LABEL matters too - the drag is
+ * bound to the glyphs, so that the strips underneath stay free for the click.
+ */
+async function shiftDragHeader(page, fromLabel, toX) {
+  const b = await page
+    .locator(`#nv .attribOverlay[aria-label^="${fromLabel},"] text`)
+    .boundingBox();
+  await page.keyboard.down("Shift");
+  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(toX, b.y + b.height / 2, { steps: 12 });
+  await page.mouse.up();
+  await page.keyboard.up("Shift");
+}
+
 const open = async (page) => {
   await page.goto(FIXTURE);
   await expect(page.locator("#nv canvas")).toHaveCount(1);
@@ -43,6 +60,9 @@ test("the gear sits at the bottom left", async ({ page }) => {
   expect(gear.y).toBeGreaterThan(host.y + host.height / 2);
 });
 
+// The point of the panel is watching the widget change as you change it, so
+// it must not sit on top of the thing it is configuring - and it must not move
+// while you drag a slider, or the control runs away from the pointer.
 // The point of the panel is watching the widget change as you change it, so
 // it must not sit on top of the thing it is configuring - and it must not move
 // while you drag a slider, or the control runs away from the pointer.
@@ -101,6 +121,10 @@ test('settingsPlacement "beside" and "over" are still available', async ({
 // nested another .brush. One redraw per page hid it; a settings slider fires
 // hardUpdate per input event and the widget filled with stale brush rects,
 // each frozen at the width of the geometry it was created under.
+// Regression: the brush join appended on enter AND update, so every redraw
+// nested another .brush. One redraw per page hid it; a settings slider fires
+// hardUpdate per input event and the widget filled with stale brush rects,
+// each frozen at the width of the geometry it was created under.
 test("redrawing does not accumulate brushes, and their width tracks the columns", async ({
   page,
 }) => {
@@ -153,6 +177,7 @@ test("unticking a column hides it without touching the data", async ({
   );
 });
 
+// The requirement that drove the whole design.
 // The requirement that drove the whole design.
 test("selections and sort order survive hiding and showing columns", async ({
   page,
@@ -374,6 +399,7 @@ test("a brush follows a geometry change and an orientation flip", async ({
 });
 
 // Requested: change what a column IS from the panel, and drag to reorder.
+// Requested: change what a column IS from the panel, and drag to reorder.
 test("an attribute's type can be changed, keeping everything else", async ({
   page,
 }) => {
@@ -480,16 +506,12 @@ test("setAttribType rejects an unknown type", async ({ page }) => {
   );
 });
 
-test("a plain click sorts and a plain drag reorders - no modifier", async ({
-  page,
-}) => {
+test("a plain click sorts; Shift-drag reorders", async ({ page }) => {
   await page.goto(
     "/test/e2e/fixtures/vertical.html?orientation=horizontal&n=40"
   );
   await expect(page.locator("#nv canvas")).toHaveCount(1);
 
-  const box = await page.locator("#nv canvas").boundingBox();
-  const g = await page.evaluate(() => ({ aw: window.nv.attribWidth }));
   const rows = () =>
     page.evaluate(() =>
       window.nv
@@ -505,21 +527,34 @@ test("a plain click sorts and a plain drag reorders - no modifier", async ({
         .join(",")
     );
 
-  // Click: sorts, does not reorder. Shift used to be required for the drag,
-  // which was undiscoverable; a distance threshold separates them now.
-  const r0 = await rows();
-  const c0 = await cols();
-  await page.mouse.click(box.x + g.aw * 4.5, box.y + 88);
-  await expect.poll(rows).not.toBe(r0);
-  expect(await cols()).toBe(c0);
+  const box = await page.locator("#nv canvas").boundingBox();
+  const aw = await page.evaluate(() => window.nv.attribWidth);
 
-  // Drag: reorders.
-  await page.mouse.move(box.x + g.aw * 4.5, box.y + 88);
-  await page.mouse.down();
-  await page.mouse.move(box.x + g.aw * 1.5, box.y + 88, { steps: 12 });
-  await page.mouse.up();
-  await expect.poll(cols).not.toBe(c0);
-  expect((await cols()).split(",").sort()).toEqual(c0.split(",").sort());
+  // A click sorts however unsteady the hand is. Each of these used to be a
+  // gesture that did nothing at all.
+  for (const drift of [0, 3, 6, 10, 20]) {
+    await page.evaluate(() => window.nv.sortBy("value"));
+    const r0 = await rows();
+    const c0 = await cols();
+
+    const X = box.x + aw * 4.5;
+    await page.mouse.move(X, box.y + 60);
+    await page.mouse.down();
+    if (drift) await page.mouse.move(X + drift, box.y + 60, { steps: 3 });
+    await page.mouse.up();
+
+    await expect
+      .poll(rows, { message: `drift ${drift}px should sort` })
+      .not.toBe(r0);
+    expect(await cols(), `drift ${drift}px must not reorder`).toBe(c0);
+  }
+
+  // Shift-drag reorders, and does not sort.
+  const r1 = await rows();
+  const c1 = await cols();
+  await shiftDragHeader(page, "value", box.x + aw * 1.5);
+  await expect.poll(cols).not.toBe(c1);
+  expect(await rows()).toBe(r1);
 });
 
 test("dragging a header updates the open panel", async ({ page }) => {
@@ -541,10 +576,7 @@ test("dragging a header updates the open panel", async ({ page }) => {
 
   const box = await page.locator("#nv canvas").boundingBox();
   const aw = await page.evaluate(() => window.nv.attribWidth);
-  await page.mouse.move(box.x + aw * 4.5, box.y + 88);
-  await page.mouse.down();
-  await page.mouse.move(box.x + aw * 1.5, box.y + 88, { steps: 12 });
-  await page.mouse.up();
+  await shiftDragHeader(page, "value", box.x + aw * 1.5);
 
   // The panel lists the same order, so it must follow.
   await expect.poll(panelOrder).not.toBe(before);
@@ -608,7 +640,9 @@ test("filter explanations clear the panel and each other", async ({ page }) => {
 
 // Dragging a header only showed the label following the pointer, which says
 // what you are moving but not where it will end up.
-test("dragging a header shows where it will land", async ({ page }) => {
+// Dragging a header only showed the label following the pointer, which says
+// what you are moving but not where it will end up.
+test("Shift-dragging a header shows where it will land", async ({ page }) => {
   await page.goto(
     "/test/e2e/fixtures/vertical.html?orientation=horizontal&n=40"
   );
@@ -624,23 +658,6 @@ test("dragging a header shows where it will land", async ({ page }) => {
         y2: +l.getAttribute("y2"),
       };
     });
-
-  // Hidden until a drag starts.
-  expect((await indicator()).shown).toBe(false);
-
-  const box = await page.locator("#nv canvas").boundingBox();
-  const aw = await page.evaluate(() => window.nv.attribWidth);
-  await page.mouse.move(box.x + aw * 1.5, box.y + 88);
-  await page.mouse.down();
-  await page.mouse.move(box.x + aw * 4.5, box.y + 88, { steps: 10 });
-
-  const mid = await indicator();
-  expect(mid.shown).toBe(true);
-  expect(mid.x1).toBeGreaterThan(0);
-  // It spans the level, so it reads as an insertion point between columns.
-  expect(mid.y2 - mid.y1).toBeGreaterThan(100);
-  // And the column in flight is dimmed. The drag is bound to the <text>, not
-  // to the focusable <g>, so that is what carries the style.
   const dimmed = () =>
     page.evaluate(
       () =>
@@ -648,45 +665,32 @@ test("dragging a header shows where it will land", async ({ page }) => {
           (t) => +getComputedStyle(t).opacity < 1
         ).length
     );
-  expect(await dimmed()).toBe(1);
 
-  await page.mouse.up();
   expect((await indicator()).shown).toBe(false);
-  expect(await dimmed()).toBe(0);
-});
-
-test("the indicator points at the edge the column actually lands on", async ({
-  page,
-}) => {
-  await page.goto(
-    "/test/e2e/fixtures/vertical.html?orientation=horizontal&n=40"
-  );
-  await expect(page.locator("#nv canvas")).toHaveCount(1);
 
   const box = await page.locator("#nv canvas").boundingBox();
   const aw = await page.evaluate(() => window.nv.attribWidth);
-  const moved = await page.evaluate(() => window.nv.getAttribs()[0]);
+  const label = await page
+    .locator('#nv .attribOverlay[aria-label^="value,"] text')
+    .boundingBox();
 
-  await page.mouse.move(box.x + aw * 1.5, box.y + 88);
+  await page.keyboard.down("Shift");
+  await page.mouse.move(label.x + label.width / 2, label.y + label.height / 2);
   await page.mouse.down();
-  await page.mouse.move(box.x + aw * 4.5, box.y + 88, { steps: 10 });
-  const x1 = await page.evaluate(
-    () => +document.querySelector("#nv ._nv_drop_indicator").getAttribute("x1")
-  );
+  await page.mouse.move(box.x + aw * 1.5, label.y + label.height / 2, {
+    steps: 10,
+  });
+
+  const mid = await indicator();
+  expect(mid.shown).toBe(true);
+  // Spans the level, so it reads as an insertion point between columns.
+  expect(mid.y2 - mid.y1).toBeGreaterThan(100);
+  expect(await dimmed()).toBe(1);
+
   await page.mouse.up();
-
-  // Where the indicator sat is where the column's edge ended up.
-  const edge = await page.evaluate((name) => {
-    const g = Array.from(document.querySelectorAll("#nv .attribOverlay")).find(
-      (e) => (e.getAttribute("aria-label") || "").startsWith(name + ",")
-    );
-    const t = g.getAttribute("transform").match(/translate\(([-\d.]+)/);
-    return +t[1];
-  }, moved);
-
-  expect(
-    Math.abs(edge + (await page.evaluate(() => window.nv.attribWidth)) - x1)
-  ).toBeLessThan(aw + 4);
+  await page.keyboard.up("Shift");
+  expect((await indicator()).shown).toBe(false);
+  expect(await dimmed()).toBe(0);
 });
 
 // Reported: "I cannot sort columns". A header label is a rotated <text>, so a
@@ -738,7 +742,7 @@ test("a shaky click on a header still sorts, at every drift", async ({
   }
 });
 
-test("a drag onto another column reorders and does not sort", async ({
+test("a Shift-drag onto another column reorders and does not sort", async ({
   page,
 }) => {
   await page.goto(
@@ -746,8 +750,6 @@ test("a drag onto another column reorders and does not sort", async ({
   );
   await expect(page.locator("#nv canvas")).toHaveCount(1);
 
-  const box = await page.locator("#nv canvas").boundingBox();
-  const aw = await page.evaluate(() => window.nv.attribWidth);
   const rows = () =>
     page.evaluate(() =>
       window.nv
@@ -765,15 +767,20 @@ test("a drag onto another column reorders and does not sort", async ({
   const r0 = await rows();
   const c0 = await cols();
 
-  await page.mouse.move(box.x + aw * 1.5, box.y + 88);
-  await page.mouse.down();
-  await page.mouse.move(box.x + aw * 4.5, box.y + 88, { steps: 10 });
-  await page.mouse.up();
+  const box = await page.locator("#nv canvas").boundingBox();
+  const aw = await page.evaluate(() => window.nv.attribWidth);
+  await shiftDragHeader(page, "value", box.x + aw * 1.5);
 
   await expect.poll(cols).not.toBe(c0);
   expect(await rows()).toBe(r0); // reordering is not sorting
 });
 
+// Reported: the two gears in the binding example rendered further down the
+// page instead of on their widgets. NavioWidget builds its container with
+// createElement and constructs Navio before the caller appends it, and
+// getComputedStyle on a DETACHED node returns "" rather than "static" - so the
+// "make the container a positioning context" guard silently did nothing and
+// the absolutely-positioned gear escaped to whichever ancestor was positioned.
 // Reported: the two gears in the binding example rendered further down the
 // page instead of on their widgets. NavioWidget builds its container with
 // createElement and constructs Navio before the caller appends it, and

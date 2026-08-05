@@ -103,7 +103,6 @@ function navio(selection, _h) {
     liveRegion,
     settingsButton,
     settingsPanel,
-    dragOrigin = { x: 0, y: 0 },
     pendingSettings = null,
     tooltipCoords = { x: -50, y: -50 },
     id = "__seqId",
@@ -614,7 +613,45 @@ function navio(selection, _h) {
       }
     `);
 
-    svg.append("g").attr("class", "attribs");
+    svg
+      .append("g")
+      .attr("class", "attribs")
+      // Sorting is ONE click handler, here, on the group that contains every
+      // header - the glyphs, the hit strips and the columns.
+      //
+      // Anything narrower does not fire reliably. A click that presses on a
+      // label and releases on a strip - a few pixels of hand tremor is enough,
+      // the strips are only ~15px wide - dispatches to their common ancestor,
+      // which is neither of them, so per-label and per-strip handlers both
+      // miss it and nothing happens. That was the "I cannot sort by clicking"
+      // report. Here the ancestor is always this group, so it always fires;
+      // the level and the column come from where the pointer is, and a click
+      // outside the header band is ignored.
+      .on("click", function (event) {
+        if (!dataIs.length || !yScales.length) return;
+        const p = d3.pointer(event, svg.node());
+        const alongA = isVertical() ? p[1] : p[0],
+          alongR = isVertical() ? p[0] : p[1];
+
+        const level = invertOrdinalScale(levelScale, alongA);
+        if (level === undefined || !yScales[level]) return;
+        // The header band only; the data area belongs to the brush.
+        if (alongR >= yScales[level].range()[0]) return;
+
+        const attrib = columnAtPointer(event, level);
+        if (attrib === undefined) return;
+
+        const el = this;
+        showLoading(el);
+        requestAnimationFrame(() => {
+          onSortLevel(event, {
+            attrib,
+            name: getAttribName(attrib),
+            level,
+          });
+          hideLoading(el);
+        });
+      });
 
     // A canvas-drawn widget is opaque to a screen reader, so describe it and
     // announce what changes (#68). role=group rather than application: the
@@ -2657,7 +2694,15 @@ function navio(selection, _h) {
 
   /** Grow or restore a column's label. Driven by the hit rect, not the text. */
   function growHeaderLabel(hitNode, d, grown) {
-    const label = d3.select(hitNode.parentNode).select("text");
+    let label = d3.select(hitNode.parentNode).select("text");
+    if (label.empty()) {
+      // Called from the hit strip, which lives in a shared layer - find the
+      // column's own label by name.
+      label = svg
+        .selectAll(".attribOverlay")
+        .filter((dd) => dd && dd.name === d.name && dd.level === d.level)
+        .select("text");
+    }
     if (label.empty()) return;
     animated(label).style(
       "font-size",
@@ -2676,24 +2721,42 @@ function navio(selection, _h) {
     // SVG hit-tests text by its ink, so most of the header was dead. The text
     // is drawn after the rect and therefore on top, so the glyphs win where
     // they overlap and the strip catches everything else.
+    // The drag stays on the glyphs: its handlers move and dim this.parentNode,
+    // which has to be the column's own <g>. The strip lives in a shared layer,
+    // so binding the drag there would drag the whole layer.
     const bindHeader = (sel) =>
       sel
-        .call(
-          d3
-            .drag()
-            .container(attribOverlayEnter.merge(attribOverlay).node())
-            .on("start", attribDragstarted)
-            .on("drag", attribDragged)
-            .on("end", attribDragended)
-        )
         .on("mousemove", function (event, d) {
           growHeaderLabel(this, d, true);
         })
         .on("mouseout", function (event, d) {
           growHeaderLabel(this, d, false);
-        });
+        })
+        .call(
+          d3
+            .drag()
+            // Shift to reorder. Without a filter, d3.drag arms on every
+            // mousedown and suppresses the following click as soon as the
+            // pointer moves at all - which is what made a plain click on a
+            // header unreliable. Filtered out, the drag does not exist unless
+            // Shift is held, so the click path is completely unobstructed.
+            .filter(
+              (event) => event.shiftKey && !event.ctrlKey && !event.button
+            )
+            .container(attribOverlayEnter.merge(attribOverlay).node())
+            .on("start", attribDragstarted)
+            .on("drag", attribDragged)
+            .on("end", attribDragended)
+        );
 
-    bindHeader(headerHit);
+    headerHit
+      .style("cursor", "pointer")
+      .on("mousemove", function (event, d) {
+        growHeaderLabel(this, d, true);
+      })
+      .on("mouseout", function (event, d) {
+        growHeaderLabel(this, d, false);
+      });
 
     if (nv.showAttribTitles) {
       attribOverlayEnter
@@ -2781,7 +2844,10 @@ function navio(selection, _h) {
               ? ", currently sorted descending"
               : ", currently sorted ascending"
             : "";
-        return `${d.name}, level ${d.level + 1}${sorted}. Enter to sort, Alt with left or right arrow to move.`;
+        return (
+          `${d.name}, level ${d.level + 1}${sorted}. ` +
+          `Enter to sort, Alt with left or right arrow to move.`
+        );
       })
       .on("keydown", function (event, d) {
         if (event.key === "Enter" || event.key === " ") {
@@ -2850,7 +2916,9 @@ function navio(selection, _h) {
     const hitLayer = levelOverlayEnter
       .merge(levelOverlay)
       .selectAll("g._nv_header_hits")
-      .data([0]);
+      // The level index, so the rects below can be positioned on their own
+      // level rather than all landing on level 0.
+      .data((_, i) => [i]);
     const hitLayerG = hitLayer
       .enter()
       .insert("g", ":first-child")
@@ -2941,6 +3009,13 @@ function navio(selection, _h) {
     return `translate(${p.x}, ${p.y})`;
   }
 
+  /** Which column the pointer is over, in svg coordinates. */
+  function columnAtPointer(event, level) {
+    const p = d3.pointer(event, svg.node());
+    const alongA = isVertical() ? p[1] : p[0];
+    return dAttribs.get(invertOrdinalScale(xScale, alongA - levelScale(level)));
+  }
+
   /** The attribute the pointer is currently over, during a header drag. */
   function dropTargetFor(event, d) {
     const name = invertOrdinalScale(
@@ -2985,7 +3060,6 @@ function navio(selection, _h) {
 
   function attribDragstarted(event, d) {
     if (nv.DEBUG) console.log("attrib drag start", d);
-    dragOrigin = { x: event.x, y: event.y };
 
     // Dim the LABEL being moved, so it reads as "in flight". `this` is the
     // transparent hit rect now, and dimming that shows nothing.
@@ -3019,35 +3093,12 @@ function navio(selection, _h) {
     // neither sorted nor reordered. d3.drag captures the pointer, so its end
     // event always fires on the right element no matter where the pointer
     // wandered, which makes it the only reliable place to make this call.
-    // The rule is about WHERE the gesture ended, not how far it travelled:
-    //
-    //   landed on another column -> reorder
-    //   landed on its own column -> sort (this is a click, however shaky)
-    //   landed on nothing, having moved -> cancelled, do nothing
-    //
-    // Distance alone left a dead zone. A column is only ~15px wide, so a 5px
-    // wobble is past any sane click threshold while still being nowhere near
-    // another column: it counted as a drag, found no new home, and silently
-    // did neither thing.
+    // Only a Shift-drag reaches here, so this is always a reorder - sorting is
+    // the plain click, handled in bindHeader. Keeping the two gestures on
+    // different modifiers is what makes each one reliable: they no longer have
+    // to be told apart after the fact.
     const attrDraggedInto = dropTargetFor(event, d);
-    const travelled = Math.hypot(
-      event.x - dragOrigin.x,
-      event.y - dragOrigin.y
-    );
-
-    if (attrDraggedInto === undefined && travelled >= nv.clickTolerance) {
-      return; // dragged off the columns and released - treat as a cancel
-    }
-
-    if (attrDraggedInto === undefined || attrDraggedInto === d.attrib) {
-      const el = this;
-      showLoading(el);
-      requestAnimationFrame(() => {
-        onSortLevel(null, d);
-        hideLoading(el);
-      });
-      return;
-    }
+    if (attrDraggedInto === undefined || attrDraggedInto === d.attrib) return;
 
     let pos;
     d3.select(this.parentNode).attr("transform", function (dd) {

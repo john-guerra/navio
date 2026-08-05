@@ -396,8 +396,10 @@ Reorder by dragging an attribute name in the panel, or with the ↑ ↓ buttons
 (which is the keyboard path). Dragging a column header on the widget itself
 works too, and the panel follows it.
 
-**Sorting vs reordering:** a click on a header sorts, a drag reorders. They are
-separated by distance (`nv.clickTolerance`), so no modifier key is needed.
+**Sorting vs reordering:** a click on a header sorts; **Shift**-drag its label
+reorders. They are on different modifiers rather than told apart after the fact,
+because a rotated label makes a plain click hard to distinguish from a small
+drag — the two used to interfere and clicks would silently do nothing.
 
 ```js
 nv.setAttribVisible("beak", false);  // hide one
