@@ -1070,6 +1070,9 @@ function navio(selection, _h) {
     ])
       out[k] = nv[k];
     out.hiddenAttribs = Array.from(hiddenAttribs);
+    out.attribTypes = Object.fromEntries(
+      attribsOrdered.map((a) => [getAttribName(a), nv.getAttribType(a)])
+    );
     out.attribOrder = attribsOrdered.map((a) => getAttribName(a));
     return out;
   };
@@ -1083,7 +1086,12 @@ function navio(selection, _h) {
   nv.setSettings = function (cfg = {}) {
     if (!cfg || typeof cfg !== "object") return nv;
     for (const k of Object.keys(cfg)) {
-      if (k === "hiddenAttribs" || k === "attribOrder" || k === "height")
+      if (
+        k === "hiddenAttribs" ||
+        k === "attribOrder" ||
+        k === "attribTypes" ||
+        k === "height"
+      )
         continue;
       if (k in nv) nv[k] = cfg[k];
     }
@@ -1096,6 +1104,12 @@ function navio(selection, _h) {
     }
     if (Array.isArray(cfg.hiddenAttribs)) {
       hiddenAttribs = new Set(cfg.hiddenAttribs);
+    }
+    if (cfg.attribTypes) {
+      for (const [name, type] of Object.entries(cfg.attribTypes)) {
+        if (type && nv.getAttribType(name) !== type)
+          nv.setAttribType(name, type);
+      }
     }
     nv.hardUpdate();
     if (settingsPanel && settingsPanel.style("display") !== "none")
@@ -1361,7 +1375,7 @@ function navio(selection, _h) {
       .style("font-size", "11px")
       .style("color", "#666")
       .style("margin-bottom", "4px")
-      .text("Untick to hide. Arrows reorder.");
+      .text("Untick to hide. Drag a name, or use the arrows, to reorder.");
 
     // The picker is pluggable. The default is a plain checkbox list with
     // reorder arrows; set nv.attribPicker to swap in something richer - see
@@ -1385,6 +1399,26 @@ function navio(selection, _h) {
         persistSettings();
         announce(`${shown.size} of ${names.length} columns shown`);
       },
+      // The picker deals in LABELS ("sequential Index"), not attribute names
+      // ("__seqId"), so the mapping back has to happen here rather than in the
+      // picker - which is also why these are callbacks and not raw API.
+      types: nv.getAttribTypes(),
+      getType: (name) =>
+        nv.getAttribType(attribsOrdered.find((a) => label(a) === name)),
+      setType: (name, type) => {
+        const attrib = attribsOrdered.find((a) => label(a) === name);
+        nv.setAttribType(attrib, type);
+        announce(`${name} is now ${type}`);
+        persistSettings();
+        drawSettingsPanel();
+      },
+      // Derived columns are drawn from side tables, not from a data column,
+      // so re-typing them would only break how they render.
+      canSetType: (name) => {
+        const attrib = attribsOrdered.find((a) => label(a) === name);
+        const n = getAttribName(attrib);
+        return n !== "__seqId" && n !== "selected";
+      },
       move: (name, delta) => {
         const attrib = attribsOrdered.find((a) => label(a) === name);
         const from = attribsOrdered.indexOf(attrib),
@@ -1399,6 +1433,52 @@ function navio(selection, _h) {
       instanceId,
     });
     if (pickerEl) attribs.node().appendChild(pickerEl);
+
+    // A custom picker only owns visibility, so the type controls that the
+    // built-in one carries in its rows would otherwise disappear with it.
+    if (nv.attribPicker) {
+      const types = settingsSection(settingsPanel, "Attribute types");
+      const trow = types
+        .selectAll("div")
+        .data(
+          attribsOrdered
+            .filter((a) => {
+              const n = getAttribName(a);
+              return n !== "__seqId" && n !== "selected";
+            })
+            .map((a) => ({ attrib: a, name: label(a) }))
+        )
+        .enter()
+        .append("div")
+        .style("display", "flex")
+        .style("align-items", "center")
+        .style("gap", "6px");
+      trow
+        .append("span")
+        .style("flex", "1")
+        .style("white-space", "nowrap")
+        .style("overflow", "hidden")
+        .style("text-overflow", "ellipsis")
+        .text((d) => d.name);
+      trow
+        .append("select")
+        .attr("aria-label", (d) => `Type of ${d.name}`)
+        .style("font-size", "11px")
+        .on("change", function (event, d) {
+          nv.setAttribType(d.attrib, this.value);
+          announce(`${d.name} is now ${this.value}`);
+          persistSettings();
+        })
+        .selectAll("option")
+        .data((d) =>
+          nv.getAttribTypes().map((t) => ({ ...t, attrib: d.attrib }))
+        )
+        .enter()
+        .append("option")
+        .attr("value", (t) => t.value)
+        .property("selected", (t) => nv.getAttribType(t.attrib) === t.value)
+        .text((t) => t.label);
+    }
 
     // --- layout ----------------------------------------------------------
     const layout = settingsSection(settingsPanel, "Layout");
@@ -1597,7 +1677,10 @@ function navio(selection, _h) {
    * visible names, and `move(name, delta)` reorders. A picker that does not
    * support reordering can simply ignore `move`.
    */
-  function defaultAttribPicker(names, { value, onChange, move, instanceId }) {
+  function defaultAttribPicker(
+    names,
+    { value, onChange, move, instanceId, types, getType, setType, canSetType }
+  ) {
     const shown = new Set(value);
     const wrap = d3.create("div");
 
@@ -1609,7 +1692,9 @@ function navio(selection, _h) {
       .style("display", "flex")
       .style("align-items", "center")
       .style("gap", "6px")
-      .style("padding", "1px 0");
+      .style("padding", "1px 0")
+      .style("border-top", "2px solid transparent")
+      .style("border-bottom", "2px solid transparent");
 
     row
       .append("input")
@@ -1622,15 +1707,83 @@ function navio(selection, _h) {
         onChange(names.filter((x) => shown.has(x)));
       });
 
+    // The label is the drag handle. Reordering by dragging is the direct
+    // gesture; the arrows below stay because a drag is not keyboard-operable.
     row
       .append("label")
       .attr("for", (n) => `_nv_vis_${instanceId}_${n}`)
+      .attr("draggable", true)
+      .attr("title", "Drag to reorder")
       .style("flex", "1")
-      .style("cursor", "pointer")
+      .style("cursor", "grab")
       .style("white-space", "nowrap")
       .style("overflow", "hidden")
       .style("text-overflow", "ellipsis")
-      .text((n) => n);
+      .style("user-select", "none")
+      .text((n) => n)
+      .on("dragstart", function (event, n) {
+        event.dataTransfer.effectAllowed = "move";
+        // Firefox will not start a drag without data set.
+        event.dataTransfer.setData("text/plain", n);
+        dragging = n;
+      })
+      .on("dragend", function () {
+        dragging = null;
+        row
+          .style("border-top", "2px solid transparent")
+          .style("border-bottom", "2px solid transparent");
+      });
+
+    // The whole row is the drop target, not just the label, so the pointer
+    // does not have to land exactly on the text.
+    let dragging = null;
+    row
+      .on("dragover", function (event, n) {
+        if (dragging === null || dragging === n) return;
+        event.preventDefault(); // required, or the drop never fires
+        event.dataTransfer.dropEffect = "move";
+        const before = names.indexOf(dragging) > names.indexOf(n);
+        d3.select(this)
+          .style(
+            "border-top",
+            before ? "2px solid #1a73e8" : "2px solid transparent"
+          )
+          .style(
+            "border-bottom",
+            before ? "2px solid transparent" : "2px solid #1a73e8"
+          );
+      })
+      .on("dragleave", function () {
+        d3.select(this)
+          .style("border-top", "2px solid transparent")
+          .style("border-bottom", "2px solid transparent");
+      })
+      .on("drop", function (event, n) {
+        event.preventDefault();
+        if (dragging === null || dragging === n) return;
+        move(dragging, names.indexOf(n) - names.indexOf(dragging));
+        dragging = null;
+      });
+
+    const typeSel = row
+      .append("select")
+      .attr("aria-label", (n) => `Type of ${n}`)
+      .attr("title", "How this column is interpreted and coloured")
+      .style("font-size", "11px")
+      .style("max-width", "82px")
+      .property("disabled", (n) => !canSetType(n))
+      .on("change", function (event, n) {
+        setType(n, this.value);
+      });
+
+    typeSel
+      .selectAll("option")
+      .data((n) => types.map((t) => ({ ...t, name: n })))
+      .enter()
+      .append("option")
+      .attr("value", (t) => t.value)
+      .property("selected", (t) => getType(t.name) === t.value)
+      .text((t) => t.label);
 
     row
       .append("button")
@@ -3784,6 +3937,78 @@ function navio(selection, _h) {
   /** Is this attribute's column currently drawn? */
   nv.isAttribVisible = function (attrib) {
     return !hiddenAttribs.has(getAttribName(attrib));
+  };
+
+  // The attribute types a column can be switched between, and the method that
+  // builds each one's scale. "object" is excluded on purpose: addObjectAttrib
+  // replaces the attribute with a stringifying accessor rather than just
+  // changing its scale, so it is not a like-for-like swap.
+  const ATTRIB_TYPES = {
+    cat: { label: "categorical", add: "addCategoricalAttrib" },
+    seq: { label: "sequential", add: "addSequentialAttrib" },
+    ordered: { label: "ordered", add: "addOrderedAttrib" },
+    text: { label: "text", add: "addTextAttrib" },
+    date: { label: "date", add: "addDateAttrib" },
+    div: { label: "diverging", add: "addDivergingAttrib" },
+    bool: { label: "boolean", add: "addBooleanAttrib" },
+  };
+
+  /** The type tag of an attribute's colour scale: "cat", "seq", "text"... */
+  nv.getAttribType = function (attrib) {
+    const scale = colScales.get(attrib) || colScales.get(getAttribName(attrib));
+    return scale && scale.__type;
+  };
+
+  /** The switchable types, as {value, label} - for building a picker. */
+  nv.getAttribTypes = function () {
+    return Object.entries(ATTRIB_TYPES).map(([value, t]) => ({
+      value,
+      label: t.label,
+    }));
+  };
+
+  /**
+   * Re-type a column: how it is coloured and how its values are interpreted.
+   *
+   * Only the colour scale changes. The attribute keeps its name, its position,
+   * and anything pointing at it - sorting compares raw values and so does a
+   * value filter, while a range filter compares positions, so none of them are
+   * invalidated by a re-type. addAllAttribs guesses types from the data and
+   * sometimes guesses wrong; this is the correction.
+   */
+  nv.setAttribType = function (attrib, type) {
+    const spec = ATTRIB_TYPES[type];
+    if (!spec) {
+      console.warn(
+        `navio.setAttribType: unknown type "${type}". ` +
+          `One of: ${Object.keys(ATTRIB_TYPES).join(", ")}`
+      );
+      return nv;
+    }
+    const name = getAttribName(attrib);
+    const pos = attribsOrdered.findIndex((a) => getAttribName(a) === name);
+    if (pos === -1) {
+      console.warn(
+        `navio.setAttribType: "${name}" is not one of the attributes`
+      );
+      return nv;
+    }
+    const attr = attribsOrdered[pos];
+    if (nv.getAttribType(attr) === type) return nv;
+
+    // Drop it from all three structures and let the real add*Attrib rebuild
+    // it, so the scale is constructed exactly as it would have been at setup -
+    // domain included. Then put it back where it was: addAttrib appends.
+    attribsOrdered.splice(pos, 1);
+    dAttribs.delete(name);
+    colScales.delete(attr);
+    colScales.delete(name);
+
+    nv[spec.add](attr);
+    moveAttrToPos(attr, pos);
+
+    nv.hardUpdate();
+    return nv;
   };
 
   /** The attributes currently drawn, in order. A subset of getAttribs(). */

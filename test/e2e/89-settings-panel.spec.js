@@ -372,3 +372,110 @@ test("a brush follows a geometry change and an orientation flip", async ({
   const flipped = await rect();
   expect(flipped.h).toBeGreaterThan(flipped.w);
 });
+
+// Requested: change what a column IS from the panel, and drag to reorder.
+test("an attribute's type can be changed, keeping everything else", async ({
+  page,
+}) => {
+  await page.goto(FIXTURE);
+  await expect(page.locator("#nv canvas")).toHaveCount(1);
+
+  const state = () =>
+    page.evaluate(() => ({
+      type: window.nv.getAttribType("category"),
+      order: window.nv
+        .getRowsAtLevel(0)
+        .map((r) => r.id)
+        .join(","),
+      selected: window.nv
+        .getVisible()
+        .map((r) => r.id)
+        .join(","),
+      columns: window.nv
+        .getAttribs()
+        .map((a) => (typeof a === "function" ? a.name : a))
+        .join(","),
+    }));
+
+  await page.evaluate(() => {
+    window.nv.sortBy("value", true);
+    window.nv.setFilters([[{ type: "value", attrib: "category", value: "a" }]]);
+  });
+  const before = await state();
+  expect(before.type).toBe("cat");
+
+  await page.locator("#nv ._nv_gear").click();
+  await page
+    .locator('#nv ._nv_settings select[aria-label="Type of category"]')
+    .selectOption("text");
+
+  const after = await state();
+  expect(after.type).toBe("text");
+  // Only the colouring changed: position, sort order and selection all hold,
+  // even though the filter is ON the attribute that was re-typed.
+  expect(after.order).toBe(before.order);
+  expect(after.selected).toBe(before.selected);
+  expect(after.columns).toBe(before.columns);
+});
+
+test("derived columns cannot be re-typed", async ({ page }) => {
+  await page.goto(FIXTURE);
+  await expect(page.locator("#nv canvas")).toHaveCount(1);
+  await page.locator("#nv ._nv_gear").click();
+
+  // They are drawn from side tables, not a data column.
+  await expect(
+    page.locator('#nv ._nv_settings select[aria-label="Type of selected"]')
+  ).toBeDisabled();
+  await expect(
+    page.locator(
+      '#nv ._nv_settings select[aria-label="Type of sequential Index"]'
+    )
+  ).toBeDisabled();
+  // And the one that IS switchable reports its real type, not a fallback.
+  await expect(
+    page.locator('#nv ._nv_settings select[aria-label="Type of value"]')
+  ).toHaveValue("seq");
+});
+
+test("dragging an attribute name reorders it", async ({ page }) => {
+  await page.goto(FIXTURE);
+  await expect(page.locator("#nv canvas")).toHaveCount(1);
+  await page.locator("#nv ._nv_gear").click();
+
+  const order = () =>
+    page.evaluate(() =>
+      window.nv
+        .getAttribs()
+        .map((a) => (typeof a === "function" ? a.name : a))
+        .join(",")
+    );
+  const before = await order();
+
+  await page
+    .locator('#nv ._nv_settings label:text-is("value")')
+    .dragTo(page.locator('#nv ._nv_settings label:text-is("id")'));
+
+  await expect.poll(order).not.toBe(before);
+  const after = await order();
+  // Same columns, just moved.
+  expect(after.split(",").sort()).toEqual(before.split(",").sort());
+  expect(after.split(",").indexOf("value")).toBeLessThan(
+    before.split(",").indexOf("value")
+  );
+});
+
+test("setAttribType rejects an unknown type", async ({ page }) => {
+  const warnings = [];
+  page.on("console", (m) => {
+    if (m.type() === "warning") warnings.push(m.text());
+  });
+  await page.goto(FIXTURE);
+  await expect(page.locator("#nv canvas")).toHaveCount(1);
+
+  await page.evaluate(() => window.nv.setAttribType("category", "bogus"));
+  expect(warnings.join("\n")).toMatch(/unknown type "bogus"/);
+  expect(await page.evaluate(() => window.nv.getAttribType("category"))).toBe(
+    "cat"
+  );
+});

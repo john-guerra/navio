@@ -380,6 +380,21 @@ because filters are materialised when created and hiding touches only the
 layout. Sorting is in place, so hiding the sorted column leaves the order alone
 too.
 
+The panel also changes an attribute's **type** — how a column is interpreted and
+coloured. `addAllAttribs` guesses from the data and sometimes guesses wrong; this
+is the correction. Only the colouring changes: the column keeps its position, and
+sorting and filtering compare raw values, so nothing you have already selected is
+invalidated.
+
+```js
+nv.getAttribType("beak");             // "seq"
+nv.setAttribType("beak", "ordered");  // cat seq ordered text date div bool
+nv.getAttribTypes();                  // the switchable set, for a picker
+```
+
+Reorder by dragging an attribute name in the panel, or with the ↑ ↓ buttons
+(which is the keyboard path).
+
 ```js
 nv.setAttribVisible("beak", false);  // hide one
 nv.getVisibleAttribs();              // what is drawn, in order
