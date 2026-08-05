@@ -2272,10 +2272,19 @@ function navio(selection, _h) {
   function updateBrushes(d, level) {
     // The brush selects a RANGE OF RECORDS, so it runs along R: brushY when
     // records go down the screen, brushX when they go across (#22).
-    const aLo = x(xScale.domain()[0], level),
-      aHi =
-        x(xScale.domain()[xScale.domain().length - 1], level) +
-        xScale.bandwidth() * 1.1,
+    //
+    // Hiding every column empties the ATTRIBUTE scale's domain, so domain()[0]
+    // and domain()[length - 1] are both undefined; scaleBand answers undefined
+    // for a value it does not know, and `levelScale(level) + undefined` is NaN.
+    // d3 then writes that NaN straight into the brush rects and the browser
+    // rejects each one - "<rect> attribute y: Expected length, NaN", several
+    // per redraw. An empty widget has nothing to brush, so collapse the
+    // attribute extent to zero rather than letting it go non-finite.
+    const domain = xScale.domain(),
+      aLo = domain.length ? x(domain[0], level) : 0,
+      aHi = domain.length
+        ? x(domain[domain.length - 1], level) + xScale.bandwidth() * 1.1
+        : 0,
       rLo = yScales[level].range()[0],
       rHi = yScales[level].range()[1],
       c0 = toXY(aLo, rLo),
@@ -3471,7 +3480,15 @@ function navio(selection, _h) {
 
   // Deletes the last level by default, or all the subsequent levels of _level on _dataIs
   function deleteSubsequentLevels(_level, _dataIs, opts) {
-    if (dataIs.length <= 1) return;
+    // Every caller that passes _dataIs threads the return value straight back
+    // into its own variable, so this MUST hand the input back when there is
+    // nothing to delete. Returning undefined here made applyFiltersAndUpdate
+    // set `newData = undefined` and then read `newData.length` - which is how
+    // brushing a widget with `nestedFilters` turned off threw "Cannot read
+    // properties of undefined (reading 'length')". With nested filters on,
+    // the level chain has already grown past 1 by the time we arrive, which is
+    // why the default configuration never hit it.
+    if (dataIs.length <= 1) return _dataIs !== undefined ? _dataIs : dataIs;
 
     let { shouldUpdate, silent = false } = opts || {};
 

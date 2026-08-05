@@ -69,6 +69,25 @@ filters compare *visual positions*, not values. Read
 `docs/ai/FILTERING-MODEL.md` — a plausible mental model here is wrong and
 produces designs that look right and are not.
 
+**`nv.nestedFilters = false` is a second, barely-walked code path.** With it on
+(the default) `applyFiltersAndUpdate` grows `dataIs` a level per filter, so the
+level chain is always longer than 1 by the time anything downstream runs. With
+it off the chain stays at length 1, and code guarded on `dataIs.length <= 1`
+fires for the first time — that is how `deleteSubsequentLevels`, whose early
+return forgot to hand `_dataIs` back, made brushing throw "Cannot read
+properties of undefined (reading 'length')". The setting has a checkbox in the
+settings panel, so users reach it. Any function that takes `_dataIs` and is
+assigned to its caller's variable must return it on **every** path.
+
+**Hiding every column empties the attribute scale's domain.** `xScale.domain()`
+becomes `[]`, `domain()[0]` and `domain()[length - 1]` are `undefined`,
+`scaleBand` answers `undefined` for a value it does not know, and
+`levelScale(level) + undefined` is `NaN`. d3 then writes that into SVG
+attributes and the browser rejects each one — several console errors per
+redraw, no exception, nothing that fails a test that only asserts on the model.
+Guard on `domain.length` before indexing it. `drawLink` reads the same
+`domain()[length - 1]`.
+
 **Navio never writes to the caller's rows.** `selected`, `__i` and `__seqId`
 used to be properties on every row; they are now side tables (`selectedFlags`
 `Uint8Array`, `posByLevel` `Int32Array`), and `__seqId` is derived from the row's

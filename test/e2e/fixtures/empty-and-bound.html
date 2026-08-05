@@ -1,0 +1,71 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>No columns, and a vertical widget bound to a horizontal one</title>
+<style>
+  body {
+    font:
+      14px system-ui,
+      sans-serif;
+    margin: 0;
+    padding: 12px;
+  }
+  #hostA,
+  #hostB {
+    margin-bottom: 24px;
+  }
+</style>
+<div id="hostA"></div>
+<div id="hostB"></div>
+
+<script src="/node_modules/d3/dist/d3.js"></script>
+<script src="/node_modules/popper.js/dist/umd/popper.js"></script>
+<script src="/dist/navio.js"></script>
+<script>
+  /* global d3, navio */
+  const { NavioWidget } = navio;
+
+  const CATS = ["alpha", "beta", "gamma"];
+  window.rows = d3.range(60).map((i) => ({
+    id: i + 1,
+    category: CATS[i % 3],
+    value: (i * 37) % 100,
+    score: (i * 13) % 50,
+  }));
+
+  const params = new URLSearchParams(location.search);
+
+  window.a = NavioWidget(window.rows, {
+    height: 300,
+    id: "id",
+    orientation: params.get("a") || "vertical",
+  });
+  document.getElementById("hostA").appendChild(window.a);
+
+  window.b = NavioWidget(window.rows, {
+    height: 300,
+    id: "id",
+    orientation: params.get("b") || "horizontal",
+  });
+  document.getElementById("hostB").appendChild(window.b);
+
+  // Navio-to-Navio binds on the CHAIN, which is the documented pairing - only
+  // that reproduces a multi-level drill-down on the peer.
+  if (params.get("bind") !== "off") {
+    window.b.setFilters(window.a.getFilters());
+    window.a.addEventListener("input", () => {
+      window.b.setFilters(window.a.getFilters());
+    });
+  }
+
+  // Anything the page throws asynchronously, so a test can assert on it.
+  window.pageErrors = [];
+  addEventListener("error", (e) => window.pageErrors.push(String(e.message)));
+
+  // d3 reports a bad attribute by console.error rather than by throwing.
+  window.consoleErrors = [];
+  const realError = console.error;
+  console.error = function (...args) {
+    window.consoleErrors.push(args.map(String).join(" "));
+    realError.apply(console, args);
+  };
+</script>
