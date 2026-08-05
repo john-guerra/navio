@@ -1801,7 +1801,7 @@ function navio(selection, _h) {
       .style("border-top", "2px solid transparent")
       .style("border-bottom", "2px solid transparent");
 
-    row
+    const boxes = row
       .append("input")
       .attr("type", "checkbox")
       .attr("id", (n) => `_nv_vis_${instanceId}_${n}`)
@@ -1915,18 +1915,30 @@ function navio(selection, _h) {
       .style("display", "flex")
       .style("gap", "6px")
       .style("margin-top", "6px");
+    // `shown` is the picker's own record of the boxes, and the boxes are what
+    // the user reads. Emitting the new set without moving both leaves the panel
+    // contradicting the widget: "Show none" emptied the canvas with every box
+    // still ticked, and the next single click then unticked one box and pushed
+    // all the OTHERS back on. Set the state, then report it - never one alone.
+    function setAll(visible) {
+      shown.clear();
+      if (visible) names.forEach((n) => shown.add(n));
+      boxes.property("checked", visible);
+      onChange(visible ? names.slice() : []);
+    }
+
     bulk
       .append("button")
       .attr("type", "button")
       .call(styleButton)
       .text("Show all")
-      .on("click", () => onChange(names.slice()));
+      .on("click", () => setAll(true));
     bulk
       .append("button")
       .attr("type", "button")
       .call(styleButton)
       .text("Show none")
-      .on("click", () => onChange([]));
+      .on("click", () => setAll(false));
 
     return wrap.node();
   }

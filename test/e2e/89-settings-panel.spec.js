@@ -592,11 +592,49 @@ test("Show none hides every column, Show all brings them back", async ({
   const shown = () => page.evaluate(() => window.nv.getVisibleAttribs().length);
   const all = await shown();
 
+  // The BOXES, not just the model. The bulk buttons used to call onChange and
+  // leave every checkbox exactly as it was, so "Show none" emptied the widget
+  // while the panel still claimed all the columns were on - and the next click
+  // on any single checkbox re-sent that stale set and brought them all back.
+  const checks = () =>
+    page.evaluate(() =>
+      Array.from(
+        document.querySelectorAll(
+          '#nv ._nv_settings input[type="checkbox"][id^="_nv_vis_"]'
+        )
+      ).map((c) => c.checked)
+    );
+
   await page.locator('#nv ._nv_settings button:text-is("Show none")').click();
   await expect.poll(shown).toBe(0);
+  expect((await checks()).some(Boolean)).toBe(false);
 
   await page.locator('#nv ._nv_settings button:text-is("Show all")').click();
   await expect.poll(shown).toBe(all);
+  expect((await checks()).every(Boolean)).toBe(true);
+});
+
+test("a checkbox after Show none toggles one column, not all of them", async ({
+  page,
+}) => {
+  await page.goto(FIXTURE);
+  await expect(page.locator("#nv canvas")).toHaveCount(1);
+  await page.locator("#nv ._nv_gear").click();
+
+  const shown = () => page.evaluate(() => window.nv.getVisibleAttribs().length);
+
+  await page.locator('#nv ._nv_settings button:text-is("Show none")').click();
+  await expect.poll(shown).toBe(0);
+
+  // The boxes were all still ticked here, so this asks the user to click a box
+  // that already looks on: check() saw it checked and did nothing, and a real
+  // click UNticked it - emitting every OTHER name and repopulating the widget.
+  // Either way the panel could not express "just this one".
+  await page
+    .locator('#nv ._nv_settings input[type="checkbox"][id^="_nv_vis_"]')
+    .first()
+    .check();
+  await expect.poll(shown).toBe(1);
 });
 
 test("filter explanations clear the panel and each other", async ({ page }) => {
