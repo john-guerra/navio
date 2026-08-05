@@ -1087,6 +1087,7 @@ function navio(selection, _h) {
   const LIVE_OPTIONS = [
     {
       key: "height",
+      hint: "The widget's extent along the RECORD axis - screen height when horizontal, width when vertical. More room means fewer rows share a pixel line.",
       label: "Size along records",
       min: 100,
       max: 1200,
@@ -1094,23 +1095,81 @@ function navio(selection, _h) {
       get: () => nv.height(),
       set: (v) => nv.height(v),
     },
-    { key: "attribWidth", label: "Column width", min: 4, max: 60, step: 1 },
-    { key: "attribFontSize", label: "Header font", min: 6, max: 24, step: 1 },
+    {
+      key: "attribWidth",
+      hint: "How wide each column is drawn. Narrow columns fit more attributes on screen; wide ones make individual values easier to compare.",
+      label: "Column width",
+      min: 4,
+      max: 60,
+      step: 1,
+    },
+    {
+      key: "attribFontSize",
+      hint: "Size of the column header labels. Capped by the column width, so widening a column can be what actually makes a header legible.",
+      label: "Header font",
+      min: 6,
+      max: 24,
+      step: 1,
+    },
     {
       key: "attribFontSizeSelected",
+      hint: "Size a header grows to while the pointer is over it, so a rotated label can be read without changing the layout.",
       label: "Header font (hover)",
       min: 6,
       max: 32,
       step: 1,
     },
-    { key: "attribRotation", label: "Header angle", min: -90, max: 0, step: 5 },
-    { key: "levelsSeparation", label: "Level gap", min: 0, max: 200, step: 5 },
-    { key: "filterFontSize", label: "Filter font", min: 6, max: 20, step: 1 },
-    { key: "margin", label: "Margin", min: 0, max: 100, step: 5 },
-    { key: "x0", label: "Left offset", min: 0, max: 200, step: 5 },
-    { key: "y0", label: "Top offset", min: 0, max: 300, step: 5 },
+    {
+      key: "attribRotation",
+      hint: "Angle of the column headers, in degrees. 0 is horizontal and -90 is vertical; steeper angles fit longer names above narrow columns. Ignored in vertical orientation, where labels are upright.",
+      label: "Header angle",
+      min: -90,
+      max: 0,
+      step: 5,
+    },
+    {
+      key: "levelsSeparation",
+      hint: "Horizontal gap between drill-down levels. The filter chips are drawn in this gap, so a wider gap gives them more room.",
+      label: "Level gap",
+      min: 0,
+      max: 200,
+      step: 5,
+    },
+    {
+      key: "filterFontSize",
+      hint: "Size of the filter chips under the levels.",
+      label: "Filter font",
+      min: 6,
+      max: 20,
+      step: 1,
+    },
+    {
+      key: "margin",
+      hint: "Blank space around the drawing, inside the widget.",
+      label: "Margin",
+      min: 0,
+      max: 100,
+      step: 5,
+    },
+    {
+      key: "x0",
+      hint: "Offset of the whole drawing from the container's left edge.",
+      label: "Left offset",
+      min: 0,
+      max: 200,
+      step: 5,
+    },
+    {
+      key: "y0",
+      hint: "Offset of the whole drawing from the container's top edge. Headroom for the rotated column headers, which are drawn above the data.",
+      label: "Top offset",
+      min: 0,
+      max: 300,
+      step: 5,
+    },
     {
       key: "divisionsThreshold",
+      hint: "How many pixels a row must occupy before dividing lines are drawn between rows. Below this the lines would be thicker than the rows.",
       label: "Row divider threshold",
       min: 0,
       max: 20,
@@ -1118,6 +1177,7 @@ function navio(selection, _h) {
     },
     {
       key: "clickTolerance",
+      hint: "How far the pointer may drift during a click and still count as a click rather than a range selection. Raise it if selecting a single value is difficult.",
       label: "Click tolerance",
       min: 0,
       max: 20,
@@ -1127,10 +1187,27 @@ function navio(selection, _h) {
 
   /** Colours re-read on every draw. Excludes the ones baked into scales. */
   const LIVE_COLOURS = [
-    { key: "divisionsColor", label: "Row dividers" },
-    { key: "levelConnectionsColor", label: "Level connections" },
-    { key: "linkColor", label: "Links" },
-    { key: "tooltipBgColor", label: "Tooltip background", needsData: true },
+    {
+      key: "divisionsColor",
+      hint: "Colour of the lines drawn between rows when they are tall enough.",
+      label: "Row dividers",
+    },
+    {
+      key: "levelConnectionsColor",
+      hint: "Colour of the ribbons linking a level to the rows it came from.",
+      label: "Level connections",
+    },
+    {
+      key: "linkColor",
+      hint: "Colour of the curves drawn for links passed via nv.links().",
+      label: "Links",
+    },
+    {
+      key: "tooltipBgColor",
+      hint: "Background of the hover tooltip.",
+      label: "Tooltip background",
+      needsData: true,
+    },
   ];
 
   /** <input type="color"> only accepts #rrggbb, so normalise whatever is set. */
@@ -1891,7 +1968,14 @@ function navio(selection, _h) {
       .style("align-items", "center")
       .style("gap", "6px")
       .style("margin-bottom", "6px");
-    orient.append("span").style("flex", "1").text("Orientation");
+    orient
+      .attr(
+        "title",
+        "Which way the two axes run. Horizontal puts attributes across and one row per pixel line down; vertical transposes both."
+      )
+      .append("span")
+      .style("flex", "1")
+      .text("Orientation");
     const orientSel = orient.append("select").on("change", function () {
       nv.orientation = this.value;
       nv.hardUpdate();
@@ -1915,7 +1999,14 @@ function navio(selection, _h) {
       .style("align-items", "center")
       .style("gap", "6px")
       .style("margin-bottom", "6px");
-    place.append("span").style("flex", "1").text("Settings panel");
+    place
+      .attr(
+        "title",
+        "Where this panel opens. Below keeps the widget visible and does not move while you drag a slider; beside needs room to the right; over is for tight layouts."
+      )
+      .append("span")
+      .style("flex", "1")
+      .text("Settings panel");
     const placeSel = place.append("select").on("change", function () {
       nv.settingsPlacement = this.value;
       persistSettings();
@@ -1937,7 +2028,10 @@ function navio(selection, _h) {
         .append("label")
         .style("display", "flex")
         .style("align-items", "center")
-        .style("gap", "6px");
+        .style("gap", "6px")
+        // On the row, not just the input: the label is the bigger target and
+        // is what someone scanning the panel actually points at.
+        .attr("title", opt.hint || opt.label);
       row.append("span").style("flex", "1").text(opt.label);
       const read = opt.get || (() => nv[opt.key]);
       const write = opt.set || ((v) => (nv[opt.key] = v));
@@ -1971,7 +2065,8 @@ function navio(selection, _h) {
         .append("label")
         .style("display", "flex")
         .style("align-items", "center")
-        .style("gap", "6px");
+        .style("gap", "6px")
+        .attr("title", c.hint || c.label);
       row.append("span").style("flex", "1").text(c.label);
       row
         .append("input")
@@ -1992,29 +2087,45 @@ function navio(selection, _h) {
     // --- what is drawn ---------------------------------------------------
     const shows = settingsSection(settingsPanel, "Show");
     for (const t of [
-      { key: "showAttribTitles", label: "Column headers" },
-      { key: "showSelectedAttrib", label: "Selected column", needsData: true },
+      {
+        key: "showAttribTitles",
+        label: "Column headers",
+        hint: "Draw the rotated attribute names above the columns. Turn them off to save vertical space once you know the layout.",
+      },
+      {
+        key: "showSelectedAttrib",
+        label: "Selected column",
+        column: "selected",
+        hint: "Show the derived column that marks which rows are currently selected.",
+      },
       {
         key: "showSequenceIDAttrib",
         label: "Sequential index column",
-        needsData: true,
+        column: "__seqId",
+        hint: "Show the derived column holding each row's original position in the data, before any sorting.",
       },
     ]) {
       const row = shows
         .append("label")
         .style("display", "flex")
         .style("align-items", "center")
-        .style("gap", "6px");
+        .style("gap", "6px")
+        .attr("title", t.hint || t.label);
       row
         .append("input")
         .attr("type", "checkbox")
         .property("checked", !!nv[t.key])
         .on("change", function () {
           nv[t.key] = this.checked;
-          // These are read inside data(), so a redraw alone would not show it.
-          if (t.needsData) nv.data(nv.data());
+          // The two derived columns were only ever ADDED, inside data(), and
+          // only when the flag was already true - so unticking left the column
+          // exactly where it was and re-ticking found it already in colScales
+          // and did nothing either. Drive the visibility set instead, which is
+          // what "display this column" means and which works both ways.
+          if (t.column) nv.setAttribVisible(t.column, this.checked);
           else nv.hardUpdate();
           persistSettings();
+          drawSettingsPanel();
         });
       row.append("span").text(t.label);
     }
@@ -2025,7 +2136,11 @@ function navio(selection, _h) {
       .append("label")
       .style("display", "flex")
       .style("align-items", "center")
-      .style("gap", "6px");
+      .style("gap", "6px")
+      .attr(
+        "title",
+        "Each filter opens a new level to its right, so a drill-down keeps its history on screen. Off, filtering narrows the single level in place."
+      );
     nested
       .append("input")
       .attr("type", "checkbox")
@@ -3199,10 +3314,24 @@ function navio(selection, _h) {
         growHeaderLabel(this, d, false);
       });
 
-    if (nv.showAttribTitles) {
-      attribOverlayEnter
-        .append("text")
-        .merge(attribOverlay.select("text"))
+    // Turning headers off has to REMOVE the labels, not merely stop creating
+    // them. This was an `if` around the append+merge, so once a label existed
+    // nothing ever took it away and the checkbox looked dead.
+    if (!nv.showAttribTitles) {
+      attribOverlayEnter.selectAll("text").remove();
+      attribOverlay.selectAll("text").remove();
+    } else {
+      // Append where there is no label yet, on BOTH selections. Enter-only
+      // appending meant that turning headers back on after turning them off
+      // only relabelled the columns that happened to be entering that pass -
+      // measured 2 of 6 - because the removal above had emptied the rest.
+      const withLabels = attribOverlayEnter.merge(attribOverlay);
+      withLabels.each(function () {
+        const g = d3.select(this);
+        if (g.select("text").empty()) g.append("text");
+      });
+      withLabels
+        .select("text")
         .style("cursor", "point")
         .style("-webkit-user-select", "none")
         .style("-moz-user-select", "none")
