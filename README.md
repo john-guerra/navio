@@ -364,22 +364,32 @@ A gear in the widget's corner opens a panel for changing options live: which
 columns are shown, their order, orientation, and the geometry.
 
 ```js
-nv.settings = false;            // hide the gear entirely (default true)
-nv.settingsPlacement = "modal"; // "below" (default) | "beside" | "over" | "modal"
+nv.settings = false;             // hide the gear entirely (default true)
+nv.settingsPlacement = "beside"; // "below" (default) | "beside" | "over"
+nv.settingsMaxAttribRows = 10;   // scroll the column list past this many; 0 disables
 ```
 
-The panel is a real `<dialog>`. Three of the four placements anchor it to the
-widget so you can watch the effect of each control as you change it: `"below"`
-is the default because column width changes the canvas *width*, and a panel
-below therefore does not move while you drag that slider; `"beside"` sits to
-the right of the canvas; `"over"` is a compact overlay for layouts with no room.
+The panel is a real `<dialog>`, and every placement keeps the widget visible so
+you can watch the effect of each control as you change it. `"below"` is the
+default because column width changes the canvas *width*, so a panel below does
+not move while you drag that slider; `"beside"` sits to the right of the canvas;
+`"over"` is a compact overlay for layouts with no room. You can also switch
+placement from inside the panel itself.
 
-`"modal"` opens it with `showModal()` and hands the whole job to the browser —
-centring, `Escape`, a focus trap, a `::backdrop`, and the **top layer**. Use it
-when the widget is embedded somewhere that clips: an ancestor with
-`overflow: hidden` cuts off an absolutely positioned panel at *any* z-index, and
-the top layer is the only way out. The trade is that the page is inert while the
-panel is up. You can also switch placement from inside the panel itself.
+A panel will not reposition while you are holding one of its own controls — the
+height slider makes the widget taller, and without that the slider would walk
+down the page away from the cursor dragging it.
+
+The **Attributes** section is a `<details>`, so a table with many columns can be
+folded away to reach Layout, Colours and Filtering; past
+`settingsMaxAttribRows` columns the list scrolls inside its own box, with
+`Show all` / `Show none` left outside it. Every parameter carries a description
+on hover.
+
+**Reset** puts the widget back the way it was constructed and forgets what was
+saved — `nv.resetSettings()`. Filters and the selection are deliberately left
+alone, so a layout can be reset without discarding a selection you have already
+made; use `setFilters()` for those.
 
 **Hiding a column is not removing it.** It keeps its type, its colour scale and
 its place in the order — and any selection you have already made survives,
