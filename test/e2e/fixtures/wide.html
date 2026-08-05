@@ -1,0 +1,37 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>Navio with a configurable number of columns</title>
+<style>
+  body {
+    font:
+      14px system-ui,
+      sans-serif;
+    margin: 0;
+    padding: 12px;
+  }
+</style>
+<div id="nv"></div>
+
+<script src="/node_modules/d3/dist/d3.js"></script>
+<script src="/node_modules/popper.js/dist/umd/popper.js"></script>
+<script src="/dist/navio.js"></script>
+<script>
+  /* global d3, navio */
+  const params = new URLSearchParams(location.search);
+  const cols = +(params.get("cols") || 5);
+  const rows = +(params.get("rows") || 40);
+
+  window.rows = d3.range(rows).map((i) => {
+    const r = { id: i + 1 };
+    for (let c = 0; c < cols; c++) r["c" + c] = (i * (c + 3)) % 100;
+    return r;
+  });
+
+  window.nv = new navio(d3.select("#nv"), {
+    height: 300,
+    settingsPlacement: params.get("placement") || "below",
+  });
+  window.nv.id("id");
+  window.nv.data(window.rows);
+  window.nv.addAllAttribs();
+</script>

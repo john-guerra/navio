@@ -58,6 +58,25 @@ and only fails on interaction — an example serving d3 v4 threw
 `d3.pointer is not a function` only when someone sorted a column. A unit test
 (`test/unit/examples-d3-version.test.js`) now fails if any example pins d3 < 7.
 
+## Conventions
+
+**Prefer standard browser controls.** When the platform already has an element
+for the job, use it rather than building the behaviour out of divs and click
+handlers: `<details>`/`<summary>` for a collapsible section, `<dialog>` for the
+settings panel, `overflow-y: auto` for a scrolling list, a real `<button>`,
+`<select>` or checkbox for a control. The native element brings its keyboard
+behaviour, its ARIA state, focus handling and find-in-page for free, and a
+hand-rolled version is a worse copy that has to be maintained. This is a
+maintainer preference, stated directly — apply it to anything new in the
+settings panel.
+
+The exception is when the native behaviour is measurably wrong for the case, and
+"measurably" means a number: `dialog.showModal()` was tried for the settings
+panel and removed, because it centres in the VIEWPORT — with two Navios on a
+page the panel appeared nowhere near the widget it belonged to — and its one
+real advantage, the top layer, cannot escape the sandboxed cross-origin iframe
+an Observable notebook renders its cells in.
+
 ## Landmines
 
 Each of these has cost real debugging time here.

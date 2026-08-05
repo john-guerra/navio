@@ -107,6 +107,11 @@ function navio(selection, _h) {
     // The scrolling wrapper between the container and the canvas. It has to be
     // reachable outside init(): it CLIPS, so its height is part of the layout.
     divNavio = null,
+    // Titles of the settings sections the user has folded away. Held here
+    // because drawSettingsPanel rebuilds the panel from scratch on every type
+    // change, reorder and header drag - a <details> element's own state would
+    // spring back open each time.
+    collapsedSections = new Set(),
     // Screen pixels the filter chips need BELOW the canvas. The chips are drawn
     // past the end of the record axis, which is outside the canvas, so both
     // boxes have to be told to cover them - see applyContainerSize.
@@ -170,12 +175,17 @@ function navio(selection, _h) {
   //            column-width slider - the default for that reason.
   //   "beside" to the right of the canvas; moves as the canvas widens.
   //   "over"   compact overlay on the widget, for layouts with no room.
-  //   "modal"  a real modal <dialog>: the browser centres it in the viewport
-  //            and puts it in the TOP LAYER, so no ancestor's overflow can
-  //            clip it and nothing on the page can paint over it. The only
-  //            placement that survives being embedded in a scrolling
-  //            container; the trade is that the page is inert while it is up.
+  //
+  // A modal placement (dialog.showModal, the top layer) was built and removed:
+  // it centres in the VIEWPORT, which with two Navios on a page puts the panel
+  // nowhere near the widget it belongs to, and its one real advantage - being
+  // unclippable - does not reach an Observable notebook, whose body is a
+  // sandboxed cross-origin iframe the top layer cannot escape.
   nv.settingsPlacement = "below";
+  // Past this many columns the attribute list scrolls inside its own box
+  // instead of pushing Layout, Colours and Filtering below the fold. The
+  // bulk buttons stay outside the scroll area, so they never scroll away.
+  nv.settingsMaxAttribRows = 10;
   // Swap the settings panel's attribute picker. See defaultAttribPicker for
   // the contract; examples/settings plugs in @john-guerra/search-checkbox.
   nv.attribPicker = null;
@@ -1150,6 +1160,7 @@ function navio(selection, _h) {
       attribsOrdered.map((a) => [getAttribName(a), nv.getAttribType(a)])
     );
     out.attribOrder = attribsOrdered.map((a) => getAttribName(a));
+    out.collapsedSections = Array.from(collapsedSections);
     return out;
   };
 
@@ -1166,11 +1177,15 @@ function navio(selection, _h) {
         k === "hiddenAttribs" ||
         k === "attribOrder" ||
         k === "attribTypes" ||
+        k === "collapsedSections" ||
         k === "height"
       )
         continue;
       if (k in nv) nv[k] = cfg[k];
     }
+    // Not an nv property - it is panel state, held in the closure.
+    if (Array.isArray(cfg.collapsedSections))
+      collapsedSections = new Set(cfg.collapsedSections);
     if (typeof cfg.height === "number") height = cfg.height;
     if (Array.isArray(cfg.attribOrder)) {
       cfg.attribOrder.forEach((name, i) => {
@@ -1349,14 +1364,10 @@ function navio(selection, _h) {
       .text("⚙")
       .on("click", () => toggleSettings());
 
-    // A real <dialog>. In the three anchored placements it is opened with
-    // show() and positioned by placeSettingsPanel, exactly as the plain div
-    // was. `settingsPlacement: "modal"` opens it with showModal() instead,
-    // which hands the whole job to the browser: the TOP LAYER, so no ancestor
-    // can clip or out-paint it; centring; a ::backdrop; Escape; and a real
-    // focus trap. Measured, an `overflow: hidden` wrapper clipped the old
-    // absolutely-positioned panel by 347px, and nothing but the top layer
-    // gets out of that.
+    // A real <dialog>, opened non-modally with show() and positioned by
+    // placeSettingsPanel exactly as the plain div was. The element is worth it
+    // for its own sake: `open` is the single source of truth for "is the panel
+    // showing", and the browser supplies Escape and the dialog semantics.
     settingsPanel = selection
       .append("dialog")
       .attr("class", "_nv_settings")
@@ -1397,6 +1408,19 @@ function navio(selection, _h) {
       // Escape reaches us as `cancel` on a modal dialog, and as a keydown on a
       // non-modal one. Both close, and both hand focus back to the gear, so a
       // keyboard user is never dropped at the top of the document.
+      // Whoever closes it - us, another instance opening its own, or the
+      // browser - the button has to follow. Making the dialog's own event the
+      // single source of truth is why a peer can close this panel directly and
+      // still leave a correct aria-expanded behind.
+      .on("close", () => {
+        if (settingsButton) settingsButton.attr("aria-expanded", "false");
+        if (typeof document !== "undefined")
+          document.removeEventListener(
+            "pointerdown",
+            dismissOnOutsidePointer,
+            true
+          );
+      })
       .on("cancel", (event) => {
         event.preventDefault(); // close it ourselves, so aria-expanded follows
         toggleSettings(false);
@@ -1410,9 +1434,6 @@ function navio(selection, _h) {
           return;
         }
         if (event.key !== "Tab") return;
-        // A modal dialog traps focus itself; doing it again here would fight
-        // the browser. Only the anchored, non-modal placements need this.
-        if (isModalSettings()) return;
         // Focus stays inside while the dialog is open.
         const items = focusablePanelItems();
         if (!items.length) return;
@@ -1426,11 +1447,6 @@ function navio(selection, _h) {
           first.focus();
         }
       });
-  }
-
-  /** Does this placement hand positioning and dismissal to the browser? */
-  function isModalSettings() {
-    return nv.settingsPlacement === "modal";
   }
 
   /** Is the panel showing? The dialog's own `open` state is the truth. */
@@ -1450,22 +1466,6 @@ function navio(selection, _h) {
    */
   function placeSettingsPanel() {
     if (!settingsPanel) return;
-
-    // "modal" is the whole point of using a real <dialog>: the browser centres
-    // it in the VIEWPORT and puts it in the top layer, so it cannot be clipped
-    // by a scrolling ancestor or out-painted by anything on the page. Hand the
-    // UA styles back and get out of the way.
-    if (isModalSettings()) {
-      settingsPanel
-        .style("position", null)
-        .style("margin", null)
-        .style("inset", null)
-        .style("top", null)
-        .style("bottom", null)
-        .style("left", null)
-        .style("right", null);
-      return;
-    }
 
     const host = selection.node(),
       cv = canvas;
@@ -1522,40 +1522,164 @@ function navio(selection, _h) {
       return;
     }
 
-    drawSettingsPanel();
-    // Placement has to be settled BEFORE opening: modal mode gives the UA
-    // styles back, and the anchored modes take them away. Opening first would
-    // paint one frame in the wrong place.
-    placeSettingsPanel();
-    if (!node.open) {
-      if (isModalSettings()) node.showModal();
-      else node.show();
+    // Only one settings panel on the page at a time.
+    //
+    // The panel opens BELOW its widget, which in a notebook - or any page that
+    // stacks Navios - is exactly where the next Navio sits. Two panels open at
+    // once meant the upper one was painted over the lower widget's own
+    // controls, so clicking its selects hit the wrong panel or nothing at all.
+    // Instances do not know about each other, so this coordinates through the
+    // DOM, the same way the widgets already share a page.
+    if (typeof document !== "undefined") {
+      for (const other of document.querySelectorAll(
+        "dialog._nv_settings[open]"
+      ))
+        if (other !== node && typeof other.close === "function") other.close();
     }
+
+    drawSettingsPanel();
+    placeSettingsPanel();
+    if (!node.open) node.show();
     settingsButton.attr("aria-expanded", "true");
 
-    // show()/showModal() focus the first focusable child themselves, but the
-    // anchored modes are opened without the browser's autofocus handling in
-    // some paths - keep this so both behave the same.
+    focusFirstPanelItem();
+
+    // Light dismiss. The panel is absolutely positioned so nothing on the page
+    // reflows around it, which means it OVERLAYS whatever follows the widget -
+    // on a page that stacks Navios, the next Navio's own gear and canvas. A
+    // pointer landing anywhere else closes it, so the second click reaches the
+    // control the user was aiming at instead of being eaten by a panel
+    // belonging to a widget further up the page.
+    if (typeof document !== "undefined") {
+      document.addEventListener("pointerdown", dismissOnOutsidePointer, true);
+    }
+  }
+
+  /** Close the panel when a pointer goes down outside it and outside the gear. */
+  function dismissOnOutsidePointer(event) {
+    if (!settingsPanel || !settingsPanel.node().open) {
+      document.removeEventListener(
+        "pointerdown",
+        dismissOnOutsidePointer,
+        true
+      );
+      return;
+    }
+    const t = event.target;
+    if (settingsPanel.node().contains(t)) return;
+    if (settingsButton && settingsButton.node().contains(t)) return;
+    // The widget itself is not "outside". The panel exists to drive THIS
+    // Navio, and several controls are on the widget rather than in the panel -
+    // dragging a header reorders the columns and the open panel is expected to
+    // follow. Only a pointer landing on some other part of the page, another
+    // Navio included, means the user has moved on.
+    if (selection && selection.node() && selection.node().contains(t)) return;
+    document.removeEventListener("pointerdown", dismissOnOutsidePointer, true);
+    toggleSettings(false);
+  }
+
+  /**
+   * Put focus inside the panel.
+   *
+   * Needed after every rebuild, not just on open: drawSettingsPanel wipes the
+   * panel and builds it again on each type change, reorder and header drag, so
+   * whatever the user was on is destroyed and focus falls back to <body>. A
+   * non-modal dialog only sees Escape when focus is inside it, so losing focus
+   * silently stopped Escape from closing the panel.
+   */
+  function focusFirstPanelItem() {
     const items = focusablePanelItems();
     if (items.length) items[0].focus();
   }
 
-  function settingsSection(parent, title) {
-    parent
-      .append("div")
-      .text(title)
-      .style("font-weight", "bold")
+  /**
+   * A titled block in the settings panel. Returns the element to fill.
+   *
+   * `collapsible` makes it a real <details>/<summary>. The browser already has
+   * a disclosure widget - keyboard operation, the expanded/collapsed ARIA
+   * state, find-in-page opening it, the marker triangle - and a hand-rolled
+   * div-and-a-click-handler would only be a worse copy of it.
+   */
+  function settingsSection(parent, title, opts = {}) {
+    const { collapsible = false, hint = null } = opts;
+
+    if (!collapsible) {
+      parent
+        .append("div")
+        .text(title)
+        .style("font-weight", "bold")
+        .style("margin", "8px 0 4px")
+        .style("border-bottom", "1px solid #eee");
+      return parent.append("div");
+    }
+
+    const details = parent
+      .append("details")
+      .attr("data-section", title)
+      .property("open", !collapsedSections.has(title))
       .style("margin", "8px 0 4px")
-      .style("border-bottom", "1px solid #eee");
-    return parent.append("div");
+      .on("toggle", function () {
+        if (this.open) collapsedSections.delete(title);
+        else collapsedSections.add(title);
+        persistSettings();
+      });
+
+    details
+      .append("summary")
+      .style("font-weight", "bold")
+      .style("cursor", "pointer")
+      .style("border-bottom", "1px solid #eee")
+      .style("padding-bottom", "2px")
+      // The count travels in the summary so it is still readable when the
+      // section is folded - otherwise collapsing hides the only place that
+      // says how many columns are on.
+      .text(hint ? `${title} (${hint})` : title);
+
+    return details.append("div");
+  }
+
+  /**
+   * Cap the attribute list's height so the sections below it stay reachable.
+   *
+   * Measured rather than assumed: a row's height depends on the font, on the
+   * type <select> inside it and on whatever a custom picker renders. The
+   * element has to be in the document for that, which is why this runs after
+   * the picker has been appended rather than inside the picker itself.
+   */
+  function capAttribList(pickerEl, count) {
+    const max = nv.settingsMaxAttribRows;
+    if (!max || count <= max) return;
+    // A picker marks the part that should scroll; without one, scroll it all.
+    const list = pickerEl.querySelector("[data-navio-attrib-list]") || pickerEl;
+    const first = list.firstElementChild;
+    const rowH = first ? first.getBoundingClientRect().height : 0;
+    d3.select(list)
+      .style("max-height", (rowH > 0 ? Math.round(rowH * max) : 240) + "px")
+      .style("overflow-y", "auto");
   }
 
   function drawSettingsPanel() {
     if (!settingsPanel) return;
+    // The rebuild is a wipe, so it destroys whatever the user was on. Only
+    // put focus back if it was inside the panel to begin with - this also runs
+    // on data updates, and stealing focus then would be worse than the bug.
+    const panelNode = settingsPanel.node(),
+      hadFocus = panelNode.contains(document.activeElement);
     settingsPanel.selectAll("*").remove();
 
     // --- attributes ------------------------------------------------------
-    const attribs = settingsSection(settingsPanel, "Attributes");
+    // Same label the column header uses, so the two agree.
+    const label = (a) =>
+      getAttribName(a) === "__seqId" ? "sequential Index" : getAttribName(a);
+    const names = attribsOrdered.map(label);
+
+    // One row per column, so this is the section that grows without bound and
+    // pushes everything else out of reach. It folds, and past
+    // settingsMaxAttribRows columns the list scrolls inside itself as well.
+    const attribs = settingsSection(settingsPanel, "Attributes", {
+      collapsible: true,
+      hint: `${visibleAttribs().length} of ${names.length} shown`,
+    });
     attribs
       .append("div")
       .style("font-size", "11px")
@@ -1568,10 +1692,6 @@ function navio(selection, _h) {
     // examples/settings, which plugs in @john-guerra/search-checkbox. Navio
     // must not fetch that itself: d3 and popper.js are already external and
     // the library takes no further dependencies.
-    // Same label the column header uses, so the two agree.
-    const label = (a) =>
-      getAttribName(a) === "__seqId" ? "sequential Index" : getAttribName(a);
-    const names = attribsOrdered.map(label);
     const picker = nv.attribPicker || defaultAttribPicker;
     const pickerEl = picker(names, {
       value: visibleAttribs().map(label),
@@ -1618,7 +1738,11 @@ function navio(selection, _h) {
       },
       instanceId,
     });
-    if (pickerEl) attribs.node().appendChild(pickerEl);
+    if (pickerEl) {
+      attribs.node().appendChild(pickerEl);
+      // After the append: measuring a row needs it to be in the document.
+      capAttribList(pickerEl, names.length);
+    }
 
     // A custom picker only owns visibility, so the type controls that the
     // built-in one carries in its rows would otherwise disappear with it.
@@ -1708,7 +1832,7 @@ function navio(selection, _h) {
     });
     placeSel
       .selectAll("option")
-      .data(["below", "beside", "over", "modal"])
+      .data(["below", "beside", "over"])
       .enter()
       .append("option")
       .attr("value", (d) => d)
@@ -1878,6 +2002,10 @@ function navio(selection, _h) {
         toggleSettings(false);
         settingsButton.node().focus();
       });
+
+    // A non-modal dialog only sees Escape while focus is inside it, so losing
+    // focus to <body> silently made the panel unclosable from the keyboard.
+    if (hadFocus && panelNode.open) focusFirstPanelItem();
   }
 
   /**
@@ -1888,6 +2016,11 @@ function navio(selection, _h) {
    * where `value` is the currently-visible names, `onChange` receives the new
    * visible names, and `move(name, delta)` reorders. A picker that does not
    * support reordering can simply ignore `move`.
+   *
+   * Mark the scrollable part with `data-navio-attrib-list` if the whole
+   * element should not scroll - see capAttribList. Without it Navio caps the
+   * returned element itself, which for this picker would carry the bulk
+   * buttons off the bottom along with the rows.
    */
   function defaultAttribPicker(
     names,
@@ -1896,7 +2029,12 @@ function navio(selection, _h) {
     const shown = new Set(value);
     const wrap = d3.create("div");
 
-    const row = wrap
+    // Only the rows scroll. The bulk buttons live outside this box, so "Show
+    // all" and "Show none" stay put instead of riding off the bottom with a
+    // long list - which would defeat the point of capping the height.
+    const list = wrap.append("div").attr("data-navio-attrib-list", "");
+
+    const row = list
       .selectAll("div")
       .data(names)
       .enter()
@@ -4741,6 +4879,14 @@ function navio(selection, _h) {
     tooltip = null;
 
     if (settingsPanel) {
+      // The light-dismiss listener lives on `document`, so removing the panel
+      // is not enough to detach it.
+      if (typeof document !== "undefined")
+        document.removeEventListener(
+          "pointerdown",
+          dismissOnOutsidePointer,
+          true
+        );
       settingsPanel.remove();
       settingsPanel = null;
     }
