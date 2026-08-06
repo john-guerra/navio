@@ -3114,18 +3114,40 @@ function navio(selection, _h) {
     //   });
   }
 
+  /**
+   * The "N records" label for each level, just past the end of the RECORD axis.
+   *
+   * This was the last draw* helper writing raw screen x/y instead of going
+   * through toXY(). Horizontally the two happen to agree; vertically the record
+   * axis IS the screen width, so `recordEnd + 15` was written as a y - putting
+   * the label 255px below a 140px canvas, where it was clipped away entirely
+   * (#22).
+   *
+   * Vertical needs more than the swap. Past the records there is only the slack
+   * between yScales.range()[1] and `height` - about 25px - which is narrower
+   * than a seven-digit count. Anchored at the start the number would run off
+   * the right edge; anchored at the END it grows back over the last few records
+   * instead, which stays legible. Along A the label sits at the level's own
+   * edge, and vertically that edge is a y, so the text has to HANG below it or
+   * its ascender is clipped by the top of the canvas.
+   */
   function drawCounts(levelOverlay, levelOverlayEnter) {
+    const vertical = isVertical();
+    const alongR = (i) => (vertical ? height - 4 : yScales[i].range()[1] + 15);
+
     levelOverlayEnter
       .append("text")
       .merge(levelOverlay.select("text.numNodesLabel"))
       .attr("class", "numNodesLabel")
       .style("font-family", "sans-serif")
       .style("pointer-events", "none")
-      .attr("y", function (_, i) {
-        return yScales[i].range()[1] + 15;
-      })
+      .attr("text-anchor", vertical ? "end" : "start")
+      .attr("dominant-baseline", vertical ? "hanging" : "auto")
       .attr("x", function (_, i) {
-        return levelScale(i);
+        return toXY(levelScale(i), alongR(i)).x;
+      })
+      .attr("y", function (_, i) {
+        return toXY(levelScale(i), alongR(i)).y;
       })
       .text(function (d) {
         return nv.fmtCounts(d.length);

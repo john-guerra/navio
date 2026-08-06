@@ -199,6 +199,86 @@ test("an existing brush can be dragged along the record axis", async ({
     .not.toBe(first.join(","));
 });
 
+// drawCounts was the last draw* helper still writing raw screen x/y instead of
+// going through toXY(). In vertical that put the label at (levelScale(level),
+// recordEnd + 15) - the second number is the extent of the RECORD axis, which
+// vertically is the canvas WIDTH, so the label was drawn ~255px below a 140px
+// canvas and clipped away entirely. Measured before the fix: text at y=395,
+// svg height 140.
+test("the record count is visible in vertical", async ({ page }) => {
+  await page.goto(V);
+  await expect(page.locator("#nv canvas")).toHaveCount(1);
+
+  const label = page.locator("#nv .numNodesLabel").first();
+  await expect(label).toHaveText("60");
+
+  const m = await page.evaluate(() => {
+    const t = document.querySelector(".numNodesLabel").getBoundingClientRect();
+    const s = document.querySelector("#nv svg").getBoundingClientRect();
+    return {
+      label: {
+        top: t.top - s.top,
+        bottom: t.bottom - s.top,
+        left: t.left - s.left,
+        right: t.right - s.left,
+      },
+      svg: { w: s.width, h: s.height },
+    };
+  });
+
+  // Inside the canvas on BOTH axes - the bug put it 255px past the bottom.
+  expect(m.label.top).toBeGreaterThanOrEqual(0);
+  expect(m.label.bottom).toBeLessThanOrEqual(m.svg.h);
+  expect(m.label.left).toBeGreaterThanOrEqual(0);
+  expect(m.label.right).toBeLessThanOrEqual(m.svg.w);
+});
+
+// Vertically the count sits in the ~40px of slack past the end of the records,
+// which is narrower than a long number is wide. Anchored at the start it would
+// run off the right edge; anchored at the end it grows back over the records
+// instead, which is legible. This pins the direction, not just the presence.
+test("a long count is not clipped by the right edge in vertical", async ({
+  page,
+}) => {
+  await page.goto(V + "&n=5000");
+  await expect(page.locator("#nv canvas")).toHaveCount(1);
+
+  const label = page.locator("#nv .numNodesLabel").first();
+  await expect(label).toHaveText("5,000");
+
+  const m = await page.evaluate(() => {
+    const t = document.querySelector(".numNodesLabel").getBoundingClientRect();
+    const s = document.querySelector("#nv svg").getBoundingClientRect();
+    return { right: t.right - s.left, left: t.left - s.left, w: s.width };
+  });
+  // Not clipped...
+  expect(m.right).toBeLessThanOrEqual(m.w);
+  expect(m.left).toBeGreaterThanOrEqual(0);
+  // ...and anchored at the trailing end of the records, so it grows leftward
+  // into the widget rather than off the edge. Before the fix it started at the
+  // level's own edge (left ~10) and pointed the wrong way.
+  expect(m.right).toBeGreaterThan(m.w - 45);
+});
+
+test("horizontal keeps the count below the records", async ({ page }) => {
+  await page.goto(H);
+  await expect(page.locator("#nv canvas")).toHaveCount(1);
+
+  const m = await page.evaluate(() => {
+    const t = document.querySelector(".numNodesLabel").getBoundingClientRect();
+    const c = document.querySelector("#nv canvas").getBoundingClientRect();
+    return {
+      belowRecords: t.top - c.top > window.nv.height() - 60,
+      left: Math.round(t.left - c.left),
+      inside: t.bottom - c.top <= c.height,
+    };
+  });
+  expect(m.belowRecords).toBe(true);
+  expect(m.inside).toBe(true);
+  // Still left-aligned at the level's own edge, as it always was.
+  expect(m.left).toBeLessThan(40);
+});
+
 test("horizontal is unchanged by the refactor", async ({ page }) => {
   await page.goto(H);
   await expect(page.locator("#nv canvas")).toHaveCount(1);
