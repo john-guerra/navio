@@ -3909,11 +3909,22 @@ function navio(selection, _h) {
     return [min, max];
   }
 
-  /** Distinct values in first-appearance order - what scaleOrdinal keeps anyway. */
-  function distinctAt(attrib) {
+  /**
+   * Distinct values in first-appearance order - what scaleOrdinal keeps anyway.
+   *
+   * `reduce` lets a scale fold its own key derivation INTO this scan. Without
+   * it a high-cardinality column pays for one Set entry per distinct row value:
+   * on a 2.7M-row dataset `ride_id` is 2,724,165 distinct strings, all of which
+   * scaleText immediately threw away by keeping only their first character.
+   * Measured there: 219ms and a multi-million-entry Set, against 92ms for a
+   * two-value column over the same rows. The scan itself is unavoidable - every
+   * row has to be read - but what it accumulates does not have to be. See #61.
+   */
+  function distinctAt(attrib, reduce) {
     const seen = new Set();
     for (let j = 0; j < dataIs[0].length; j++) {
-      seen.add(attribAt(dataIs[0][j], attrib));
+      const v = attribAt(dataIs[0][j], attrib);
+      seen.add(reduce ? reduce(v) : v);
     }
     return Array.from(seen);
   }
@@ -3935,7 +3946,14 @@ function navio(selection, _h) {
         const [min, max] = extentAt(attrib);
         const absMax = Math.max(-min, max); // Assumes diverging point on 0
         scale.domain([-absMax, absMax]);
-      } else if (scale.__type === "text" || scale.__type === "ordered") {
+      } else if (scale.__type === "text") {
+        // A text scale colours by the first `digits` characters only, so hand
+        // the scan its reduction and let the Set collapse millions of values
+        // into the few dozen keys it will actually use. A custom scale passed
+        // to addTextAttrib may not expose one; then this is the old behaviour.
+        scale.domain(distinctAt(attrib, scale.reduce));
+      } else if (scale.__type === "ordered") {
+        // An ordered scale ranks the real values, so it needs all of them.
         scale.domain(distinctAt(attrib));
       }
 

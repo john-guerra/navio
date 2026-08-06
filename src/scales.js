@@ -60,6 +60,22 @@ export function scaleText(nullColor, digits = 1, defaultColorInterpolator) {
   const stringify = (d) => d + "";
   // const stringify = JSON.stringify;
 
+  /**
+   * The only part of a value this scale ever looks at: its first `digits`
+   * characters.
+   *
+   * Exposed (as compute.reduce) so a caller scanning a large column can fold it
+   * into its own pass instead of collecting one entry per distinct FULL value.
+   * The two are interchangeable: reducing before or after de-duplicating yields
+   * the same key set, so the same sort order, so the same index for every value
+   * and the same colour. Reducing an already-reduced value is a no-op, which is
+   * what makes domain() safe to call with either.
+   *
+   * Falsy values pass through untouched - compute() maps them to nullColor and
+   * they must not collapse into each other on the way in.
+   */
+  const reduce = (d) => (d ? stringify(d).slice(0, digits) : d);
+
   // Computes the actual value, based on the index of the first digits in the domain
   function compute(d) {
     if (!d) return nullColor;
@@ -125,7 +141,7 @@ export function scaleText(nullColor, digits = 1, defaultColorInterpolator) {
       computeRepresentatives(
         data
           // .filter(d => typeof(d) === typeof(""))
-          .map((d) => (d ? stringify(d).slice(0, digits) : d))
+          .map(reduce)
       );
       if (DEBUG)
         console.log(
@@ -139,6 +155,7 @@ export function scaleText(nullColor, digits = 1, defaultColorInterpolator) {
   };
 
   compute.computeRepresentatives = computeRepresentatives;
+  compute.reduce = reduce;
   compute.__type = "text";
 
   return compute;
