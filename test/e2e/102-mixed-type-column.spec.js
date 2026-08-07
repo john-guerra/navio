@@ -29,7 +29,6 @@ test.describe("a numeric column with stray strings", () => {
     // which rebuilds every colour domain with the data in its sorted order.
     await page.evaluate(() => window.nv.sortBy("sortKey"));
     await page.evaluate(() => window.nv.setAttribType("allPositive", "div"));
-    await page.waitForTimeout(100);
 
     const after = await page.evaluate(() => window.columnColours("mixedIds"));
     expect(after).toBeGreaterThan(10);
@@ -46,7 +45,6 @@ test.describe("a numeric column with stray strings", () => {
     await expect(page.locator("#nv canvas")).toHaveCount(1);
     await page.evaluate(() => window.nv.sortBy("sortKey"));
     await page.evaluate(() => window.nv.setAttribType("allPositive", "div"));
-    await page.waitForTimeout(100);
 
     // Named, so a mixed-type column is findable instead of just mis-coloured.
     expect(warnings.join("\n")).toMatch(/mixedIds/);
