@@ -248,6 +248,8 @@ function navio(selection, _h) {
     maxNumDistictForOrdered: "maxNumDistinctForOrdered",
   };
   const warnedRenames = new Set();
+  // Columns already reported as holding values a numeric scale cannot place.
+  const warnedMixedTypes = new Set();
   for (const [oldName, newName] of Object.entries(RENAMED)) {
     Object.defineProperty(nv, oldName, {
       enumerable: false, // keeps it out of OPTION_NAMES and getOptions()
@@ -3896,19 +3898,58 @@ function navio(selection, _h) {
     return representatives;
   }
 
+  /** A value a numeric colour scale can actually place: a number or a date. */
+  function isNumericLike(v) {
+    if (typeof v === "number") return v >= v; // NaN-safe
+    return v instanceof Date && !isNaN(v.getTime());
+  }
+
+  /** One line per column, not one per redraw. */
+  function warnMixedType(attrib, skipped) {
+    const name = getAttribName(attrib);
+    if (warnedMixedTypes.has(name)) return;
+    warnedMixedTypes.add(name);
+    console.warn(
+      `navio: "${name}" is coloured by a numeric scale, but ${skipped} of its ` +
+        `values are neither numbers nor dates. They are ignored when computing ` +
+        `the colour range. If the column is really categorical, use ` +
+        `nv.setAttribType("${name}", "ordered").`
+    );
+  }
+
   /**
    * min/max of an attribute over every row, in one pass.
    *
-   * Same semantics as d3.extent (skips null/undefined/NaN) but without
-   * materialising an intermediate array. updateColorDomains used to build one
-   * per attribute, so a 7-attribute 100k-row dataset allocated 700k values
-   * every time it ran. See #61.
+   * No intermediate array: updateColorDomains used to build one per attribute,
+   * so a 7-attribute 100k-row dataset allocated 700k values every time it ran.
+   * See #61.
+   *
+   * Values that are not numbers or dates are SKIPPED, which is where this stops
+   * matching d3.extent. d3's validity test is `v != null && v >= v`, and a
+   * STRING passes it. Once a string reaches min or max it is never replaced,
+   * because every later number-vs-string comparison coerces to NaN and is
+   * therefore false - so one stray string decides the whole domain.
+   *
+   * Measured on 202105-citibike-tripdata.csv: end_station_id is numeric except
+   * for 190 rows out of 2,724,165 ("JC095", "HB102", "SYS035" - Jersey City,
+   * Hoboken and system stations). Unsorted it is fine, because row 0 is a
+   * number. Sorting by end_lng floats the westernmost stations - Jersey City -
+   * to the top, and the next colour-domain recompute found "JC095" at sorted
+   * position 5449 before any number and returned the domain
+   * ["HB102", "SYS035"]. scaleSequential then answered NaN for every real id:
+   * the column went from 174 distinct rendered colours to 2, solid black.
    */
   function extentAt(attrib) {
-    let min, max;
+    let min,
+      max,
+      skipped = 0;
     for (let j = 0; j < dataIs[0].length; j++) {
       const v = attribAt(dataIs[0][j], attrib);
-      if (v == null || !(v >= v)) continue; // NaN-safe, matches d3.extent
+      if (v == null) continue;
+      if (!isNumericLike(v)) {
+        skipped++;
+        continue;
+      }
       if (min === undefined) {
         min = max = v;
       } else {
@@ -3916,6 +3957,7 @@ function navio(selection, _h) {
         if (v > max) max = v;
       }
     }
+    if (skipped) warnMixedType(attrib, skipped);
     return [min, max];
   }
 
