@@ -126,6 +126,12 @@ function navio(selection, _h) {
     tooltipCoords = { x: -50, y: -50 },
     id = "__seqId",
     updateCallback = function () {},
+    // Whether anyone is actually on the other end of updateCallback. The slot
+    // defaults to a no-op, and projecting the whole selection into row objects
+    // to pass it to a function that ignores its argument is pure cost. An
+    // explicit flag rather than an identity check against the default: rollup
+    // constant-folds values that are only ever read.
+    hasUpdateCallback = false,
     changeListeners = [],
     // Navio's bookkeeping lives in side tables keyed by a row's index into
     // `data`, never on the caller's objects. Writing to the rows polluted them,
@@ -1007,10 +1013,23 @@ function navio(selection, _h) {
     if (liveRegion) liveRegion.text(message);
   }
 
+  /**
+   * How many rows are selected, WITHOUT projecting them into an array.
+   *
+   * getSelected() maps the selection into the caller's row objects, which is
+   * the right answer for the public API and the wrong one for a count.
+   */
+  function selectedCount() {
+    const level = dataIs[dataIs.length - 1];
+    let n = 0;
+    for (let i = 0; i < level.length; i++) if (selectedFlags[level[i]]) n++;
+    return n;
+  }
+
   /** What the current selection and filter chain amount to, in words. */
   function announceState() {
     if (!liveRegion || !data.length) return;
-    const shown = nv.getVisible().length;
+    const shown = selectedCount();
     const chips = filtersByLevel
       .filter((lvl) => lvl && lvl.length)
       .map((lvl) => lvl.map((f) => f.toStr()).join(" or "));
@@ -1020,9 +1039,24 @@ function navio(selection, _h) {
     );
   }
 
+  /**
+   * Every change notification used to build the selected-rows array TWICE:
+   * once for the callback slot, then again inside announceState, which only
+   * wanted its length. Both are full projections of the selection into row
+   * objects, and the slot is a no-op unless someone registered a callback -
+   * so the common case projected millions of rows to hand them to a function
+   * that ignores the argument, then projected them again to call .length.
+   *
+   * It bites hardest when CLOSING a level, because closing re-selects
+   * everything. Measured on 202105-citibike-tripdata.csv (2,724,165 rows):
+   * getSelected() alone was 60ms, so the pair was ~120ms of a 242ms close.
+   * That is the asymmetry - creating a level costs in proportion to the rows
+   * that SURVIVE, closing one always costs the whole dataset.
+   */
   function notifyChange({ silent = false } = {}) {
-    // The legacy single-subscriber slot is always called, exactly as before.
-    updateCallback(nv.getVisible());
+    // The legacy single-subscriber slot, called exactly as before - but only
+    // projected for when there is something on the other end.
+    if (hasUpdateCallback) updateCallback(nv.getVisible());
     announceState();
     if (silent) return;
     // Copy first: a listener may unsubscribe itself while we iterate.
@@ -5137,7 +5171,10 @@ function navio(selection, _h) {
   };
 
   nv.updateCallback = function (_) {
-    return arguments.length ? ((updateCallback = _), nv) : updateCallback;
+    if (!arguments.length) return updateCallback;
+    updateCallback = _;
+    hasUpdateCallback = typeof _ === "function";
+    return nv;
   };
 
   nv.selectedColorRange = function (_) {
@@ -5274,6 +5311,7 @@ function navio(selection, _h) {
     yScales = [];
     colScales = new Map();
     updateCallback = function () {};
+    hasUpdateCallback = false;
 
     return nv;
   };
