@@ -95,9 +95,12 @@ test("column width still leaves the panel alone", async ({ page }) => {
   await page.mouse.down();
   await page.mouse.move(b.x + b.width * 0.8, b.y + b.height / 2, { steps: 8 });
   await page.mouse.up();
-  await page.waitForTimeout(150);
 
-  expect(await page.evaluate(() => window.nv.attribWidth)).toBeGreaterThan(15);
+  // Poll for the drag to land rather than sleeping on it: the assertion IS the
+  // condition worth waiting for.
+  await expect
+    .poll(() => page.evaluate(() => window.nv.attribWidth))
+    .toBeGreaterThan(15);
   // Column width changes the canvas WIDTH, and a below-placed panel is
   // anchored to its bottom, so this one never moved it in the first place.
   const now = await slider.boundingBox();
@@ -111,7 +114,7 @@ test("the binding example's two widgets each keep their panel", async ({
 }) => {
   await page.setViewportSize({ width: 1400, height: 1000 });
   await page.goto("/examples/binding/");
-  await page.waitForSelector("canvas");
+  await expect(page.locator("canvas").first()).toBeVisible();
 
   const gears = page.locator("._nv_gear");
   expect(await gears.count()).toBeGreaterThanOrEqual(2);
@@ -128,6 +131,8 @@ test("the binding example's two widgets each keep their panel", async ({
   // not scroll for you the way an action would.
   await slider.scrollIntoViewIfNeeded();
   const b = await slider.boundingBox();
+  const sliderValue = () => slider.inputValue();
+  const before = await sliderValue();
   await page.mouse.move(b.x + b.width * 0.3, b.y + b.height / 2);
   await page.mouse.down();
   await page.mouse.move(b.x + b.width * 0.75, b.y + b.height / 2, {
@@ -138,7 +143,12 @@ test("the binding example's two widgets each keep their panel", async ({
   expect(Math.abs(mid.y - b.y)).toBeLessThanOrEqual(1);
 
   await page.mouse.up();
-  await page.waitForTimeout(150);
+  // Wait for the drag to have been PROCESSED, not for an arbitrary 150ms. This
+  // is the stronger order: once the widget has acted on the gesture, a panel
+  // that survives has genuinely survived it. Asserting immediately after
+  // mouse.up() would pass before any dismissal had a chance to happen.
+  await expect.poll(sliderValue).not.toBe(before);
+
   // Still open, still exactly one panel: dragging must not trip light dismiss
   // or the close-the-other-instance rule.
   await expect(page.locator("._nv_settings[open]")).toHaveCount(1);

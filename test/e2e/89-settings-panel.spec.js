@@ -9,6 +9,22 @@ import { test, expect } from "@playwright/test";
 const FIXTURE = "/test/e2e/fixtures/single.html";
 
 /**
+ * Press at (x, y), drift sideways by `drift` px, release.
+ *
+ * `drift === 0` means NO pointer movement at all between down and up - a pure
+ * click - which is a genuinely different gesture from a 0px move, because a 0px
+ * move still dispatches a pointermove the click/drag discrimination has to
+ * classify. Keeping both is the point of these tests (#90), so the branch is
+ * real; it lives out here so it is not a conditional inside a test body.
+ */
+async function clickWithDrift(page, x, y, drift) {
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  if (drift) await page.mouse.move(x + drift, y, { steps: 3 });
+  await page.mouse.up();
+}
+
+/**
  * Reorder a column by dragging its label. Shift is required: without it the
  * gesture is a click, which sorts. Grabbing the LABEL matters too - the drag is
  * bound to the glyphs, so that the strips underneath stay free for the click.
@@ -513,6 +529,7 @@ test("setAttribType rejects an unknown type", async ({ page }) => {
 // https://github.com/john-guerra/navio/issues/92
 test.describe(() => {
   test.describe.configure({ retries: 3 });
+
   test("a plain click sorts; Shift-drag reorders", async ({ page }) => {
     await page.goto(
       "/test/e2e/fixtures/vertical.html?orientation=horizontal&n=40"
@@ -545,10 +562,7 @@ test.describe(() => {
       const c0 = await cols();
 
       const X = box.x + aw * 4.5;
-      await page.mouse.move(X, box.y + 60);
-      await page.mouse.down();
-      if (drift) await page.mouse.move(X + drift, box.y + 60, { steps: 3 });
-      await page.mouse.up();
+      await clickWithDrift(page, X, box.y + 60, drift);
 
       await expect
         .poll(rows, { message: `drift ${drift}px should sort` })
@@ -782,10 +796,7 @@ test("a shaky click on a header still sorts, at every drift", async ({
 
     // Hover first, the way a hand does - the label grows on hover.
     const X = box.x + aw * 4.5;
-    await page.mouse.move(X, box.y + 88);
-    await page.mouse.down();
-    if (drift) await page.mouse.move(X + drift, box.y + 88, { steps: 3 });
-    await page.mouse.up();
+    await clickWithDrift(page, X, box.y + 88, drift);
 
     await expect
       .poll(rows, { message: `drift ${drift}px should still sort` })

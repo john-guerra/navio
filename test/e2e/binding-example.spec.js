@@ -175,7 +175,16 @@ test("the brush is restored in the bound peer, and is draggable there", async ({
   await page.mouse.down();
   await page.mouse.move(xa, A.box.y + A.g.y0 + A.rowSpan * 60, { steps: 10 });
   await page.mouse.up();
-  await page.waitForTimeout(250);
+  // Poll for the sync to reach B rather than sleeping: B's selection settling
+  // at 51 IS the thing being waited for, and the assertions below then check
+  // the shape of that result.
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => document.querySelector("#navioB").firstChild.getSelected().length
+      )
+    )
+    .toBe(51);
 
   // A range filter is expressed on screen by its brush, so the synced peer
   // must show one too - otherwise it is filtered with nothing to grab.
@@ -206,7 +215,15 @@ test("the brush is restored in the bound peer, and is draggable there", async ({
   await page.mouse.down();
   await page.mouse.move(xb, B.box.y + B.g.y0 + B.rowSpan * 40, { steps: 10 });
   await page.mouse.up();
-  await page.waitForTimeout(250);
+  // B's drag has to reach A before the two can be compared. Polling on that
+  // rather than a fixed 250ms - the wait and the assertion are the same fact.
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => document.querySelector("#navioA").firstChild.getSelected().length
+      )
+    )
+    .not.toBe(before);
 
   const after = await page.evaluate(() => ({
     a: document.querySelector("#navioA").firstChild.getSelected().length,

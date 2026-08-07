@@ -28,7 +28,7 @@ const panelOnTop = (page) =>
 test("the panel paints over a notebook code cell", async ({ page }) => {
   await page.goto(FIXTURE);
   await expect(page.locator("#nv canvas")).toHaveCount(1);
-  await page.click("._nv_gear");
+  await page.locator("._nv_gear").click();
   await expect(page.locator("._nv_settings")).toBeVisible();
 
   expect(await panelOnTop(page)).toBe("on top");
@@ -42,7 +42,7 @@ test("z-index was never the constraint - even 1 wins here", async ({
 }) => {
   await page.goto(FIXTURE);
   await expect(page.locator("#nv canvas")).toHaveCount(1);
-  await page.click("._nv_gear");
+  await page.locator("._nv_gear").click();
   await expect(page.locator("._nv_settings")).toBeVisible();
 
   for (const z of [1, 2, 6]) {
@@ -61,7 +61,7 @@ test("the panel is not clipped to a fraction of a short widget", async ({
 }) => {
   await page.goto(FIXTURE);
   await expect(page.locator("#nv canvas")).toHaveCount(1);
-  await page.click("._nv_gear");
+  await page.locator("._nv_gear").click();
 
   const m = await page.evaluate(() => {
     const panel = document.querySelector("._nv_settings");
@@ -90,7 +90,7 @@ test("the panel is not clipped to a fraction of a short widget", async ({
 test("stored settings are scoped to the page", async ({ page }) => {
   const keysAfterVisiting = async (url) => {
     await page.goto(url);
-    await page.waitForSelector("canvas");
+    await expect(page.locator("canvas").first()).toBeVisible();
     return page.evaluate(() => {
       (window.nv || window.a).saveSettings();
       return Object.keys(localStorage).filter((k) =>
@@ -113,7 +113,7 @@ test("stored settings are scoped to the page", async ({ page }) => {
 test("the query string is not part of the key", async ({ page }) => {
   const keys = async (url) => {
     await page.goto(url);
-    await page.waitForSelector("canvas");
+    await expect(page.locator("canvas").first()).toBeVisible();
     return page.evaluate(() => {
       (window.nv || window.a).saveSettings();
       return Object.keys(localStorage).filter((k) =>

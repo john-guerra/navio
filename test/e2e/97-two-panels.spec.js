@@ -16,7 +16,7 @@ const openPanels = (page) =>
 
 test("opening one panel closes the other instance's", async ({ page }) => {
   await page.goto(TWO);
-  await page.waitForSelector("canvas");
+  await expect(page.locator("canvas").first()).toBeVisible();
 
   await page.locator("#nv1 ._nv_gear").click();
   expect(await openPanels(page)).toBe(1);
@@ -45,7 +45,7 @@ test("the second widget's own controls are reachable, not covered", async ({
   page,
 }) => {
   await page.goto(TWO);
-  await page.waitForSelector("canvas");
+  await expect(page.locator("canvas").first()).toBeVisible();
   await page.locator("#nv1 ._nv_gear").click();
 
   // nv1's panel is absolutely positioned, so it OVERLAYS nv2 rather than
@@ -84,7 +84,7 @@ test("the second widget's own controls are reachable, not covered", async ({
 
 test("a select changes only its own instance", async ({ page }) => {
   await page.goto(TWO);
-  await page.waitForSelector("canvas");
+  await expect(page.locator("canvas").first()).toBeVisible();
 
   const orientOf = (host) =>
     page
@@ -108,7 +108,7 @@ test("Escape still closes the panel after a control has been used", async ({
   page,
 }) => {
   await page.goto(TWO);
-  await page.waitForSelector("canvas");
+  await expect(page.locator("canvas").first()).toBeVisible();
   await page.locator("#nv1 ._nv_gear").click();
 
   await page
