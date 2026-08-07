@@ -3123,17 +3123,29 @@ function navio(selection, _h) {
    * the label 255px below a 140px canvas, where it was clipped away entirely
    * (#22).
    *
-   * Vertical needs more than the swap. Past the records there is only the slack
-   * between yScales.range()[1] and `height` - about 25px - which is narrower
-   * than a seven-digit count. Anchored at the start the number would run off
-   * the right edge; anchored at the END it grows back over the last few records
-   * instead, which stays legible. Along A the label sits at the level's own
-   * edge, and vertically that edge is a y, so the text has to HANG below it or
-   * its ascender is clipped by the top of the canvas.
+   * Vertical needs more than the swap, and NOT the same corner. Horizontally
+   * the label goes past the end of the records, which is below the widget and
+   * has the page to grow into. Vertically that same side is the ~40px of slack
+   * between yScales.range()[1] and `height` - measured against a 58px "171,477"
+   * on the vast-challenge example - so a count anchored there is drawn on top
+   * of the data whichever way it is aligned.
+   *
+   * The other side of the level has room: past its COLUMNS there is a whole
+   * levelsSeparation (41px measured, and the same gap exists between levels) and
+   * the entire width of the record axis to write into. So vertical hangs the
+   * count under the columns, at the leading edge of the records - the same
+   * bottom-left corner of the level's block that horizontal uses, reached along
+   * the other axis. drawCloseButton makes the same kind of trade for the same
+   * kind of reason.
    */
   function drawCounts(levelOverlay, levelOverlayEnter) {
     const vertical = isVertical();
-    const alongR = (i) => (vertical ? height - 4 : yScales[i].range()[1] + 15);
+    // Along A: the level's own leading edge, or just past its columns.
+    const alongA = (i) =>
+      vertical ? levelScale(i) + xScale.range()[1] + 15 : levelScale(i);
+    // Along R: just past the records, or at the point where they start.
+    const alongR = (i) =>
+      vertical ? yScales[i].range()[0] : yScales[i].range()[1] + 15;
 
     levelOverlayEnter
       .append("text")
@@ -3141,13 +3153,11 @@ function navio(selection, _h) {
       .attr("class", "numNodesLabel")
       .style("font-family", "sans-serif")
       .style("pointer-events", "none")
-      .attr("text-anchor", vertical ? "end" : "start")
-      .attr("dominant-baseline", vertical ? "hanging" : "auto")
       .attr("x", function (_, i) {
-        return toXY(levelScale(i), alongR(i)).x;
+        return toXY(alongA(i), alongR(i)).x;
       })
       .attr("y", function (_, i) {
-        return toXY(levelScale(i), alongR(i)).y;
+        return toXY(alongA(i), alongR(i)).y;
       })
       .text(function (d) {
         return nv.fmtCounts(d.length);

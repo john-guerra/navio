@@ -233,31 +233,62 @@ test("the record count is visible in vertical", async ({ page }) => {
   expect(m.label.right).toBeLessThanOrEqual(m.svg.w);
 });
 
-// Vertically the count sits in the ~40px of slack past the end of the records,
-// which is narrower than a long number is wide. Anchored at the start it would
-// run off the right edge; anchored at the end it grows back over the records
-// instead, which is legible. This pins the direction, not just the presence.
-test("a long count is not clipped by the right edge in vertical", async ({
+// Which side of the level the count goes on is decided by which side has room,
+// and vertically the two sides are very different. Past the END OF THE RECORDS
+// there is only `height - yScales.range()[1]` of slack - 40px measured on the
+// vast-challenge example - against a 58px "171,477", so a count anchored there
+// is drawn on top of the data whichever way it is aligned. Past the level's
+// COLUMNS there is a whole levelsSeparation (41px measured) and the entire
+// width of the record axis to write into. So vertical puts it there.
+//
+// The invariant, either orientation: the count never overlaps the block it is
+// counting.
+test("a long count does not overlap the columns in vertical", async ({
   page,
 }) => {
-  await page.goto(V + "&n=5000");
+  await page.goto(V + "&n=100000");
   await expect(page.locator("#nv canvas")).toHaveCount(1);
 
   const label = page.locator("#nv .numNodesLabel").first();
-  await expect(label).toHaveText("5,000");
+  await expect(label).toHaveText("100,000");
 
   const m = await page.evaluate(() => {
     const t = document.querySelector(".numNodesLabel").getBoundingClientRect();
     const s = document.querySelector("#nv svg").getBoundingClientRect();
-    return { right: t.right - s.left, left: t.left - s.left, w: s.width };
+    const nv = window.nv;
+    const nAttribs = nv.getAttribs().length;
+    return {
+      label: {
+        top: t.top - s.top,
+        bottom: t.bottom - s.top,
+        left: t.left - s.left,
+        right: t.right - s.left,
+      },
+      svg: { w: s.width, h: s.height },
+      // The block of drawn data for level 0: records along x, columns along y.
+      data: {
+        left: nv.y0,
+        right: nv.height() - nv.margin - 30,
+        top: nv.x0 + nv.margin,
+        bottom: nv.x0 + nv.margin + nv.attribWidth * nAttribs,
+      },
+    };
   });
-  // Not clipped...
-  expect(m.right).toBeLessThanOrEqual(m.w);
-  expect(m.left).toBeGreaterThanOrEqual(0);
-  // ...and anchored at the trailing end of the records, so it grows leftward
-  // into the widget rather than off the edge. Before the fix it started at the
-  // level's own edge (left ~10) and pointed the wrong way.
-  expect(m.right).toBeGreaterThan(m.w - 45);
+
+  // On the canvas...
+  expect(m.label.left).toBeGreaterThanOrEqual(0);
+  expect(m.label.right).toBeLessThanOrEqual(m.svg.w);
+  expect(m.label.top).toBeGreaterThanOrEqual(0);
+  expect(m.label.bottom).toBeLessThanOrEqual(m.svg.h);
+
+  // ...and clear of the data. Two boxes miss each other when one is wholly
+  // past the other on either axis; here it is past the columns.
+  const clear =
+    m.label.left >= m.data.right ||
+    m.label.right <= m.data.left ||
+    m.label.top >= m.data.bottom ||
+    m.label.bottom <= m.data.top;
+  expect(clear).toBe(true);
 });
 
 test("horizontal keeps the count below the records", async ({ page }) => {
