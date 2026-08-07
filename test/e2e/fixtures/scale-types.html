@@ -1,0 +1,68 @@
+<!doctype html>
+<meta charset="utf-8" />
+<div id="nv"></div>
+<script src="/node_modules/d3/dist/d3.js"></script>
+<script src="/node_modules/popper.js/dist/umd/popper.js"></script>
+<script src="/dist/navio.js"></script>
+<script>
+  /* global d3, navio */
+  // Columns shaped after the cases that went wrong on citibike:
+  //
+  //  straddling  crosses zero, so a diverging scale is meaningful
+  //  allNegative every value negative but nowhere near zero - longitude in New
+  //              York (-74.026..-73.886). A diverging domain of [-74.03, 74.03]
+  //              squeezes it into 0.09% of the ramp.
+  //  allPositive latitude, the control
+  //  mixedIds    numeric ids with a handful of STRING ids among them, exactly
+  //              like citibike's end_station_id ("JC095", "HB102", "SYS035" -
+  //              190 of them in 2.7M rows). `sortKey` orders the strings first,
+  //              so a sort followed by anything that recomputes colour domains
+  //              reaches a string before any number.
+  var N = +(new URLSearchParams(location.search).get("n") || 600);
+  var STRING_IDS = ["JC095", "HB102", "SYS035"];
+  var rows = d3.range(N).map(function (i) {
+    // ~1% of rows, like the real file - but none in the first 100, because
+    // that is the window findNotNull samples to decide the column is numeric
+    // at all. In citibike the strings are 190 rows out of 2.7M, so the type
+    // guess never sees one either.
+    var stringy = i > 100 && i % 97 === 0;
+    return {
+      id: i + 1,
+      straddling: (i % 200) - 100,
+      allNegative: -74.026 + (i % 100) * 0.0014,
+      allPositive: 40.636 + (i % 100) * 0.0024,
+      mixedIds: stringy ? STRING_IDS[i % STRING_IDS.length] : 2733 + (i % 6000),
+      // Ascending on this puts every string-id row at the very top, the way
+      // sorting citibike by end_lng floats Jersey City to the front.
+      sortKey: stringy ? -1000 + i : i,
+    };
+  });
+
+  window.nv = new navio(d3.select("#nv"), 600);
+  window.nv.id("id");
+  window.nv.data(rows);
+  window.nv.addAllAttribs();
+
+  /** Distinct rendered colours down a column - how a dead scale is detected. */
+  window.columnColours = function (name) {
+    var nv = window.nv;
+    var c = document.querySelector("#nv canvas");
+    var ctx = c.getContext("2d");
+    var dpr = c.width / parseFloat(c.style.width);
+    var names = nv.getAttribs().map(function (a) {
+      return typeof a === "function" ? a.name : a;
+    });
+    var i = names.indexOf(name);
+    if (i === -1) throw new Error("no such attribute: " + name);
+    var x = Math.round(
+      (nv.x0 + nv.margin + i * nv.attribWidth + nv.attribWidth / 2) * dpr
+    );
+    var H = parseFloat(c.style.height);
+    var seen = new Set();
+    for (var y = 20; y < H - 40; y += 2) {
+      var d = ctx.getImageData(x, Math.round(y * dpr), 1, 1).data;
+      seen.add(d[0] + "," + d[1] + "," + d[2]);
+    }
+    return seen.size;
+  };
+</script>

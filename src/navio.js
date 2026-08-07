@@ -4575,8 +4575,18 @@ function navio(selection, _h) {
           nv.addTextAttrib(attr);
         }
       } else if (typeof firstNotNull === typeof 0) {
-        // Numbers
-        if (d3.min(data, (d) => getAttrib(d, attr)) < 0) {
+        // Numbers.
+        //
+        // Diverging only when the values actually STRADDLE the diverging point.
+        // updateColorDomains builds a diverging domain as [-absMax, absMax]
+        // around zero - "Assumes diverging point on 0" - so a column that never
+        // crosses zero gets a domain about twice its own magnitude with every
+        // value crammed into one end of the ramp. A negative minimum alone used
+        // to be enough, which is how citibike's start_lng (-74.02564 ..
+        // -73.886312) drew as one flat brown: its 0.139 of range sat inside a
+        // 148.05-wide domain, 0.094% of the scale.
+        const [numMin, numMax] = d3.extent(data, (d) => getAttrib(d, attr));
+        if (numMin < 0 && numMax > 0) {
           nv.DEBUG &&
             console.log(`Navio: Adding attr ${attrName} as diverging`);
           nv.addDivergingAttrib(attr);
