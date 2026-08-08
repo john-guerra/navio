@@ -106,7 +106,7 @@ jobs:
       - name: Write legacy redirects
         run: sudo node build/legacy-redirects.js ./_site
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: ./_site
 
