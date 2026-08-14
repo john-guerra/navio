@@ -79,24 +79,24 @@
     <p>
       Navio ships no stylesheet &mdash; every colour it draws is an inline style
       or a canvas stroke &mdash; so a dark page used to get black column headers
-      on a black background. It now follows
-      <code>prefers-color-scheme</code>, and stays transparent so it sits on
-      whatever ground the page provides.
+      on a black background. It now reads the background it is sitting on and
+      picks its ink to suit, while staying transparent itself.
     </p>
 
     <p id="buttons"></p>
 
     <div class="note">
-      The buttons set <strong>the page's</strong> colour scheme, the way your
-      operating system would. The widget's chrome follows &mdash; headers,
-      counts, borders, row dividers, nulls, the gear and the settings panel. Open
-      the gear in both. <strong>The data colours never change:</strong> a
-      category that is teal on a light page is the same teal on a dark one.
+      The buttons only change <strong>the page's</strong> colours. Nothing tells
+      the widget which theme to use &mdash; it looks at the ground behind it.
+      Headers, counts, borders, row dividers, the gear and the settings panel all
+      follow; open the gear in both. <strong>The data colours never change:</strong>
+      a category that is teal on a light page is the same teal on a dark one, and
+      so is the pink used for missing values.
     </div>
 
     <div id="nv"></div>
 
-    <pre>// follows the reader's system setting, and keeps following it (default)
+    <pre>// reads the background behind it, and re-reads on every redraw (default)
 const nv = navio(d3.select("#nv"), { height: 400 });
 
 // or pin it, whatever the page is doing
@@ -104,10 +104,10 @@ nv.theme = "dark";
 nv.hardUpdate();</pre>
 
     <p>
-      <code>divisionsColor</code> (lines between rows) and
-      <code>nullColor</code> (missing values) default to <code>null</code>,
-      meaning &ldquo;follow the theme&rdquo;. Set either to a colour and it is
-      used in both themes.
+      Navio only redraws when something asks it to, so a page that repaints
+      itself calls <code>nv.hardUpdate()</code> afterwards &mdash; that is all
+      the buttons above do. <code>nv.resolvedTheme()</code> reports which theme
+      won.
     </p>
 
     <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
@@ -142,20 +142,24 @@ nv.hardUpdate();</pre>
           ["light", "Light page"],
           ["dark", "Dark page"],
         ]) {
-        const b = document.createElement("button");
-        b.type = "button";
-        b.textContent = label;
-        b.dataset.value = value;
-        b.addEventListener("click", () => {
-          if (value === "system") delete document.documentElement.dataset.force;
-          else document.documentElement.dataset.force = value;
-          // Navio reads prefers-color-scheme, which a data attribute cannot
-          // change - so tell it what this page is now.
-          nv.theme = value === "system" ? "auto" : value;
-          nv.hardUpdate();
-          for (const other of document.querySelectorAll("#buttons button"))
-            other.setAttribute("aria-pressed", String(other.dataset.value === value));
-        });
+          const b = document.createElement("button");
+          b.type = "button";
+          b.textContent = label;
+          b.dataset.value = value;
+          b.addEventListener("click", () => {
+            if (value === "system")
+              delete document.documentElement.dataset.force;
+            else document.documentElement.dataset.force = value;
+            // Note what is NOT here: nothing sets nv.theme. Repainting the page
+            // is enough, because the widget reads the background behind it. It
+            // just has to be told to redraw.
+            nv.hardUpdate();
+            for (const other of document.querySelectorAll("#buttons button"))
+              other.setAttribute(
+                "aria-pressed",
+                String(other.dataset.value === value)
+              );
+          });
           document.getElementById("buttons").append(b);
         }
         document

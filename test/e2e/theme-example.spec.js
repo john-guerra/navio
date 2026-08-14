@@ -35,6 +35,12 @@ test("the widget follows the page's own light/dark buttons", async ({
     "light ink on a dark page"
   ).toBeGreaterThan(140);
 
+  // The page never tells the widget which theme to use - it repaints itself and
+  // redraws, and the widget reads the ground behind it. If the example ever
+  // starts setting nv.theme it still looks right, and stops demonstrating the
+  // thing it exists to demonstrate.
+  expect(await page.evaluate(() => window.nv.theme), "still auto").toBe("auto");
+
   expect(errors).toEqual([]);
 });
 
