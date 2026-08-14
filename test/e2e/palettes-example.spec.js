@@ -66,3 +66,101 @@ test("every palette button draws something", async ({ page }) => {
     expect((await assigned(page)).length, name).toBeGreaterThan(0);
   }
 });
+
+// The comparison table. Its numbers come from palettes.json, which
+// `npm run palettes` writes from the same script that generates the shipped
+// palettes - so the risk is not that a number is wrong, it is that the file
+// goes stale or the page stops reading it.
+
+const cell = (page, palette, column) =>
+  page.evaluate(
+    ([p, c]) => {
+      const heads = [...document.querySelectorAll("#head th")].map((th) =>
+        th.textContent.trim()
+      );
+      const row = [...document.querySelectorAll("#rows tr")].find((tr) =>
+        tr.querySelector("td").textContent.startsWith(p)
+      );
+      return row ? row.children[heads.indexOf(c)].textContent.trim() : null;
+    },
+    [palette, column]
+  );
+
+test("the table scores every shipped palette", async ({ page }) => {
+  await page.goto(EXAMPLE);
+  await expect(page.locator("#rows tr")).not.toHaveCount(0);
+
+  const shipped = await page.evaluate(() =>
+    Object.keys(window.navio.palettes).sort()
+  );
+  const listed = await page.evaluate(() =>
+    [...document.querySelectorAll("#rows tr td:first-child")]
+      .map((td) => td.firstChild.textContent.trim())
+      .sort()
+  );
+
+  // A palette added to navio.palettes and not to the table would be shipped
+  // unmeasured, which is the one thing this page exists to prevent.
+  expect(listed).toEqual(shipped);
+});
+
+test("it marks the palettes that collide at 25 categories", async ({
+  page,
+}) => {
+  await page.goto(EXAMPLE);
+  await expect(page.locator("#rows tr")).not.toHaveCount(0);
+
+  // The default clears the just-noticeable difference for every vision type;
+  // category10 does not, which is why the default changed.
+  expect(Number(await cell(page, "nameable", "Worst"))).toBeGreaterThan(2.3);
+  expect(Number(await cell(page, "category10", "Worst"))).toBeLessThan(2.3);
+  await expect(
+    page.locator("#rows tr", { hasText: "category10" }).locator(".broken")
+  ).not.toHaveCount(0);
+});
+
+test("the table numbers match the palettes the library ships", async ({
+  page,
+}) => {
+  await page.goto(EXAMPLE);
+  await expect(page.locator("#rows tr")).not.toHaveCount(0);
+
+  // palettes.json is generated and committed, so it can go stale against
+  // src/palettes.js without anything failing to build.
+  const drift = await page.evaluate(async () => {
+    const data = await (await fetch("palettes.json")).json();
+    const out = [];
+    // Through d3.color first: the generator writes hex, and the interpolator
+    // palettes hand back "rgb(...)" - the same colours in another notation.
+    const norm = (list) =>
+      list.map((c) => window.d3.color(c).formatHex()).join();
+    for (const p of data.sets[50]) {
+      const live = window.navio.palettes[p.name];
+      const colours = typeof live === "function" ? live(50) : live;
+      if (norm(colours) !== norm(p.colours)) out.push(p.name);
+    }
+    return out;
+  });
+  expect(drift, "palettes.json is stale - run npm run palettes").toEqual([]);
+});
+
+test("switching to a dichromat view repaints the swatches", async ({
+  page,
+}) => {
+  await page.goto(EXAMPLE);
+  await expect(page.locator("#rows tr")).not.toHaveCount(0);
+
+  const swatches = () =>
+    page.evaluate(() =>
+      [...document.querySelectorAll("#rows .swatch i")].map(
+        (i) => i.style.background
+      )
+    );
+
+  const normal = await swatches();
+  await page.getByRole("button", { name: "protan", exact: true }).click();
+  const protan = await swatches();
+
+  expect(protan).toHaveLength(normal.length);
+  expect(protan).not.toEqual(normal);
+});
