@@ -17,6 +17,30 @@ Use it to <strong>summarize</strong>, <strong>explore</strong> and <strong>navig
 | -----| --- | ---|
 | Click on a header to sort <br> <a href="https://navio.dev/examples/vispubdata"><img src="imgs/navio_sort.gif" alt="Navio sort on les miserables network" width="300"></a> | Drag to select a range <br> <a href="https://john-guerra.github.io/momaExplorer"><img src="imgs/navio_range.gif" alt="Moma Explorer" width="300"></a> | Click on a value to select all instances <br> <a href="https://navio.dev/examples/vispubdata"> <img src="imgs/navio_value.gif" alt="Navio select a value with the vispubdata" width="300"></a> |
 
+## Upgrading to 0.3.0
+
+Two changes need a look before you upgrade.
+
+**`height` is now the RECORD extent, not the widget's total size.** The column
+headers are drawn in a band that is *added* on top of it rather than carved out
+of it, so the data area is `height` however long your attribute names are.
+Before, a 180px widget with the default `y0: 100` drew **40px of rows**, and
+`y0: 140` drew none at all. Your widgets will be roughly the old `y0` taller —
+set `height` down by that much if you need the previous footprint.
+
+The band is measured from the labels now (`autoHeaderSpace`, on by default), so
+short names stop paying for headroom they never use, and long ones stop being
+cut off. Past `headerMaxSpace` (140px) the extra hangs above the widget rather
+than growing it — which means it also overlaps whatever is above it, and takes
+clicks meant for it.
+
+**A container with no `id` no longer remembers its settings.** The key used to
+fall back to a per-page construction counter, which is not an identity: build
+two Navios in a different order on the next load and each restored the other's
+hidden columns and attribute types. Give the container a stable `id`, or set
+`settingsKey` yourself, and persistence works as before. `settingsKey` passed in
+the options object also works now — it was being rejected as an unknown option.
+
 ## Try it!
 
 You can test Navio right now with your **own CSV or JSON data** (less than 200MB), using:
@@ -146,68 +170,38 @@ var nv = navio(d3.select("#Navio"), 600); //height 600
 
 4. [Optional] **Configure navio to your liking**
 
+Every option, its type, its default and what it does is listed in
+**[docs/ai/API.md](docs/ai/API.md)** — generated from `src/params.js`, so it
+cannot drift from the code. The same table drives the settings panel, and
+`navio.describe()` returns it at runtime:
+
+```js
+navio.describe().options.filter((o) => o.section === "Layout");
+navio.describe().methods.find((m) => m.name === "setFilters");
+```
+
+This README used to repeat that list by hand, and had already fallen behind —
+it documented `filterFontSize = 10` against an actual default of 8.
+
+A few of the ones worth knowing about:
+
 ```javascript
-// Default parameters
-nv.x0 = 0;  //Where to start drawing navio in x
-nv.y0 = 100; //Where to start drawing navio in y, useful if your attrib names are too long
-nv.maxNumDistinctForCategorical = 10; // addAllAttribs uses this for deciding if an attribute is categorical (has less than nv.maxNumDistinctForCategorical categories) or ordered
-nv.maxNumDistinctForOrdered = 90; // addAllAttribs uses this for deciding if an attribute is ordered (has less than nv.maxNumDistinctForCategorical categories) or text. Use nv.maxNumDistinctForOrdered = Infinity for never choosing Text
+nv.attribWidth = 15;          // column width
+nv.attribRotation = -45;      // header angle; 0 is flat, -90 is vertical
+nv.nestedFilters = true;      // each filter opens a new level
+nv.digitsForText = 2;         // how many leading characters text is bucketed by
+nv.id("attribName");          // the field that identifies a row
 
-nv.howManyItemsShouldSearchForNotNull = 100; // How many rows should addAllAttribs search to decide guess an attribute type
-nv.margin = 10; // Margin around navio
-
-nv.levelsSeparation = 40; // Separation between the levels
-nv.divisionsColor = "white"; // Border color for the divisions
-nv.levelConnectionsColor = "rgba(205, 220, 163, 0.5)"; // Color for the conections between levels
-nv.divisionsThreshold = 4; // What's the minimum row height needed to draw divisions
-nv.fmtCounts = d3.format(",.0d"); // Format used to display the counts on the bottom
-nv.nestedFilters = true; // Should navio use nested levels?
-
-nv.showAttribTitles = true; // Show headers?
-nv.attribWidth = 15; // Width of the columns
-nv.attribRotation = -45; // Headers rotation
-nv.attribFontSize = 13; // Headers font size
-nv.attribFontSizeSelected = 32; // Headers font size when mouse over
-
-nv.filterFontSize = 10; // Font size of the filters explanations on the bottom
-
-nv.tooltipFontSize = 12; // Font size for the tooltip
-nv.tooltipBgColor = "#b2ddf1"; // Font color for tooltip background
-nv.tooltipMargin = 50; // How much to separate the tooltip from the cursor
-nv.tooltipArrowSize = 10; // How big is the arrow on the tooltip
-
-nv.digitsForText = 2; // How many digits to use for text attributes
-
-nv.id("attribName"); // Shows this id on the tooltip, should be unique
-
-nv.addAllAttribsRecursionLevel = Infinity; // How many levels depth do we keep on adding nested attributes
-nv.addAllAttribsIncludeObjects = false; // Should addAllAttribs include objects
-nv.addAllAttribsIncludeArrays = false; // Should addAllAttribs include arrays
-
-nv.DEBUG = false; // Set to true to trace Navio's internals to the console. Navio is
-// silent by default; genuine problems (bad arguments, skipped
-// attributes) are always reported via console.warn regardless.
-
-// Default colors for values
-nv.nullColor = "#ffedfd"; // Color for null values
+// Colours
+nv.nullColor = "#ffedfd";
 nv.defaultColorInterpolator = d3.interpolateBlues;
-nv.defaultColorInterpolatorDate = d3.interpolatePurples;
-nv.defaultColorInterpolatorDiverging = d3.interpolateBrBG;
-nv.defaultColorInterpolatorOrdered = d3.interpolateOranges;
-nv.defaultColorInterpolatorText = d3.interpolateGreys;
-nv.defaultColorRangeBoolean = ["#a1d76a", "#e9a3c9", "white"]; //true false null
-nv.defaultColorRangeSelected = ["white", "#b5cf6b"];
 nv.defaultColorCategorical = d3.schemeCategory10;
 
-// // Discouraged: If you want to break perceptual rules to have many more categories use
-// // the following "Piñata mode 🎉"
+// // Discouraged: to break perceptual rules for many more categories, "Piñata mode 🎉"
 // nv.defaultColorCategorical = d3.schemeCategory10
 //   .concat(d3.schemeAccent)
-//   .concat(d3.schemePastel1)
-//   .concat(d3.schemeSet2)
-//   .concat(d3.schemeSet3);
+//   .concat(d3.schemePastel1);
 // nv.maxNumDistinctForCategorical = nv.defaultColorCategorical.length;
-
 ```
 
 4. [Optional] **Add your attributes manually**. Navio supports six types of attributes: categorical, sequential (numerical), diverging (numerical with negative values), text, date and boolean. You can either add them manually or use `nv.addAllAttribs()` to auto detect them (must be called after seting the data with `nv.data(your_data)`)
