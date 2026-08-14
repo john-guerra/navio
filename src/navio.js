@@ -3717,8 +3717,67 @@ function navio(selection, _h) {
     }
   }
 
-  /** Grow or restore a column's label. Driven by the hit rect, not the text. */
-  function growHeaderLabel(hitNode, d, grown) {
+  /**
+   * The biggest a hovered label can be drawn and still be seen.
+   *
+   * attribFontSizeSelected is a wish, not a size. The label is anchored at the
+   * top of the band and grows away from the data, and the box it lives in is a
+   * scroll box in both axes - so anything past the top edge is destroyed, with
+   * no scrollbar to reach it. Growing a long name to 32px cut 259px off it,
+   * which is most of the name: the label was made bigger and became less
+   * readable. That was equally true with the band fully reserved and nothing
+   * spilling, so it was never a consequence of the spill.
+   *
+   * The band was measured to fit the WIDEST name, so a shorter one has slack
+   * and grows further. Per-label rather than one size for the row, because a
+   * single size would be governed by the longest name and would stop the short
+   * ones growing at all.
+   */
+  function grownFontSize(text) {
+    const base = Math.min(nv.attribFontSize, nv.attribWidth),
+      want = nv.attribFontSizeSelected;
+    if (!context || !text || want <= base) return want;
+
+    // What measureHeaderBand reserved, less the breathing room it added.
+    const room = nv.y0 + headerSpill - nv.margin;
+    if (room <= 0) return base;
+
+    context.save();
+    context.font = `${base}px sans-serif`;
+    const width = context.measureText(text).width;
+    context.restore();
+    if (!width) return want;
+
+    // The inverse of measureHeaderBand: text width and glyph height both scale
+    // with the font size, so solve its reach for the factor that just fits.
+    let k;
+    if (isVertical()) {
+      k = (room - 6) / width;
+    } else {
+      const theta = (Math.abs(nv.attribRotation) * Math.PI) / 180,
+        sin = Math.sin(theta),
+        cos = Math.cos(theta),
+        half = (xScale.bandwidth() / 2) * sin,
+        per = width * sin + base * cos;
+      k = per > 0 ? (room - half) / per : 1;
+    }
+    return Math.max(base, Math.min(want, base * k));
+  }
+
+  /**
+   * Grow or restore a column's label. Driven by the hit rect, not the text.
+   *
+   * Never while a button is down. This is bound to mousemove, so a click with a
+   * few pixels of drift fires it mid-gesture and the label is MOVING between
+   * mousedown and mouseup - and the label is one of the two things a click can
+   * land on. Different element down and up means the browser dispatches `click`
+   * to the common ancestor, which has no handler, and the click does nothing:
+   * the same failure the drag/click split was untangled to fix (#92). It went
+   * unnoticed while the grown label shot out of the visible box, because then
+   * it was never under the pointer to retarget to.
+   */
+  function growHeaderLabel(hitNode, d, grown, event) {
+    if (grown && event && event.buttons) return;
     let label = d3.select(hitNode.parentNode).select("text");
     if (label.empty()) {
       // Called from the hit strip, which lives in a shared layer - find the
@@ -3731,9 +3790,9 @@ function navio(selection, _h) {
     if (label.empty()) return;
     animated(label).style(
       "font-size",
-      grown
-        ? nv.attribFontSizeSelected + "px"
-        : Math.min(nv.attribFontSize, nv.attribWidth) + "px"
+      (grown
+        ? grownFontSize(label.text())
+        : Math.min(nv.attribFontSize, nv.attribWidth)) + "px"
     );
   }
 
@@ -3826,7 +3885,7 @@ function navio(selection, _h) {
     const bindHeader = (sel) =>
       sel
         .on("mousemove", function (event, d) {
-          growHeaderLabel(this, d, true);
+          growHeaderLabel(this, d, true, event);
         })
         .on("mouseout", function (event, d) {
           growHeaderLabel(this, d, false);
@@ -3851,7 +3910,7 @@ function navio(selection, _h) {
     headerHit
       .style("cursor", "pointer")
       .on("mousemove", function (event, d) {
-        growHeaderLabel(this, d, true);
+        growHeaderLabel(this, d, true, event);
       })
       .on("mouseout", function (event, d) {
         growHeaderLabel(this, d, false);
@@ -4078,11 +4137,19 @@ function navio(selection, _h) {
       })
       .attr("x", (d) => toXY(0, -hitDepth(d.level)).x)
       .attr("y", (d) => toXY(0, -hitDepth(d.level)).y)
-      .attr("width", (d) => toWH(xScale.bandwidth(), hitDepth(d.level)).width)
-      .attr(
-        "height",
-        (d) => toWH(xScale.bandwidth(), hitDepth(d.level)).height
-      );
+      // step(), not bandwidth(): paddingInner is 0.1, so strips a bandwidth
+      // wide leave a dead gap between every pair of columns. Land in one and
+      // the event's target is the <svg> itself - outside g.attribs, where the
+      // one sort handler lives - so the click does nothing. That is #92: a
+      // press on a label and a release 3px away in the gap sorts nothing,
+      // because their common ancestor is the svg. It was masked by the hovered
+      // label growing to 32px and covering the gaps with its own ink, so the
+      // gesture worked about two times in three depending on where the glyphs
+      // happened to fall. Tiling the strips removes the gap instead of hiding
+      // it. A strip that reaches into the padding is right anyway: nothing else
+      // is drawn there, and a click target should not have holes.
+      .attr("width", (d) => toWH(xScale.step(), hitDepth(d.level)).width)
+      .attr("height", (d) => toWH(xScale.step(), hitDepth(d.level)).height);
 
     drawAttribHeaders(attribOverlay, attribOverlayEnter, headerHit);
 

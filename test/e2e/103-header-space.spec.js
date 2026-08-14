@@ -338,3 +338,48 @@ test("moving the Top offset slider moves the drawing", async ({ page }) => {
   expect(await page.evaluate(() => window.nv.y0)).toBe(60);
   expect(await recordsStart(), "the records moved with it").not.toBe(before);
 });
+
+// Hovering a header grows it to attribFontSizeSelected so it can be read. The
+// widget clips - div.navio's inner box is a scroll box in both axes - and a
+// scroll box destroys anything above its top edge rather than offering a
+// scrollbar for it. So the grown label ran straight out of the widget: 259px
+// of a long name was cut off, which is most of it. The label was made bigger
+// and became less readable, and the same happened with the band fully reserved
+// and nothing spilling, so it was never about the spill.
+test("a hovered header grows only as far as it can be seen", async ({
+  page,
+}) => {
+  for (const query of [
+    "?names=short&derived=0",
+    "?names=short",
+    "?names=long",
+    "?names=long&cap=400",
+  ]) {
+    await page.goto(`${F}${query}`);
+    await ready(page);
+
+    const labels = page.locator("#nv svg .attribOverlay text");
+    const n = await labels.count();
+    expect(n, query).toBeGreaterThan(0);
+
+    for (let i = 0; i < n; i++) {
+      await labels.nth(i).hover({ force: true });
+      // The growth is animated, so wait for it to settle.
+      await page.waitForTimeout(450);
+
+      const over = await page.evaluate((idx) => {
+        const box = document.querySelector("#nv > div").getBoundingClientRect();
+        const el = document.querySelectorAll("#nv svg .attribOverlay text")[
+          idx
+        ];
+        const bb = el.getBoundingClientRect();
+        return { top: box.top - bb.top, name: el.textContent };
+      }, i);
+
+      expect(
+        Math.round(over.top),
+        `${query} / ${over.name}`
+      ).toBeLessThanOrEqual(1);
+    }
+  }
+});

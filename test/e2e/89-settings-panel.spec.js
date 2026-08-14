@@ -522,14 +522,18 @@ test("setAttribType rejects an unknown type", async ({ page }) => {
   );
 });
 
-// Retried, not deleted: this fails about 30% of runs on the `drift 3px`
-// assertion and already did when v0.2.3 was tagged - it is not a regression.
-// A real regression still fails every attempt and so still fails the build.
-// Whether the underlying 3px-drift gesture is genuinely unreliable is open:
-// https://github.com/john-guerra/navio/issues/92
+// This carried `retries: 3` and a note that it failed about 30% of runs on the
+// `drift 3px` assertion, had done so since v0.2.3, and that whether the gesture
+// was genuinely unreliable was open (#92). It was genuinely unreliable, and the
+// retries were hiding a real defect rather than papering over a flaky harness:
+// the header hit strips were a bandwidth wide with paddingInner gaps between
+// them, so a press on a label and a release 3px away in a gap had the <svg> as
+// their common ancestor - outside the group the single sort handler is on - and
+// sorted nothing. Whether it worked came down to whether the hovered label's
+// glyphs happened to cover the gap. The strips tile now; 20 consecutive runs
+// pass without a retry, so the retries are gone and a regression fails the
+// build again.
 test.describe(() => {
-  test.describe.configure({ retries: 3 });
-
   test("a plain click sorts; Shift-drag reorders", async ({ page }) => {
     await page.goto(
       "/test/e2e/fixtures/vertical.html?orientation=horizontal&n=40"
