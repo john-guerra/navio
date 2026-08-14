@@ -639,8 +639,14 @@ function navio(selection, _h) {
       // vertically too: CSS forces the other axis to `auto` when one axis is
       // not `visible`, so `overflow-x: auto` alone is never what it looks
       // like. applyContainerSize sizes this box to include the filter chips.
+      //
+      // Adding `overflow-y: visible` here does NOT free the record axis, and
+      // is worth not trying again: it is the rule directly above, and the
+      // browser computes the value straight back to `auto`. `style.overflowY`
+      // still reads "visible" afterwards, so it looks applied - only
+      // getComputedStyle says otherwise. Letting the rotated headers spill
+      // needs a second box, not a style tweak.
       .style("overflow-x", "auto")
-      .style("overflow-y", "visible")
       .style("position", "relative");
 
     divNavio.append("canvas");
