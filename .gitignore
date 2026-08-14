@@ -37,3 +37,6 @@ docs/facetedSearch/
 # Notebook tarballs downloaded for local reproduction. The notebooks are the
 # source of truth on observablehq.com; a stale copy here would only mislead.
 examples/*.tgz
+
+# Papers kept locally for reference; copyrighted and large, not ours to redistribute.
+docs/ai/*.pdf

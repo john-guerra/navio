@@ -175,6 +175,18 @@
       because they disagree: <strong>&#916;E00</strong> is the modern standard,
       <strong>&#916;E*ab</strong> is what the visualisation size literature
       reports, and &#916;E00 down-weights differences between saturated colours.
+      Heer &amp; Stone (CHI 2012) use &#916;E00 and note that Euclidean CIELAB
+      is unreliable for comparisons across the whole space, which is what a
+      minimum-pairwise score is.
+    </p>
+    <p class="muted">
+      <strong>Named</strong> is mean naming saliency from their C3 model &mdash;
+      how reliably a reader can put a word to a colour, which is how people
+      refer to things on screen. Maximising distance alone walks into the gaps
+      of colour space, and the gaps are where unnameable colours live: the
+      unfiltered generated palette puts 9 of 25 below the 0.2 they call
+      &ldquo;naming confusion&rdquo;. Searching only over nameable colours costs
+      about 1.4 of separation and removes all nine.
     </p>
 
     <div class="controls">
@@ -202,6 +214,7 @@
             <th>Deutan</th>
             <th>Tritan</th>
             <th>Worst</th>
+            <th>Named</th>
             <th>Colours</th>
           </tr>
         </thead>
@@ -233,6 +246,7 @@
 
       // Short enough to fit a rotated column header.
       const SHORT = {
+        "max-min, CVD-aware + nameable": "max-min nameable",
         "max-min, CVD-aware": "max-min CVD",
         "Mokole 50": "Mokole",
         "max-min, normal vision only": "max-min normal",
@@ -343,12 +357,21 @@
           if (p.name.startsWith("max-min, CVD")) tr.className = "pick";
           const cells = [p.name].concat(
             VISION.map(([t]) => p[metric][t].toFixed(1)),
-            [p[worstKey].toFixed(1)]
+            [
+              p[worstKey].toFixed(1),
+              // Mean naming saliency, and how many colours fall below the 0.2
+              // the paper calls "naming confusion". Distance says the colours
+              // look different; this says a reader can say which one they mean.
+              p.naming
+                ? `${p.naming.meanSaliency.toFixed(2)}${p.naming.confused ? " (" + p.naming.confused + " unnamed)" : ""}`
+                : "",
+            ]
           );
           cells.forEach((text, i) => {
             const td = document.createElement("td");
             td.textContent = text;
-            if (i > 0 && parseFloat(text) < 2.3) td.className = "broken";
+            // Only the distance columns carry the below-JND styling.
+            if (i > 0 && i <= 5 && parseFloat(text) < 2.3) td.className = "broken";
             if (i === 0) {
               const em = document.createElement("div");
               em.className = "muted";

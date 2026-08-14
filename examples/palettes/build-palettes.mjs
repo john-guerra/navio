@@ -26,6 +26,7 @@
  */
 import * as d3 from "d3";
 import { writeFileSync } from "node:fs";
+import { saliency, scorePalette } from "./name-metrics.mjs";
 
 const hex = (c) => d3.rgb(c).formatHex();
 const TYPES = ["normal", "protan", "deutan", "tritan"];
@@ -169,8 +170,8 @@ const minPair = (cols, type, metric) => {
  * row: it scores superbly on the metric it was optimised for and collapses
  * under simulation.
  */
-function maxMin(n, { cvd = true } = {}) {
-  const cand = [];
+function maxMin(n, { cvd = true, salFloor = 0 } = {}) {
+  let cand = [];
   for (let L = 30; L <= 85; L += 5)
     for (let C = 15; C <= 110; C += 5)
       for (let H = 0; H < 360; H += 5) {
@@ -187,6 +188,13 @@ function maxMin(n, { cvd = true } = {}) {
           continue;
         cand.push(hex(c));
       }
+  // Optionally drop colours nobody can name before searching at all.
+  // Maximising distance alone walks into the GAPS of colour space, and the gaps
+  // are where the unnameable colours live: without this, 4 of 25 land below the
+  // 0.2 saliency the paper calls "naming confusion". Filtering first is free at
+  // 0.2 - identical minimum distance - and at 0.4 buys nameability comparable
+  // to a hand-designed scheme for about 1.4 of separation.
+  if (salFloor > 0) cand = cand.filter((c) => saliency(c) >= salFloor);
   const types = cvd ? TYPES : ["normal"];
   const lab = types.map((t) =>
     cand.map((c) => {
@@ -235,6 +243,11 @@ const MOKOLE50 = "d3d3d3 2f4f4f 556b2f 6b8e23 a0522d a52a2a 2e8b57 228b22 708090
   .map((h) => "#" + h);
 
 const CANDIDATES = (n) => [
+  {
+    name: "max-min, CVD-aware + nameable",
+    note: "as below, but searched only over colours people can name (saliency >= 0.4)",
+    colours: maxMin(n, { salFloor: 0.4 }),
+  },
   {
     name: "max-min, CVD-aware",
     note: "generated here: farthest-point, scored on the worst vision type",
@@ -304,6 +317,10 @@ for (const n of [10, 12, 25, 50]) {
       de76: Object.fromEntries(
         TYPES.map((t) => [t, +minPair(p.colours, t, de76).toFixed(1)])
       ),
+      // Naming, from Heer & Stone's C3 model - see name-metrics.mjs. Distance
+      // says whether two colours LOOK different; this says whether a reader can
+      // say which one they mean.
+      naming: scorePalette(p.colours),
     }))
     .map((p) => ({
       ...p,

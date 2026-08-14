@@ -27,6 +27,21 @@ const ready = async (page) => {
 // begins at x = nv.margin.
 const CENTRE = (i) => 10 + i * 20 + 10;
 
+/**
+ * Which column a header sits in, by name. Looked up rather than hardcoded: the
+ * palette list grows, and an index that was right when it was written silently
+ * points at a different column afterwards. The sorted column carries an arrow,
+ * so match on the stem.
+ */
+const columnOf = (page, label) =>
+  page.evaluate(
+    (want) =>
+      [...document.querySelectorAll("#nv svg text")]
+        .map((t) => t.textContent.replace(/\s*[\u2191\u2193]$/, ""))
+        .indexOf(want),
+    label
+  );
+
 /** Colour boundaries down one column: few means bands, many means shredded. */
 const runsInColumn = (page, xCss) =>
   page.evaluate((x) => {
@@ -76,8 +91,9 @@ test("sorting by a palette column groups it; sorting by calories shreds it", asy
   // Polled, not read once: the sort and the redraw it triggers are not finished
   // just because the call returned, and sampling a half-drawn canvas reports a
   // number between the two answers.
+  const paletteColumn = CENTRE(await columnOf(page, "max-min CVD"));
   await expect
-    .poll(() => runsInColumn(page, CENTRE(0)), { message: "shredded" })
+    .poll(() => runsInColumn(page, paletteColumn), { message: "shredded" })
     .toBeGreaterThan(300);
 
   // By NAME, which is what the column header shows. The columns are accessor
@@ -89,8 +105,14 @@ test("sorting by a palette column groups it; sorting by calories shreds it", asy
   // anti-aliased at dpr 1 and crisp at dpr 2, so the same view measures ~234
   // and ~27 on two machines (#105). The claim that survives either is that a
   // grouped column has far fewer colour boundaries than an ungrouped one.
-  const grouped = await runsInColumn(page, CENTRE(0));
-  const numeric = await runsInColumn(page, CENTRE(9)); // calories
+  const grouped = await runsInColumn(
+    page,
+    CENTRE(await columnOf(page, "max-min CVD"))
+  );
+  const numeric = await runsInColumn(
+    page,
+    CENTRE(await columnOf(page, "calories"))
+  );
   expect(grouped, "grouped vs a numeric column").toBeLessThan(numeric / 2);
 });
 
