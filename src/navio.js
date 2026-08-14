@@ -128,6 +128,9 @@ function navio(selection, _h) {
     // Attributes already warned about for palette recycling, so a redraw does
     // not repeat the message on every frame.
     warnedRecycle = new Set(),
+    // The prefers-color-scheme listener, so destroy() can take it off again.
+    schemeQuery = null,
+    onSchemeChange = null,
     // How much of the header band did not fit inside headerMaxSpace and is
     // hanging above the widget instead. See applyHeaderBand.
     headerSpill = 0,
@@ -206,8 +209,21 @@ function navio(selection, _h) {
   nv.margin = 10; // Margin around navio
 
   nv.levelsSeparation = 40; // Separation between the levels
-  nv.divisionsColor = "white"; // Border color for the divisions
-  nv.nullColor = "#ffedfd"; // Color for null values
+  // Lines between rows when they are tall enough. `null` follows the theme, for
+  // the same reason as nullColor: white lines on a dark ground are stripes.
+  nv.divisionsColor = null;
+  // Which way the widget's CHROME is coloured - labels, counts, borders, the
+  // panel, the tooltip. "auto" follows the page's prefers-color-scheme and
+  // keeps following it, so a widget in a notebook changes with the notebook.
+  //
+  // The DATA colours never follow it. Inverting a categorical scale would
+  // change what a colour means, and a palette chosen for contrast on white does
+  // not become correct by flipping it.
+  nv.theme = "auto";
+  // Colour for null values. `null` means "follow the theme" - a near-white pink
+  // is invisible on a dark ground. Set it to a colour and that colour is used
+  // in both themes, because then it is yours.
+  nv.nullColor = null;
   nv.levelConnectionsColor = "rgba(205, 220, 163, 0.5)"; // Color for the connections between levels
   nv.divisionsThreshold = 4; // What's the minimum row height needed to draw divisions
   nv.fmtCounts = d3.format(",.0d"); // Format used to display the counts on the bottom
@@ -457,6 +473,14 @@ function navio(selection, _h) {
   function initTooltipPopper() {
     if (nv.DEBUG)
       console.log("initTooltipPopper, selection", selection, selection.node());
+    if (schemeQuery && onSchemeChange) {
+      if (schemeQuery.removeEventListener)
+        schemeQuery.removeEventListener("change", onSchemeChange);
+      else if (schemeQuery.removeListener)
+        schemeQuery.removeListener(onSchemeChange);
+      schemeQuery = onSchemeChange = null;
+    }
+
     if (tooltip && typeof tooltip.destroy === "function") tooltip.destroy();
     if (tooltipElement) tooltipElement.remove();
 
@@ -492,7 +516,7 @@ function navio(selection, _h) {
       .style("text-align", "center")
       .style("background", nv.tooltipBgColor)
       .style("position", "absolute")
-      .style("color", "black")
+      .style("color", theme().tooltipInk)
       // High, because the tooltip is a <body> child now: at z-index 4 it painted
       // underneath ordinary app chrome such as a Bootstrap modal backdrop
       // (1040). Cannot beat the browser's top layer (dialog.showModal, the
@@ -607,7 +631,7 @@ function navio(selection, _h) {
       .style("font-size", "70%")
       .style("margin-top", "10px")
       .style("text-align", "left")
-      .style("color", "#777")
+      .style("color", theme().faint)
       .html(`<div>Click to filter a value (<strong>alt</strong> for negative filter).<br>
         Drag for filtering a range.<br> <strong>shift</strong> click for appending to the filters</div>`);
 
@@ -731,6 +755,25 @@ function navio(selection, _h) {
       .style("z-index", 5)
       .style("top", nv.margin + "px")
       .style("left", nv.margin + "px");
+
+    // Follow the system setting for as long as theme is "auto". Without this
+    // "auto" would mean "auto once, at construction", which is exactly the case
+    // a reader switching to dark mode is in.
+    if (typeof window !== "undefined" && window.matchMedia) {
+      schemeQuery = window.matchMedia("(prefers-color-scheme: dark)");
+      onSchemeChange = () => {
+        if (nv.theme !== "auto") return;
+        applyTheme();
+        // hardUpdate, not update: the column headers and count labels are SVG
+        // built in the scales/overlay pass, which a plain update does not
+        // re-enter - so the canvas would flip theme and the labels would not.
+        nv.hardUpdate();
+      };
+      // addEventListener is not in older Safari, which only has addListener.
+      if (schemeQuery.addEventListener)
+        schemeQuery.addEventListener("change", onSchemeChange);
+      else if (schemeQuery.addListener) schemeQuery.addListener(onSchemeChange);
+    }
 
     // Namespaced per instance so multiple Navio instances on the same page
     // don't overwrite each other's keydown/keyup listener on `body` (d3's
@@ -871,8 +914,8 @@ function navio(selection, _h) {
     svg
       .append("g")
       .attr("id", "closeButton")
-      .style("fill", "white")
-      .style("stroke", "black")
+      .style("fill", theme().surface)
+      .style("stroke", theme().ink)
       .style("display", "none")
       .append("path")
       .call(function (sel) {
@@ -1260,8 +1303,9 @@ function navio(selection, _h) {
   function styleButton(sel) {
     return sel
       .style("font", "13px sans-serif")
-      .style("background", "#fff")
-      .style("border", "1px solid #bbb")
+      .style("color", theme().ink)
+      .style("background", theme().surface)
+      .style("border", `1px solid ${theme().hairline}`)
       .style("border-radius", "4px")
       .style("padding", "2px 8px")
       .style("cursor", "pointer");
@@ -1569,8 +1613,9 @@ function navio(selection, _h) {
       .style("overflow-y", "auto")
       .style("min-width", "230px")
       .style("padding", "10px 12px")
-      .style("background", "#fff")
-      .style("border", "1px solid #bbb")
+      .style("background", theme().surface)
+      .style("color", theme().ink)
+      .style("border", `1px solid ${theme().hairline}`)
       .style("border-radius", "6px")
       .style("box-shadow", "0 2px 10px rgba(0,0,0,0.25)")
       .style("font", "13px sans-serif")
@@ -1632,6 +1677,107 @@ function navio(selection, _h) {
           first.focus();
         }
       });
+  }
+
+  /**
+   * The colours of Navio's own furniture, per theme.
+   *
+   * Navio ships no stylesheet - every colour is an inline style or a canvas
+   * stroke - so a dark page got black labels on a black ground and there was no
+   * CSS hook to fix it from outside. These are the values that answer to
+   * nv.theme; the DATA scales deliberately do not appear here.
+   *
+   * The light column is what Navio drew before 0.3.0, so nothing moves on a
+   * light page.
+   */
+  const THEMES = {
+    light: {
+      ink: "#000000", // labels, counts, the close button glyph
+      muted: "#666666", // secondary text in the panel
+      faint: "#777777", // tooltip footnote
+      border: "#000000", // the box around a level
+      surface: "#ffffff", // panel and button backgrounds
+      hairline: "#bbbbbb", // panel and button borders
+      divisions: "white", // lines between rows
+      nulls: "#ffedfd", // missing values
+      tooltipBg: "#b2ddf1",
+      tooltipInk: "#000000",
+    },
+    dark: {
+      ink: "#e9eaee",
+      muted: "#9aa0aa",
+      faint: "#8b919b",
+      border: "#8a919c",
+      surface: "#1b1e24",
+      hairline: "#3a3f48",
+      divisions: "#1b1e24",
+      nulls: "#4a2f46",
+      tooltipBg: "#204a5e",
+      tooltipInk: "#eef4f8",
+    },
+  };
+
+  /**
+   * Whether a dark page is being asked for. Read fresh rather than cached: with
+   * theme "auto" the answer changes when the reader changes their system
+   * setting, and a widget that only looked once would be wrong for the rest of
+   * the session.
+   */
+  nv.resolvedTheme = function () {
+    if (nv.theme === "dark" || nv.theme === "light") return nv.theme;
+    return typeof window !== "undefined" &&
+      window.matchMedia &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
+  };
+
+  /** The current chrome colours. */
+  function theme() {
+    return THEMES[nv.resolvedTheme()] || THEMES.light;
+  }
+
+  /**
+   * divisionsColor and nullColor are public options whose default is now `null`
+   * - the sentinel for "follow the theme". Anything a caller sets is theirs and
+   * is used in both themes, because a colour someone chose deliberately is not
+   * ours to override.
+   */
+  function divisionsColour() {
+    return nv.divisionsColor === null || nv.divisionsColor === undefined
+      ? theme().divisions
+      : nv.divisionsColor;
+  }
+  function nullColour() {
+    return nv.nullColor === null || nv.nullColor === undefined
+      ? theme().nulls
+      : nv.nullColor;
+  }
+
+  /**
+   * Re-colour the chrome that is built once and then kept.
+   *
+   * The drawn parts - headers, counts, borders, rows - are restyled on every
+   * redraw and follow the theme for free. The tooltip, the gear and the panel
+   * are created in init() and live for the widget's lifetime, so with
+   * theme "auto" a reader switching their system to dark would otherwise be
+   * left with a white panel until they reloaded.
+   */
+  function applyTheme() {
+    const t = theme();
+    if (settingsButton) {
+      settingsButton.style("color", t.ink).style("background", t.surface);
+      settingsButton.style("border", `1px solid ${t.hairline}`);
+    }
+    if (settingsPanel)
+      settingsPanel
+        .style("background", t.surface)
+        .style("color", t.ink)
+        .style("border", `1px solid ${t.hairline}`);
+    if (tooltipElement)
+      tooltipElement
+        .style("background", t.tooltipBg)
+        .style("color", t.tooltipInk);
   }
 
   /** Is the panel showing? The dialog's own `open` state is the truth. */
@@ -2012,7 +2158,7 @@ function navio(selection, _h) {
     attribs
       .append("div")
       .style("font-size", "11px")
-      .style("color", "#666")
+      .style("color", theme().muted)
       .style("margin-bottom", "4px")
       .text("Untick to hide. Drag a name, or use the arrows, to reorder.");
 
@@ -2198,7 +2344,7 @@ function navio(selection, _h) {
         .append("span")
         .style("width", "34px")
         .style("text-align", "right")
-        .style("color", "#666")
+        .style("color", theme().muted)
         .text(read());
       row
         .append("input")
@@ -2686,7 +2832,7 @@ function navio(selection, _h) {
 
       context.strokeStyle =
         val === undefined || val === null || val === "" || val === "none"
-          ? nv.nullColor
+          ? nullColour()
           : colScales.get(attrib)(val);
 
       context.stroke();
@@ -2703,7 +2849,7 @@ function navio(selection, _h) {
         context.lineTo(d1.x, d1.y);
         context.lineWidth = 1;
         // context.lineWidth = 1;
-        context.strokeStyle = nv.divisionsColor;
+        context.strokeStyle = divisionsColour();
         context.stroke();
       }
     }
@@ -2719,7 +2865,7 @@ function navio(selection, _h) {
         yScales[i].range()[1] + 2 - yScales[i].range()[0]
       );
     context.rect(origin.x, origin.y, size.width, size.height);
-    context.strokeStyle = "black";
+    context.strokeStyle = theme().border;
     context.lineWidth = 1;
     context.stroke();
     context.restore();
@@ -3328,6 +3474,7 @@ function navio(selection, _h) {
       .merge(levelOverlay.select("text.numNodesLabel"))
       .attr("class", "numNodesLabel")
       .style("font-family", "sans-serif")
+      .style("fill", theme().ink)
       .style("pointer-events", "none")
       .attr("x", function (_, i) {
         return toXY(alongA(i), alongR(i)).x;
@@ -3657,6 +3804,7 @@ function navio(selection, _h) {
             : "normal";
         })
         .style("font-family", "sans-serif")
+        .style("fill", theme().ink)
         .style("font-size", function () {
           // make it grow ?
           // if (dSortBy[d.level]!==undefined &&
@@ -4496,6 +4644,7 @@ function navio(selection, _h) {
   }
 
   function updateWidthAndHeight() {
+    applyTheme();
     // levelScale runs along A, `height` along R, so the two swap places on the
     // screen when the widget is vertical (#22).
     const alongA = levelScale.range()[1] + nv.margin + nv.x0,
@@ -4848,7 +4997,7 @@ function navio(selection, _h) {
     const scale =
       _scale ||
       scaleText(
-        nv.nullColor,
+        nullColour(),
         nv.digitsForText,
         nv.defaultColorInterpolatorText
       );
@@ -4860,7 +5009,7 @@ function navio(selection, _h) {
 
   nv.addOrderedAttrib = function (attr, _scale) {
     const scale =
-      _scale || scaleOrdered(nv.nullColor, nv.defaultColorInterpolatorOrdered);
+      _scale || scaleOrdered(nullColour(), nv.defaultColorInterpolatorOrdered);
 
     nv.addAttrib(attr, scale);
 
@@ -4886,7 +5035,7 @@ function navio(selection, _h) {
     const scale =
       _scale ||
       scaleText(
-        nv.nullColor,
+        nullColour(),
         nv.digitsForObjects, // nv.digitsForText,
         nv.defaultColorInterpolatorObject
       );
@@ -5580,6 +5729,14 @@ function navio(selection, _h) {
     d3.select("body")
       .on(`keydown.navio-${instanceId}`, null)
       .on(`keyup.navio-${instanceId}`, null);
+
+    if (schemeQuery && onSchemeChange) {
+      if (schemeQuery.removeEventListener)
+        schemeQuery.removeEventListener("change", onSchemeChange);
+      else if (schemeQuery.removeListener)
+        schemeQuery.removeListener(onSchemeChange);
+      schemeQuery = onSchemeChange = null;
+    }
 
     if (tooltip && typeof tooltip.destroy === "function") tooltip.destroy();
     tooltip = null;

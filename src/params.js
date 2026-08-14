@@ -122,6 +122,15 @@ export const PARAMS = [
     label: "Header band cap",
     hint: "The most the header band will reserve. Past this the labels still draw in full, but the extra hangs above the widget instead of growing it - and what it hangs over, it takes clicks from. Ignored in vertical orientation, which never spills.",
   },
+  {
+    key: "theme",
+    type: "string",
+    default: "auto",
+    values: ["auto", "light", "dark"],
+    section: "Layout",
+    label: "Theme",
+    hint: "Which way the widget's CHROME is coloured - labels, counts, borders, the panel, the tooltip. \"auto\" follows the page's prefers-color-scheme and keeps following it. The DATA colours never follow it: inverting a categorical scale would change what a colour means. The widget stays transparent in every theme, so it sits on the page's own background.",
+  },
   // --------------------------------------------------------------- headers
   {
     key: "showAttribTitles",
@@ -239,11 +248,11 @@ export const PARAMS = [
   },
   {
     key: "divisionsColor",
-    type: "colour",
-    default: "white",
+    type: "colour | null",
+    default: null,
     section: "Rows",
     label: "Row dividers",
-    hint: "Colour of the lines drawn between rows when they are tall enough.",
+    hint: "Colour of the lines drawn between rows when they are tall enough. null follows the theme; a colour you set is used in both.",
     control: "color",
   },
   {
@@ -266,11 +275,11 @@ export const PARAMS = [
   },
   {
     key: "nullColor",
-    type: "colour",
-    default: "#ffedfd",
+    type: "colour | null",
+    default: null,
     section: "Rows",
     label: "Null colour",
-    hint: "Colour for a missing value, in every scale type.",
+    hint: "Colour for a missing value, in every scale type. null follows the theme - the light value is a near-white pink, which is invisible on a dark ground. Set a colour and it is used in both themes, because then it is yours.",
   },
   // --------------------------------------------------------------- tooltip
   {

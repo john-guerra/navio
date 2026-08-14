@@ -34,6 +34,7 @@ Pass any of these in the options object, or set them on the instance. A few are 
 | `y0` | number | `100` | Room for the rotated column headers, before the records start. Measured from the labels by default; moving this slider takes that over and keeps whatever you set. |
 | `autoHeaderSpace` | boolean | `true` | Size y0 from the labels actually drawn, on every update. Off means y0 is yours. Note the band is ADDED to height rather than taken out of it, so the data area is height either way. |
 | `headerMaxSpace` | number | `140` | The most the header band will reserve. Past this the labels still draw in full, but the extra hangs above the widget instead of growing it - and what it hangs over, it takes clicks from. Ignored in vertical orientation, which never spills. |
+| `theme` | `auto` \| `light` \| `dark` | `"auto"` | Which way the widget's CHROME is coloured - labels, counts, borders, the panel, the tooltip. "auto" follows the page's prefers-color-scheme and keeps following it. The DATA colours never follow it: inverting a categorical scale would change what a colour means. The widget stays transparent in every theme, so it sits on the page's own background. |
 
 ### Headers
 
@@ -60,10 +61,10 @@ Pass any of these in the options object, or set them on the instance. A few are 
 | Option | Type | Default | What it does |
 | --- | --- | --- | --- |
 | `divisionsThreshold` | number | `4` | How many pixels a row must occupy before dividing lines are drawn between rows. Below this the lines would be thicker than the rows. |
-| `divisionsColor` | colour | `"white"` | Colour of the lines drawn between rows when they are tall enough. |
+| `divisionsColor` | colour | null | `null` | Colour of the lines drawn between rows when they are tall enough. null follows the theme; a colour you set is used in both. |
 | `levelConnectionsColor` | colour | `"rgba(205, 220, 163, 0.5)"` | Colour of the ribbons linking a level to the rows it came from. |
 | `linkColor` | colour | `"#ccc"` | Colour of the curves drawn for links passed via nv.links(). |
-| `nullColor` | colour | `"#ffedfd"` | Colour for a missing value, in every scale type. |
+| `nullColor` | colour | null | `null` | Colour for a missing value, in every scale type. null follows the theme - the light value is a near-white pink, which is invisible on a dark ground. Set a colour and it is used in both themes, because then it is yours. |
 
 ### Tooltip
 
