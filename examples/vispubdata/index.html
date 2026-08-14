@@ -69,8 +69,12 @@
     <script src="https://cdn.jsdelivr.net/npm/vega-lite@3.2.1/build/vega-lite.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/vega-embed@4.0.0/build/vega-embed.js"></script>
 
-    <script src="https://unpkg.com/navio/dist/navio.js"></script>
-    <!-- <script src="../../dist/navio.js"></script> -->
+    <!-- The build this repo just made, like every other example. Loading
+         unpkg here meant this page showed the LAST PUBLISHED release while
+         the rest of the site showed the current one, so a change could look
+         fine everywhere and be broken here, or the reverse. -->
+    <script src="../../dist/navio.js"></script>
+    <!-- <script src="https://unpkg.com/navio/dist/navio.js"></script> -->
 
     <script>
       /* global d3, navio */
