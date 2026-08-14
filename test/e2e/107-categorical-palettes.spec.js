@@ -133,3 +133,60 @@ test("navio.palettes exposes the built-ins", async ({ page }) => {
   expect(shape.turboIsFunction).toBe(true);
   expect(shape.rainbowEndsDiffer).toBe(true);
 });
+
+// Changing the palette after the columns exist is the ordinary way to do it -
+// addAllAttribs runs, you look at the result, you pick a different palette. It
+// silently did nothing: the range was resolved once, when the column was added,
+// and only a FUNCTION palette was ever re-resolved afterwards. The palettes
+// example hid this by destroying and rebuilding the widget for every click.
+test("setting the palette after addAllAttribs takes effect", async ({
+  page,
+}) => {
+  await load(page, "?cats=12");
+  const before = await assigned(page);
+
+  await page.evaluate(() => window.setPalette("mokole"));
+  const after = await assigned(page);
+
+  const mokole = await page.evaluate(() =>
+    window.navio.palettes.mokole.slice(0, 12).map((c) => c.toLowerCase())
+  );
+  expect(after.map((c) => c.toLowerCase())).toEqual(mokole);
+  expect(after).not.toEqual(before);
+});
+
+test("a function palette set afterwards is called with the real count", async ({
+  page,
+}) => {
+  await load(page, "?cats=12");
+
+  const n = await page.evaluate(() => {
+    const seen = [];
+    window.setPalette((count) => {
+      seen.push(count);
+      return window.d3
+        .range(count)
+        .map((i) => window.d3.interpolateCool(i / count));
+    });
+    return seen;
+  });
+
+  expect(n).toContain(12);
+});
+
+// A caller who passes their own scale has said what they want. Navio needs the
+// domain to know the category count, but the colours are theirs.
+test("a caller's own scale keeps its colours and its domain order", async ({
+  page,
+}) => {
+  await load(page, "?cats=3&custom=own");
+
+  expect(await assigned(page)).toEqual(["#ff0000", "#00ff00", "#0000ff"]);
+  expect(
+    await page.evaluate(() => window.nv.getColorScale("cat").domain())
+  ).toEqual(["c2", "c1", "c0"]);
+
+  // And it survives a palette change aimed at the columns Navio does own.
+  await page.evaluate(() => window.setPalette("turbo"));
+  expect(await assigned(page)).toEqual(["#ff0000", "#00ff00", "#0000ff"]);
+});

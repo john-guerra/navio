@@ -44,7 +44,26 @@
 
   nv.id("id");
   nv.data(rows);
-  nv.addAllAttribs();
+
+  if (params.get("custom") === "own") {
+    // A scale the CALLER built, with its own colours and a deliberate domain
+    // order. Navio has to leave both alone.
+    nv.addCategoricalAttrib(
+      "cat",
+      d3
+        .scaleOrdinal(["#ff0000", "#00ff00", "#0000ff"])
+        .domain(["c2", "c1", "c0"])
+    );
+    nv.data(rows);
+  } else {
+    nv.addAllAttribs();
+  }
+
+  /** Change the palette on a widget that already has its columns. */
+  window.setPalette = (p) => {
+    nv.defaultColorCategorical = typeof p === "string" ? navio.palettes[p] : p;
+    nv.hardUpdate();
+  };
 
   /** The colours actually assigned, one per category. */
   window.assigned = () => {

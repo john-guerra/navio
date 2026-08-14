@@ -4464,8 +4464,22 @@ function navio(selection, _h) {
         // anyway, so no colour moves by this alone.
         const name = getAttribName(attrib);
         const values = distinctAt(attrib);
-        scale.domain(values);
-        if (scale.__paletteFn) scale.range(categoricalRange(values.length));
+
+        if (scale.__navioOwned) {
+          // Navio built this scale, so the palette is Navio's to re-resolve -
+          // on EVERY update, not only when it is a function. Resolving once at
+          // addCategoricalAttrib meant `nv.defaultColorCategorical = ...;
+          // nv.hardUpdate()` silently did nothing, which is the ordinary way to
+          // change it: you call addAllAttribs, look at the result, then pick.
+          scale.domain(values);
+          scale.range(categoricalRange(values.length));
+        } else {
+          // A caller's own scale. Navio still needs the domain to know the
+          // count, but only sets it if the caller left it empty - an explicit
+          // domain is a statement about which category gets which colour, and
+          // overwriting it in first-appearance order quietly reassigns them.
+          if (!scale.domain().length) scale.domain(values);
+        }
         // Recycling is silent by construction - scaleOrdinal simply wraps - so
         // say it once. Two categories sharing a colour is a lie about the data,
         // and the reader has no way to tell.
@@ -5031,8 +5045,9 @@ function navio(selection, _h) {
     // 10 is a starting range only; updateColorDomains sets the real one once it
     // knows how many categories there are.
     const scale = _scale || d3.scaleOrdinal(categoricalRange(10));
-    if (!_scale && typeof nv.defaultColorCategorical === "function")
-      scale.__paletteFn = true;
+    // Who owns the colours. updateColorDomains re-resolves the palette for the
+    // scales Navio made and leaves a caller's scale alone.
+    scale.__navioOwned = !_scale;
     scale.__type = "cat";
     nv.addAttrib(attr, scale);
 
