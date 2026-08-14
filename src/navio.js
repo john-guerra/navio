@@ -1794,25 +1794,40 @@ function navio(selection, _h) {
    * Scroll offsets are saved with the overflow: an element reset to `visible`
    * loses its scroll position, which would jump a half-scrolled sidebar to the
    * top behind the panel.
+   *
+   * The two axes are lifted and restored as LONGHANDS, never as the `overflow`
+   * shorthand. Assigning the shorthand replaces both longhands in the element's
+   * inline block, so a host that wrote `overflow-x: auto` inline - what a
+   * dashboard writes to let a wide widget scroll sideways - had that rule
+   * overwritten on open and then deleted on close, when restoring the shorthand
+   * to its old value ("") cleared the axis the page had set. The container
+   * stopped clipping for the rest of the session, one gear click after the page
+   * loaded, with nothing to say why. A rule coming from a stylesheet survives
+   * either way, which is what made this easy to miss.
    */
   function liftClipsForPanel() {
     dropClipsForPanel();
     liftedClips = clippingAncestorsOfPanel().map((el) => ({
       el,
-      overflow: el.style.overflow,
+      overflowX: el.style.overflowX,
+      overflowY: el.style.overflowY,
       scrollTop: el.scrollTop,
       scrollLeft: el.scrollLeft,
     }));
-    for (const s of liftedClips) s.el.style.overflow = "visible";
+    for (const s of liftedClips) {
+      s.el.style.overflowX = "visible";
+      s.el.style.overflowY = "visible";
+    }
   }
 
   /** Put back exactly what liftClipsForPanel found, inline style and all. */
   function dropClipsForPanel() {
     if (!liftedClips) return;
     for (const s of liftedClips) {
-      // Restoring the empty string removes the inline style, which is right:
-      // the value was coming from the page's own stylesheet.
-      s.el.style.overflow = s.overflow;
+      // Restoring the empty string removes that axis from the inline style,
+      // which is right: the value was coming from the page's own stylesheet.
+      s.el.style.overflowX = s.overflowX;
+      s.el.style.overflowY = s.overflowY;
       s.el.scrollTop = s.scrollTop;
       s.el.scrollLeft = s.scrollLeft;
     }

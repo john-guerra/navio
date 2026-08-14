@@ -119,6 +119,42 @@ test("the host page's overflow is put back when the panel closes", async ({
   expect(await overflowOf()).toBe("auto");
 });
 
+// The test above cannot fail while the host's rule lives in a STYLESHEET:
+// whatever the lift wrote inline, clearing it re-exposes the sheet and the
+// container reads `auto` again. An inline longhand is the case that tells the
+// two apart, and it is the common one - a dashboard writes `overflow-x: auto`
+// on the element to let a wide widget scroll sideways.
+//
+// Assigning `style.overflow` REPLACES that longhand in the inline block, so
+// restoring the shorthand to what it was ("") leaves the element with no
+// overflow at all: the page's own rule is gone for the rest of the session and
+// the container silently stops clipping. Lift and restore the two longhands
+// instead.
+test("an inline overflow-x on the host survives the panel", async ({
+  page,
+}) => {
+  await page.goto(`${FIXTURE}?inline=1`);
+
+  const overflow = () =>
+    page.evaluate(() => {
+      const el = document.querySelector("#nv");
+      const cs = getComputedStyle(el);
+      return {
+        inlineX: el.style.overflowX,
+        computed: `${cs.overflowX}/${cs.overflowY}`,
+      };
+    });
+
+  expect(await overflow()).toEqual({ inlineX: "auto", computed: "auto/auto" });
+
+  await open(page);
+  expect((await overflow()).computed).toBe("visible/visible");
+
+  await page.keyboard.press("Escape");
+  await expect(page.locator("._nv_settings")).toBeHidden();
+  expect(await overflow()).toEqual({ inlineX: "auto", computed: "auto/auto" });
+});
+
 test("destroy() takes the panel with it", async ({ page }) => {
   await page.goto(FIXTURE);
   await open(page);

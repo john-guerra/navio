@@ -16,6 +16,15 @@
   #nv {
     overflow: auto;
   }
+  /* ?inline=1 takes that rule away and puts the clip on the element itself, as
+     an inline `overflow-x` longhand - the shape a dashboard writes when it only
+     means to let a wide widget scroll sideways. A stylesheet rule cannot tell
+     you whether the lift was written correctly: clearing the inline shorthand
+     re-exposes the sheet either way, so the host looks unharmed. An inline
+     longhand does tell you, because the shorthand overwrites it. */
+  #nv.inline-overflow {
+    overflow: visible;
+  }
   /* A SECOND clipping box, further up than the container Navio was given, so
      the fix has to walk the whole ancestor chain rather than only checking the
      panel's own parent. Transformed as well, which is what rules out solving
@@ -39,6 +48,15 @@
   const params = new URLSearchParams(location.search);
   if (params.get("transform") === "1") {
     document.getElementById("outer").classList.add("transformed");
+  }
+  if (params.get("inline") === "1") {
+    const el = document.getElementById("nv");
+    el.classList.add("inline-overflow");
+    // Set BEFORE Navio is constructed, the way a host page's own styling
+    // arrives. overflow-x alone is what a page writes when it means "let this
+    // scroll sideways"; CSS computes overflow-y to auto anyway, so the panel
+    // is clipped just the same.
+    el.style.overflowX = "auto";
   }
 
   // Enough attributes that the settings list is far taller than the widget.

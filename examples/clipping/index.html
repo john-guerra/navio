@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Navio in a host container that clips</title>
+    <style>
+      body {
+        font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        max-width: 900px;
+        margin: 0 auto 120px;
+        padding: 0 16px;
+        color: #1b1e23;
+      }
+      .note {
+        background: #f4f6f8;
+        border-left: 3px solid #b2ddf1;
+        padding: 12px 16px;
+        margin: 20px 0;
+        font-size: 14px;
+      }
+      code {
+        background: #f4f6f8;
+        padding: 1px 4px;
+        border-radius: 3px;
+      }
+      ol {
+        font-size: 14px;
+      }
+      /* The point of the example. A host page gives the widget its own scroll
+         box — an Observable Framework card, a sidebar, any narrow column — and
+         anything absolutely positioned inside it is clipped with it. The rule
+         is written inline on #nv (not here) because that is the case that
+         breaks: see the note about longhands below. */
+      #frame {
+        width: 560px;
+        max-width: 100%;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        padding: 10px;
+      }
+      #probe {
+        position: absolute;
+        left: 0;
+        bottom: -90px;
+        width: 340px;
+        padding: 8px 10px;
+        border: 2px dashed #c5221f;
+        border-radius: 6px;
+        background: #fff5f5;
+        color: #c5221f;
+        font-size: 13px;
+      }
+      #out {
+        font-family: ui-monospace, Menlo, monospace;
+        font-size: 12.5px;
+        line-height: 1.7;
+        background: #fbfbfc;
+        border: 1px solid #eee;
+        border-radius: 6px;
+        padding: 10px 12px;
+        white-space: pre-wrap;
+      }
+      .ok {
+        color: #137333;
+      }
+      .bad {
+        color: #c5221f;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Navio in a host container that clips</h1>
+
+    <p>
+      The settings panel is a child of the container you hand Navio, so a page
+      that makes that container a scroll box clips the panel with it. This
+      example is that page: <code>#nv</code> carries an inline
+      <code>overflow-x: auto</code> so its many columns can be scrolled
+      sideways, exactly like a widget inside a narrow dashboard column.
+    </p>
+
+    <div class="note">
+      <strong>Note <code>overflow-x</code> alone is enough.</strong> CSS
+      computes the other axis to <code>auto</code> as soon as one axis is not
+      <code>visible</code>, so a box that only meant to scroll sideways clips
+      vertically too — which is the axis the settings panel needs.
+    </div>
+
+    <ol>
+      <li>
+        Note the dashed <strong>probe</strong>: a child of the widget's
+        container sitting 90px below it. The container clips, so you cannot see
+        it. This is the settings panel's situation exactly.
+      </li>
+      <li>
+        Open the gear. The whole panel is visible and clickable to its bottom
+        edge — Navio lifts the clip off every ancestor while the panel is open
+        (<a href="https://github.com/john-guerra/navio/issues/100">#100</a>).
+      </li>
+      <li>
+        Close it. The probe is now visible too: the container has stopped
+        clipping, permanently, and the page never asked for that.
+      </li>
+    </ol>
+
+    <div class="note">
+      <strong>What to watch in the readout.</strong> The host's inline rule
+      starts as <code>overflow-x: auto</code>. While the panel is open it reads
+      <code>overflow: visible</code> — the shorthand, which
+      <em>replaces</em> the longhand in that inline block. Restoring the
+      shorthand on close therefore removes both axes and the page's own
+      <code>overflow-x: auto</code> never comes back: after one open/close the
+      widget has silently stopped scrolling. Saving and restoring
+      <code>style.overflowX</code> / <code>style.overflowY</code> instead keeps
+      the host's rule intact. A host that sets the rule from a stylesheet rather
+      than inline restores correctly, which is what makes this easy to miss.
+    </div>
+
+    <div id="frame">
+      <div id="nv" style="overflow-x: auto">
+        <!-- Same relationship to the container as the settings panel: an
+             absolutely positioned child that sticks out past the bottom edge.
+             Hidden while the container clips, visible the moment it stops. -->
+        <div id="probe">a child 90px below the widget — clipped, until it isn't</div>
+      </div>
+    </div>
+
+    <p id="out"></p>
+
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <script src="https://unpkg.com/popper.js@1.14/dist/umd/popper.min.js"></script>
+    <script src="../../dist/navio.js"></script>
+
+    <script type="module">
+      /* global d3, navio */
+
+      // Enough columns that the widget is wider than the 560px frame, so the
+      // host's overflow-x actually has something to scroll.
+      const CATS = ["alpha", "beta", "gamma", "delta"];
+      const rows = d3.range(300).map((i) => ({
+        id: i + 1,
+        category: CATS[i % 4],
+        region: ["north", "south", "east", "west"][(i >> 2) % 4],
+        cohort: 2015 + (i % 8),
+        status: i % 3 ? "active" : "inactive",
+        value: (i * 37) % 100,
+        score: Math.round(Math.sin(i) * 50 + 50),
+        weight: Math.round(Math.cos(i) * 30 + 40),
+        delta: Math.round(Math.sin(i / 3) * 20),
+        rank: (i * 7) % 50,
+        streak: i % 11,
+        level: ["I", "II", "III"][i % 3],
+      }));
+
+      const host = document.getElementById("nv");
+      // Navio empties the container it is given, so the probe is re-attached
+      // after construction rather than being wiped by it.
+      const probe = document.getElementById("probe");
+      const nv = new navio(d3.select(host), 210);
+      host.append(probe);
+      nv.attribWidth = 55; // wide enough that the widget looks like a real one
+      nv.id("id");
+      nv.data(rows);
+      nv.addAllAttribs();
+
+      const out = document.getElementById("out");
+      // Hit-test rather than trust the geometry: a clipped element still has a
+      // box, it just is not painted or clickable there.
+      const probeState = () => {
+        const r = probe.getBoundingClientRect();
+        const el = document.elementFromPoint(
+          r.left + r.width / 2,
+          Math.min(r.top + r.height / 2, window.innerHeight - 4)
+        );
+        if (el === probe || (el !== null && probe.contains(el))) return "visible";
+        // The open panel sits over the same spot, so say so rather than
+        // reporting a clip that is not there.
+        if (el !== null && el.closest("._nv_settings")) return "behind the open panel";
+        return "clipped";
+      };
+      const report = () => {
+        const cs = getComputedStyle(host);
+        const panel = host.querySelector("._nv_settings");
+        const open = panel ? panel.open === true : false;
+        // The host started with an inline overflow-x. If the panel is closed
+        // and that rule is gone, the restore has eaten it.
+        const lost = !open && !host.style.overflowX && !host.style.overflow;
+        out.innerHTML =
+          `panel:             ${open ? "open" : "closed"}\n` +
+          `inline style:      ${host.getAttribute("style") || "(none)"}\n` +
+          `computed overflow: ${cs.overflowX}/${cs.overflowY}\n` +
+          `container clips:   ${cs.overflowX === "visible" ? "no" : "yes"}\n` +
+          `probe below it:    ${probeState()}\n` +
+          (lost
+            ? `<span class="bad">the host's inline overflow-x is gone — restored the shorthand over the longhand</span>`
+            : `<span class="ok">the host's own overflow rule is intact</span>`);
+      };
+
+      // The style attribute is what changes when the panel opens and closes, so
+      // watch it rather than polling.
+      new MutationObserver(report).observe(host, {
+        attributes: true,
+        attributeFilter: ["style"],
+      });
+      document.addEventListener("click", () => requestAnimationFrame(report), true);
+      report();
+    </script>
+  </body>
+</html>
