@@ -100,6 +100,10 @@ function navio(selection, _h) {
     svg,
     canvas,
     context,
+    // The canvas is sized in device pixels and the context scaled by this, so
+    // drawing happens in CSS units. Kept because snapping a stroke to the pixel
+    // grid has to be done in DEVICE pixels - see snapToDevice.
+    pixelRatio = 1,
     tooltip,
     tooltipElement,
     liveRegion,
@@ -905,6 +909,7 @@ function navio(selection, _h) {
     canvas.style.height = height + "px";
 
     const scale = window.devicePixelRatio;
+    pixelRatio = scale || 1;
     canvas.width = ctxWidth * scale;
     canvas.height = height * scale;
 
@@ -2589,6 +2594,29 @@ function navio(selection, _h) {
     }
   }
 
+  /**
+   * Put a stroke of `deviceWidth` device pixels exactly on the pixel grid.
+   *
+   * A canvas stroke straddles its path, so a line one device pixel wide
+   * centred on an INTEGER device coordinate covers half of the pixel above and
+   * half of the one below - each at about 50% - instead of one pixel fully.
+   * Consecutive strokes then composite to roughly 75% of the intended colour,
+   * and the exact figure alternates with where each row falls. A run of
+   * identical values comes out striped and washed out (#105): measured at
+   * alphas of 239 and 247, and 87 distinct colours down a column whose data
+   * had one value.
+   *
+   * Odd widths want a half-pixel centre, even widths a whole one. This has to
+   * be reckoned in DEVICE pixels, not CSS ones: the context is scaled by
+   * pixelRatio, so at ratio 2 a 1-unit line is already 2 device pixels on an
+   * even boundary and is crisp - adding a flat 0.5 in CSS units would fix
+   * ratio 1 and break ratio 2, which is why the old code looked correct.
+   */
+  function snapToDevice(coord, deviceWidth) {
+    const dev = Math.round(coord * pixelRatio) + (deviceWidth % 2 ? 0.5 : 0);
+    return dev / pixelRatio;
+  }
+
   function drawItem(rowIdx, level) {
     const item = data[rowIdx];
     let attrib, i, y;
@@ -2608,10 +2636,18 @@ function navio(selection, _h) {
             : getAttrib(item, attrib);
       const attribName = getAttribName(attrib);
 
-      y = Math.round(
-        yScales[level](idOf(rowIdx)) + yScales[level].bandwidth() / 2
+      // A whole number of DEVICE pixels, so the stroke can sit exactly on the
+      // grid. Round rather than ceil the device width: ceil in CSS units then
+      // scaled would round twice and, at a fractional pixelRatio, still land
+      // between pixels.
+      const deviceWidth = Math.max(
+        1,
+        Math.round(Math.ceil(yScales[level].bandwidth()) * pixelRatio)
       );
-      // y = yScales[level](item[id]) + yScales[level].bandwidth()/2;
+      y = snapToDevice(
+        yScales[level](idOf(rowIdx)) + yScales[level].bandwidth() / 2,
+        deviceWidth
+      );
 
       // One stroke per (record, attribute) cell: it runs the width of the
       // attribute band along A, and is as thick as one record along R.
@@ -2622,8 +2658,7 @@ function navio(selection, _h) {
       context.beginPath();
       context.moveTo(p0.x, p0.y);
       context.lineTo(p1.x, p1.y);
-      context.lineWidth = Math.ceil(yScales[level].bandwidth());
-      // context.lineWidth = 1;
+      context.lineWidth = deviceWidth / pixelRatio;
 
       context.strokeStyle =
         val === undefined || val === null || val === "" || val === "none"
@@ -4415,6 +4450,7 @@ function navio(selection, _h) {
       { width: ctxWidth, height: ctxHeight } = toWH(alongA, recordAxisTotal());
     nv.DEBUG && console.log("updateWidthAndHeight: ", ctxWidth, ctxHeight);
     const scale = window.devicePixelRatio || 1;
+    pixelRatio = scale;
     d3.select(canvas)
       .attr("width", ctxWidth * scale)
       .attr("height", ctxHeight * scale)

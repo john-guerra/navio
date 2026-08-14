@@ -1,0 +1,64 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>One colour, many rows</title>
+<div id="nv" style="width: 200px"></div>
+
+<script src="/node_modules/d3/dist/d3.js"></script>
+<script src="/node_modules/popper.js/dist/umd/popper.js"></script>
+<script src="/dist/navio.js"></script>
+<script>
+  /* global d3, navio */
+  // Every row holds the SAME value, so any colour variation down the column is
+  // a rendering artefact and cannot be the data. ?n= sets how many records
+  // share the height, which is what decides whether a row is thinner than a
+  // pixel.
+  const params = new URLSearchParams(location.search);
+  const N = +(params.get("n") || 4000);
+  const rows = d3.range(N).map((i) => ({ id: i, cat: "same" }));
+
+  window.nv = new navio(d3.select("#nv"), {
+    height: +(params.get("height") || 400),
+    settings: false,
+    showSelectedAttrib: false,
+    showSequenceIDAttrib: false,
+    attribWidth: 40,
+  });
+  window.nv.id("id");
+  window.nv.data(rows);
+  window.nv.addCategoricalAttrib(
+    "cat",
+    d3.scaleOrdinal(["#1f77b4"]).domain(["same"])
+  );
+  window.nv.data(rows);
+
+  window.INTENDED = "31,119,180";
+
+  /**
+   * Every painted pixel down the middle of the column, strictly INSIDE the
+   * record axis. The level border is a black rectangle around the data and is
+   * chrome, not a record - sampling across it reports black as an extra colour
+   * and says nothing about how rows are drawn.
+   */
+  window.columnPixels = () => {
+    const cv = document.querySelector("#nv canvas");
+    const ctx = cv.getContext("2d", { willReadFrequently: true });
+    const dpr = cv.width / parseFloat(cv.style.width);
+    const d = ctx.getImageData(Math.round(30 * dpr), 0, 1, cv.height).data;
+    const out = { dpr, alphas: new Set(), colours: new Set(), painted: 0 };
+    const top = Math.ceil((window.nv.y0 + 3) * dpr);
+    const bottom = Math.floor((window.nv.y0 + window.nv.height() - 3) * dpr);
+    for (let y = top; y < bottom; y++) {
+      const i = y * 4;
+      if (d[i + 3] === 0) continue;
+      out.painted++;
+      out.alphas.add(d[i + 3]);
+      out.colours.add(`${d[i]},${d[i + 1]},${d[i + 2]}`);
+    }
+    return {
+      dpr: out.dpr,
+      painted: out.painted,
+      alphas: Array.from(out.alphas).sort((a, b) => a - b),
+      colours: Array.from(out.colours),
+    };
+  };
+</script>
