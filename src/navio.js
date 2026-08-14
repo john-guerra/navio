@@ -1338,7 +1338,9 @@ function navio(selection, _h) {
   }
 
   function styleButton(sel) {
-    return sel
+    // padding is set below, deliberately: the panel's buttons are smaller than
+    // a browser's default.
+    return styleControl(sel, "button")
       .style("font", "13px sans-serif")
       .style("color", theme().ink)
       .style("background", theme().surface)
@@ -1346,6 +1348,43 @@ function navio(selection, _h) {
       .style("border-radius", "4px")
       .style("padding", "2px 8px")
       .style("cursor", "pointer");
+  }
+
+  /**
+   * The box metrics of the panel's form controls, stated rather than inherited.
+   *
+   * Navio ships no stylesheet so that it does not fight the page it is dropped
+   * into, and that only works in one direction unless it is deliberate about
+   * the other. The panel is built from real <button>, <select> and <input>
+   * elements, so anything left unset belongs to whatever the host wrote - and
+   * `button { margin: 0 6px 12px 0 }`, which is what any page with buttons of
+   * its own writes, added 11px to EVERY row of the attribute list. At 19
+   * attributes that is 209px of invented height, and it reads as Navio having
+   * grown spacing of its own. A `select { padding: 8px }` on top of it took the
+   * row from 25px to 46px.
+   *
+   * The values are Chrome's own defaults for each control, so a page with no
+   * such rules looks exactly as it did - a blanket `margin: 0` would have
+   * tightened every panel to fix a problem only some pages have. Being explicit
+   * also means the panel is the same size in every engine rather than following
+   * each one's idea of a checkbox.
+   *
+   * Only what moves a control relative to its row. Anything genuinely cosmetic
+   * that a host wants to restyle is still theirs.
+   */
+  const CONTROL_BOX = {
+    select: ["0", "0"],
+    color: ["0", "1px 2px"],
+    range: ["2px", "0"],
+    checkbox: ["3px 3px 3px 4px", "0"],
+  };
+
+  function styleControl(sel, kind) {
+    const [margin, padding] = CONTROL_BOX[kind] || ["0", "0"];
+    return sel
+      .style("margin", margin)
+      .style("padding", padding)
+      .style("box-sizing", "border-box");
   }
 
   /** Everything the panel can change, as a plain JSON-safe object. */
@@ -2363,6 +2402,7 @@ function navio(selection, _h) {
         .text((d) => d.name);
       trow
         .append("select")
+        .call((n) => styleControl(n, "select"))
         .attr("aria-label", (d) => `Type of ${d.name}`)
         .style("font-size", "11px")
         .on("change", function (event, d) {
@@ -2396,6 +2436,7 @@ function navio(selection, _h) {
       const write = opt.set || ((v) => (nv[opt.key] = v));
       row
         .append("select")
+        .call((n) => styleControl(n, "select"))
         .attr("aria-label", opt.label)
         .on("change", function () {
           write(this.value);
@@ -2435,6 +2476,7 @@ function navio(selection, _h) {
       row
         .append("input")
         .attr("type", "range")
+        .call((n) => styleControl(n, "range"))
         .attr("min", opt.min)
         .attr("max", opt.max)
         .attr("step", opt.step)
@@ -2462,6 +2504,7 @@ function navio(selection, _h) {
       row
         .append("input")
         .attr("type", "color")
+        .call((n) => styleControl(n, "color"))
         .attr("aria-label", c.label)
         // The colour in USE, not the option's raw value. Two of these default
         // to null - the sentinel for "follow the theme" - and <input
@@ -2509,6 +2552,7 @@ function navio(selection, _h) {
       row
         .append("input")
         .attr("type", "checkbox")
+        .call((n) => styleControl(n, "checkbox"))
         .property("checked", !!nv[t.key])
         .on("change", function () {
           nv[t.key] = this.checked;
@@ -2539,6 +2583,7 @@ function navio(selection, _h) {
     nested
       .append("input")
       .attr("type", "checkbox")
+      .call((n) => styleControl(n, "checkbox"))
       .property("checked", !!nv.nestedFilters)
       .on("change", function () {
         nv.nestedFilters = this.checked;
@@ -2652,6 +2697,7 @@ function navio(selection, _h) {
     const boxes = row
       .append("input")
       .attr("type", "checkbox")
+      .call((n) => styleControl(n, "checkbox"))
       .attr("id", (n) => `_nv_vis_${instanceId}_${n}`)
       .property("checked", (n) => shown.has(n))
       .on("change", function (event, n) {
@@ -2720,6 +2766,7 @@ function navio(selection, _h) {
 
     const typeSel = row
       .append("select")
+      .call((n) => styleControl(n, "select"))
       .attr("aria-label", (n) => `Type of ${n}`)
       .attr("title", "How this column is interpreted and coloured")
       .style("font-size", "11px")
