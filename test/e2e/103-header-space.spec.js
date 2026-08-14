@@ -252,3 +252,54 @@ test("the band is measured against the layout it is for", async ({ page }) => {
   await page.evaluate(() => window.nv.hardUpdate());
   expect(await y0()).toBe(afterWiden);
 });
+
+// The scroll box is lifted headerSpill px above the container so the headers
+// have somewhere to hang, and everything inside it is pushed back down by the
+// same amount to stay put. The canvas and the SVG were; div.explanations, which
+// carries the filter chips, was not - so the chips floated headerSpill px above
+// the row they describe, up into the data.
+test("the filter chips sit where they would with no spill", async ({
+  page,
+}) => {
+  const measure = async (query) => {
+    await page.goto(`${F}${query}`);
+    await expect(page.locator("#nv canvas")).toHaveCount(1);
+    await page.evaluate(() =>
+      window.nv.setFilters([
+        [
+          {
+            type: "value",
+            attrib: "Departamento academico responsable",
+            value: "d1",
+          },
+        ],
+      ])
+    );
+    await expect(page.locator("#nv .filterExplanation div")).not.toHaveCount(0);
+
+    return page.evaluate(() => {
+      const box = document.querySelector("#nv > div");
+      const c = document.querySelector("#nv canvas").getBoundingClientRect();
+      const chip = document
+        .querySelector("#nv .filterExplanation")
+        .getBoundingClientRect();
+      return {
+        // The chip is drawn just under the last record. Measured from the top
+        // of the canvas and with y0 taken out, so the two caps - which reserve
+        // different amounts and therefore start the records in different places
+        // - are directly comparable.
+        offset: Math.round(chip.top - c.top - window.nv.y0),
+        // Negative only when the box was lifted, which is the case under test.
+        lift: box.style.top,
+      };
+    });
+  };
+
+  // cap=0 forces the whole band to spill; a generous cap forces none.
+  const spilling = await measure("?cap=0");
+  const flat = await measure("?cap=400");
+
+  expect(spilling.lift, "the box really was lifted").toMatch(/^-\d/);
+  expect(flat.lift, "and here it was not").toBeFalsy();
+  expect(spilling.offset).toBe(flat.offset);
+});

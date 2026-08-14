@@ -4749,6 +4749,12 @@ function navio(selection, _h) {
     // room above the drawing changed; the drawing did not.
     canvas.style.marginTop = headerSpill ? `${headerSpill}px` : "";
     svg.style("top", headerSpill ? `${headerSpill}px` : 0);
+    // The filter chips too. They are absolutely positioned against the same box
+    // and were left behind, so they floated headerSpill px up into the data
+    // instead of sitting under the level they describe.
+    selection
+      .select("div.explanations")
+      .style("top", nv.margin + headerSpill + "px");
 
     applyContainerSize();
 
