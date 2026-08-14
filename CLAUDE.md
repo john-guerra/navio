@@ -45,6 +45,14 @@ build/ascii.js      escapes non-ASCII literals (replaces rollup-plugin-ascii)
 build/verify-bundle.js  postbuild guard, runs automatically
 docs/ai/            durable review docs - read FILTERING-MODEL.md before
                     touching filtering, sorting or selection
+docs/ai/API.md      GENERATED from src/params.js by `npm run docs:api`. Every
+                    option and method, for someone USING navio rather than
+                    working on it. Never edit it by hand; a stale copy fails
+                    the gate.
+src/params.js       the one description of every option and method. The
+                    settings panel, navio.describe() and docs/ai/API.md are
+                    all built from it, so they cannot disagree. Adding an
+                    option without an entry here fails the gate.
 ```
 
 `src/navio.js` is a single closure. Its internal helpers are **not exported and
@@ -125,7 +133,7 @@ it and was silently undone by the next redraw.
 `.value` used to be the chain, which broke the one thing the reactive-widget
 contract is for — `viewof selected = navio(data)` handed every downstream
 Observable cell a list of filter descriptors where it expected data. The chain
-lives on `getFilters()`/`setFilters()`/`snapshot()`. Both are needed and neither
+lives on `getFilters()`/`setFilters()`. Both are needed and neither
 substitutes: rows are projections through *this* instance's arrays, so binding
 two Navios on `.value` gives the peer one flat level where the source has three.
 Bind Navio-to-Navio on the chain, Navio-to-anything-else on `.value`. A knock-on:

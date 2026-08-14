@@ -50,7 +50,8 @@
     "format:check": "prettier --check .",
     "check": "npm run format:check && npm run lint && npm run test && npm run build",
     "postbuild": "node build/verify-bundle.js",
-    "prepublishOnly": "npm run check"
+    "prepublishOnly": "npm run check",
+    "docs:api": "node build/write-api-docs.js"
   },
   "repository": {
     "type": "git",

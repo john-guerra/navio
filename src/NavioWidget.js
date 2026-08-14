@@ -20,7 +20,7 @@ import navio from "./navio.js";
  *
  * The multi-level FILTER CHAIN - which is what Navio actually manipulates, and
  * the only form that replays faithfully onto another instance - stays available
- * through getFilters()/setFilters() and snapshot(). Assigning `.value` a
+ * through getFilters()/setFilters(). Assigning `.value` a
  * `{ filters }` wrapper, or a chain (an array of arrays), applies it as filters;
  * anything else is read as rows. Rows are matched by nv.id(), so a bind against
  * a peer over the same data round-trips. See issues #60 and #93.

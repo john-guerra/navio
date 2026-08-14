@@ -2,6 +2,8 @@
 
 import * as d3 from "d3";
 
+import { PARAMS, METHODS } from "./params.js";
+
 // import {
 //   interpolateBlues,
 //   interpolatePurples,
@@ -383,8 +385,15 @@ function navio(selection, _h) {
   nv.getOptions = function () {
     const out = {};
     for (const key of OPTION_NAMES) out[key] = nv[key];
-    // The accessor-backed ones, read through their getters.
+    // The accessor-backed ones, read through their getters. OPTION_NAMES is a
+    // snapshot of nv's own keys taken before these functions are defined, so
+    // they are never in it.
     out.id = nv.id();
+    // `height` was missing here, which broke the round-trip this function
+    // exists for: getOptions() -> navio(sel, options) came back at the default
+    // 600 whatever size the widget had been. applyOptions skips it, because a
+    // live resize goes through nv.height(), but the CONSTRUCTOR reads it.
+    out.height = nv.height();
     return out;
   };
 
@@ -1182,140 +1191,36 @@ function navio(selection, _h) {
   // the inner div, which is a scroll container in both axes and would clip it.
   // ---------------------------------------------------------------------
 
-  /** Options safe to expose: each is re-read on every hardUpdate(). */
-  const LIVE_OPTIONS = [
-    {
-      key: "height",
-      hint: "The widget's extent along the RECORD axis - screen height when horizontal, width when vertical. More room means fewer rows share a pixel line.",
-      label: "Size along records",
-      min: 100,
-      max: 1200,
-      step: 20,
-      get: () => nv.height(),
-      set: (v) => nv.height(v),
-    },
-    {
-      key: "attribWidth",
-      hint: "How wide each column is drawn. Narrow columns fit more attributes on screen; wide ones make individual values easier to compare.",
-      label: "Column width",
-      min: 4,
-      max: 60,
-      step: 1,
-    },
-    {
-      key: "attribFontSize",
-      hint: "Size of the column header labels. Capped by the column width, so widening a column can be what actually makes a header legible.",
-      label: "Header font",
-      min: 6,
-      max: 24,
-      step: 1,
-    },
-    {
-      key: "attribFontSizeSelected",
-      hint: "Size a header grows to while the pointer is over it, so a rotated label can be read without changing the layout.",
-      label: "Header font (hover)",
-      min: 6,
-      max: 32,
-      step: 1,
-    },
-    {
-      key: "attribRotation",
-      hint: "Angle of the column headers, in degrees. 0 is horizontal and -90 is vertical; steeper angles fit longer names above narrow columns. Ignored in vertical orientation, where labels are upright.",
-      label: "Header angle",
-      min: -90,
-      max: 0,
-      step: 5,
-    },
-    {
-      key: "levelsSeparation",
-      hint: "Horizontal gap between drill-down levels. The filter chips are drawn in this gap, so a wider gap gives them more room.",
-      label: "Level gap",
-      min: 0,
-      max: 200,
-      step: 5,
-    },
-    {
-      key: "filterFontSize",
-      hint: "Size of the filter chips under the levels.",
-      label: "Filter font",
-      min: 6,
-      max: 20,
-      step: 1,
-    },
-    {
-      key: "margin",
-      hint: "Blank space around the drawing, inside the widget.",
-      label: "Margin",
-      min: 0,
-      max: 100,
-      step: 5,
-    },
-    {
-      key: "x0",
-      hint: "Offset of the whole drawing from the container's left edge.",
-      label: "Left offset",
-      min: 0,
-      max: 200,
-      step: 5,
-    },
-    {
-      key: "y0",
-      hint: "Room for the rotated column headers, before the records start. Measured from the labels by default; moving this slider takes that over and keeps whatever you set.",
-      label: "Top offset",
-      min: 0,
-      max: 300,
-      step: 5,
+  /**
+   * The panel's controls, derived from PARAMS so the descriptions the panel
+   * shows and the descriptions an agent reads are the same strings.
+   *
+   * Only get/set live here, because only those can close over this instance.
+   * Everything else - label, hint, range, step - comes from the table.
+   */
+  const OPTION_ACCESSORS = {
+    height: { get: () => nv.height(), set: (v) => nv.height(v) },
+    y0: {
       // Touching the slider hands control over. Without this the measurement
       // would overwrite the chosen value on the very next update, so the
-      // control would appear to do nothing at all - which is exactly how the
-      // Show checkboxes behaved before #100-show-options.
+      // control would appear to do nothing at all.
       set: (v) => {
         nv.autoHeaderSpace = false;
         nv.y0 = v;
       },
     },
-    {
-      key: "divisionsThreshold",
-      hint: "How many pixels a row must occupy before dividing lines are drawn between rows. Below this the lines would be thicker than the rows.",
-      label: "Row divider threshold",
-      min: 0,
-      max: 20,
-      step: 1,
-    },
-    {
-      key: "clickTolerance",
-      hint: "How far the pointer may drift during a click and still count as a click rather than a range selection. Raise it if selecting a single value is difficult.",
-      label: "Click tolerance",
-      min: 0,
-      max: 20,
-      step: 1,
-    },
-  ];
+  };
 
-  /** Colours re-read on every draw. Excludes the ones baked into scales. */
-  const LIVE_COLOURS = [
-    {
-      key: "divisionsColor",
-      hint: "Colour of the lines drawn between rows when they are tall enough.",
-      label: "Row dividers",
-    },
-    {
-      key: "levelConnectionsColor",
-      hint: "Colour of the ribbons linking a level to the rows it came from.",
-      label: "Level connections",
-    },
-    {
-      key: "linkColor",
-      hint: "Colour of the curves drawn for links passed via nv.links().",
-      label: "Links",
-    },
-    {
-      key: "tooltipBgColor",
-      hint: "Background of the hover tooltip.",
-      label: "Tooltip background",
-      needsData: true,
-    },
-  ];
+  const fromParams = (control) =>
+    PARAMS.filter((p) => p.control === control).map((p) => ({
+      ...p,
+      ...(OPTION_ACCESSORS[p.key] || {}),
+    }));
+
+  /** Options safe to expose: each is re-read on every hardUpdate(). */
+  const LIVE_OPTIONS = fromParams("range");
+
+  const LIVE_COLOURS = fromParams("color");
 
   /** <input type="color"> only accepts #rrggbb, so normalise whatever is set. */
   function toHex(colour) {
@@ -5643,6 +5548,27 @@ navio.getAttribsFromObjectAsFn = getAttribsFromObjectAsFn;
 // So the loaded build can be checked without reading the console - useful from
 // a notebook cell, or from a test.
 navio.version = VERSION;
+
+/**
+ * What this build can be configured with, and what it can be told to do.
+ *
+ * The same table the settings panel and docs/ai/API.md are built from, so it
+ * cannot describe a different Navio than the one you are holding. Meant for
+ * anything reading the API at runtime rather than reading the repo - a console,
+ * a notebook cell, an agent with an eval:
+ *
+ *   navio.describe().options.filter(o => o.section === "Layout")
+ *   navio.describe().methods.find(m => m.name === "setFilters")
+ *
+ * A frozen copy: callers get to keep it, not to edit the schema.
+ */
+navio.describe = function () {
+  return Object.freeze({
+    version: VERSION,
+    options: PARAMS.map((p) => Object.freeze({ ...p })),
+    methods: METHODS.map((m) => Object.freeze({ ...m })),
+  });
+};
 
 /**
  * Default DEBUG for instances created from here on.

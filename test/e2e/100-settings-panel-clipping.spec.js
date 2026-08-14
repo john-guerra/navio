@@ -160,6 +160,6 @@ test("destroy() takes the panel with it", async ({ page }) => {
   await open(page);
 
   await page.evaluate(() => window.nv.destroy());
-  expect(await page.locator("._nv_settings").count()).toBe(0);
-  expect(await page.locator("._nv_popover").count()).toBe(0);
+  await expect(page.locator("._nv_settings")).toHaveCount(0);
+  await expect(page.locator("._nv_popover")).toHaveCount(0);
 });
