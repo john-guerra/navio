@@ -319,7 +319,7 @@ export const PARAMS = [
   {
     key: "maxNumDistinctForCategorical",
     type: "number",
-    default: 10,
+    default: 30,
     section: "Attributes",
     label: "Categorical threshold",
     hint: "addAllAttribs calls an attribute categorical below this many distinct values.",
@@ -455,11 +455,11 @@ export const PARAMS = [
   },
   {
     key: "defaultColorCategorical",
-    type: "array",
-    defaultText: "d3.schemeCategory10",
+    type: "array | function",
+    defaultText: "navio.palettes.nameable",
     section: "Colours",
     label: "Categorical scheme",
-    hint: "Palette for categorical attributes.",
+    hint: "Palette for categorical attributes: an array of colours, or a function (n) => colours called with the number of categories. navio.palettes holds the built-ins - nameable (the default, 50 colours that stay distinguishable under colour blindness and can all be named), distinct, mokole, category10 (the pre-0.3.0 look), tableau10, turbo, rainbow, sinebow. Too few colours for the data warns rather than silently repeating.",
   },
   // --------------------------------------------------------- settings panel
   {

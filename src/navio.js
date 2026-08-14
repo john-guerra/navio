@@ -3,6 +3,7 @@
 import * as d3 from "d3";
 
 import { PARAMS, METHODS } from "./params.js";
+import { palettes, nameable } from "./palettes.js";
 
 // import {
 //   interpolateBlues,
@@ -124,6 +125,9 @@ function navio(selection, _h) {
     // Ancestors whose `overflow` was lifted to show the settings panel, with
     // what to put back. Null when the panel is closed. See liftClipsForPanel.
     liftedClips = null,
+    // Attributes already warned about for palette recycling, so a redraw does
+    // not repeat the message on every frame.
+    warnedRecycle = new Set(),
     // How much of the header band did not fit inside headerMaxSpace and is
     // hanging above the widget instead. See applyHeaderBand.
     headerSpill = 0,
@@ -189,7 +193,14 @@ function navio(selection, _h) {
   // addAllAttribs decides an attribute is categorical below the first
   // threshold, ordered below the second, and text above it. Set the second to
   // Infinity to never choose text.
-  nv.maxNumDistinctForCategorical = 10;
+  // Raised from 10 in 0.3.0, together with the palette. The old value was not a
+  // judgement about data, it was the length of d3.schemeCategory10: past ten
+  // categories the colours repeated, so anything larger had to be drawn as an
+  // ordered ramp instead. The shipped palette carries 50 distinguishable
+  // colours, so a 25-category column - a food group, a department, a country -
+  // can be drawn as what it is. Beyond this a ramp really does read better, and
+  // that is what still happens.
+  nv.maxNumDistinctForCategorical = 30;
   nv.maxNumDistinctForOrdered = 90;
   nv.howManyItemsShouldSearchForNotNull = 100; // How many rows should addAllAttribs search to decide guess an attribute type
   nv.margin = 10; // Margin around navio
@@ -271,7 +282,20 @@ function navio(selection, _h) {
 
   nv.defaultColorRangeBoolean = ["#a1d76a", "#e9a3c9", "white"]; //true false null
   nv.defaultColorRangeSelected = ["white", "#b5cf6b"];
-  nv.defaultColorCategorical = d3.schemeCategory10;
+  // Categorical colours. Either an ARRAY of colours, or a FUNCTION (n) => colours
+  // called with the number of categories once they are known - which is what
+  // lets a generator fill exactly the palette a column needs. navio.palettes
+  // holds the built-in choices; anything of either shape works:
+  //
+  //   nv.defaultColorCategorical = navio.palettes.mokole;      // an array
+  //   nv.defaultColorCategorical = navio.palettes.turbo;       // a function
+  //   nv.defaultColorCategorical = (n) => d3.quantize(d3.interpolateCool, n);
+  //
+  // The default was d3.schemeCategory10 until 0.3.0. Ten colours, RECYCLED past
+  // ten, so an eleventh category was drawn in exactly the colour of the first
+  // and nothing said so - and it collides for colour-blind readers before it
+  // even runs out. See src/palettes.js.
+  nv.defaultColorCategorical = nameable;
 
   nv.showSelectedAttrib = true; // Display the attribute that shows if a row is selected
   nv.showSequenceIDAttrib = true; // Display the attribute with the sequence ID
@@ -4237,6 +4261,34 @@ function navio(selection, _h) {
       } else if (scale.__type === "ordered") {
         // An ordered scale ranks the real values, so it needs all of them.
         scale.domain(distinctAt(attrib));
+      } else if (scale.__type === "cat") {
+        // Setting the domain explicitly is what makes the category COUNT known.
+        // There was no branch here at all: scaleOrdinal grew its domain as
+        // values arrived, so nothing could size a palette to the data, and
+        // which colour a category got depended on the order rows happened to be
+        // drawn in. First-appearance order, which is what scaleOrdinal kept
+        // anyway, so no colour moves by this alone.
+        const name = getAttribName(attrib);
+        const values = distinctAt(attrib);
+        scale.domain(values);
+        if (scale.__paletteFn) scale.range(categoricalRange(values.length));
+        // Recycling is silent by construction - scaleOrdinal simply wraps - so
+        // say it once. Two categories sharing a colour is a lie about the data,
+        // and the reader has no way to tell.
+        const range = scale.range();
+        if (
+          range.length &&
+          values.length > range.length &&
+          !warnedRecycle.has(name)
+        ) {
+          warnedRecycle.add(name);
+          console.warn(
+            `navio: "${name}" has ${values.length} categories but the ` +
+              `palette has ${range.length} colours, so colours repeat. Set ` +
+              `nv.defaultColorCategorical to a longer palette or a function ` +
+              `(n) => colours - see navio.palettes.`
+          );
+        }
       }
 
       colScales.set(getAttribName(attrib), scale);
@@ -4769,8 +4821,23 @@ function navio(selection, _h) {
     return nv;
   };
 
+  /**
+   * A palette is either an array or a function of the category count. The count
+   * is not known when the column is added - scaleOrdinal builds its domain
+   * lazily - so a function palette is resolved later, in updateColorDomains,
+   * and remembered here until then.
+   */
+  function categoricalRange(n) {
+    const p = nv.defaultColorCategorical;
+    return typeof p === "function" ? p(n) : p;
+  }
+
   nv.addCategoricalAttrib = function (attr, _scale) {
-    const scale = _scale || d3.scaleOrdinal(nv.defaultColorCategorical);
+    // 10 is a starting range only; updateColorDomains sets the real one once it
+    // knows how many categories there are.
+    const scale = _scale || d3.scaleOrdinal(categoricalRange(10));
+    if (!_scale && typeof nv.defaultColorCategorical === "function")
+      scale.__paletteFn = true;
     scale.__type = "cat";
     nv.addAttrib(attr, scale);
 
@@ -5612,6 +5679,12 @@ navio.version = VERSION;
  *
  * A frozen copy: callers get to keep it, not to edit the schema.
  */
+/**
+ * The built-in categorical palettes, for `nv.defaultColorCategorical`. Arrays
+ * or (n) => colours functions; see src/palettes.js for how they were derived.
+ */
+navio.palettes = palettes;
+
 navio.describe = function () {
   return Object.freeze({
     version: VERSION,

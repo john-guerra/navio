@@ -26,7 +26,7 @@
  */
 import * as d3 from "d3";
 import { writeFileSync } from "node:fs";
-import { saliency, scorePalette } from "./name-metrics.mjs";
+import { saliency, scorePalette } from "../../build/name-metrics.mjs";
 
 const hex = (c) => d3.rgb(c).formatHex();
 const TYPES = ["normal", "protan", "deutan", "tritan"];

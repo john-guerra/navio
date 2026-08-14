@@ -79,7 +79,7 @@ Pass any of these in the options object, or set them on the instance. A few are 
 | Option | Type | Default | What it does |
 | --- | --- | --- | --- |
 | `id` | string | `"__seqId"` | Which field identifies a row. Defaults to the row's position, which is enough until rows are re-sorted or linked - set it to a real key for links, and for a selection that survives sorting. |
-| `maxNumDistinctForCategorical` | number | `10` | addAllAttribs calls an attribute categorical below this many distinct values. |
+| `maxNumDistinctForCategorical` | number | `30` | addAllAttribs calls an attribute categorical below this many distinct values. |
 | `maxNumDistinctForOrdered` | number | `90` | addAllAttribs calls an attribute ordered below this many distinct values, and text above it. Set to Infinity to never choose text. |
 | `howManyItemsShouldSearchForNotNull` | number | `100` | How many rows to look through for a non-null value when guessing an attribute's type. |
 | `addAllAttribsRecursionLevel` | number | `Infinity` | How deep addAllAttribs descends into nested objects. |
@@ -101,7 +101,7 @@ Pass any of these in the options object, or set them on the instance. A few are 
 | `defaultColorInterpolatorObject` | function | `d3.interpolateGreens` | Interpolator for object and array attributes. |
 | `defaultColorRangeBoolean` | array | `["#a1d76a","#e9a3c9","white"]` | Colours for true, false and null, in that order. |
 | `defaultColorRangeSelected` | array | `["white","#b5cf6b"]` | Colours for unselected and selected rows in the derived selected column. |
-| `defaultColorCategorical` | array | `d3.schemeCategory10` | Palette for categorical attributes. |
+| `defaultColorCategorical` | array | function | `navio.palettes.nameable` | Palette for categorical attributes: an array of colours, or a function (n) => colours called with the number of categories. navio.palettes holds the built-ins - nameable (the default, 50 colours that stay distinguishable under colour blindness and can all be named), distinct, mokole, category10 (the pre-0.3.0 look), tableau10, turbo, rainbow, sinebow. Too few colours for the data warns rather than silently repeating. |
 
 ### Settings panel
 

@@ -15,14 +15,15 @@
  *                 zero means the two are called the same thing, however far
  *                 apart they look.
  *
- * Used at GENERATION time only - see build-palettes.mjs. The model is 1.6MB and
+ * Used at GENERATION time only - by build/gen-palettes.mjs and by the
+ * examples/palettes generator. The model is 1.6MB and
  * has no business in a widget bundle; what ships is the resulting hex codes.
  *
  * Carry this caveat: the XKCD respondents were 74.6% native English speakers
  * and about 68% male, so the model describes ENGLISH naming. For an
  * international audience these numbers are a tiebreaker, not an objective.
  *
- * C3 is vendored under vendor/c3 (BSD 3-clause, Copyright 2011 Stanford
+ * C3 is vendored under build/vendor/c3 (BSD 3-clause, Copyright 2011 Stanford
  * University); see vendor/c3/LICENSE.
  */
 import * as d3 from "d3";
@@ -67,13 +68,21 @@ const c3 = loadC3();
  */
 const BINS = new Map();
 c3.color.forEach((c, i) => {
-  const key = [5 * Math.round(c.l / 5), 5 * Math.round(c.a / 5), 5 * Math.round(c.b / 5)].join();
+  const key = [
+    5 * Math.round(c.l / 5),
+    5 * Math.round(c.a / 5),
+    5 * Math.round(c.b / 5),
+  ].join();
   if (!BINS.has(key)) BINS.set(key, i);
 });
 
 export function binOf(colour) {
   const x = d3.lab(colour);
-  const key = [5 * Math.round(x.l / 5), 5 * Math.round(x.a / 5), 5 * Math.round(x.b / 5)].join();
+  const key = [
+    5 * Math.round(x.l / 5),
+    5 * Math.round(x.a / 5),
+    5 * Math.round(x.b / 5),
+  ].join();
   if (BINS.has(key)) return BINS.get(key);
   let best = -1,
     bestD = Infinity;

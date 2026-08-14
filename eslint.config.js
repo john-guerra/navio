@@ -28,6 +28,10 @@ export default [
       // dependencies) through a self-referential node_modules/navio path, and
       // its import in src/index.js is commented out. Tracked by #20.
       "src/NavioComponent.jsx",
+      // Vendored third-party: StanfordHCI/c3, BSD 3-clause. Kept unmodified so
+      // it can be re-fetched and diffed; linting someone else's 2011 browser
+      // code to our rules would only invite editing it.
+      "build/vendor/**",
     ],
   },
 
@@ -66,7 +70,7 @@ export default [
 
   // Build tooling and configs: run in Node, not the browser.
   {
-    files: ["*.config.js", "rollup.config.js", "build/**/*.js"],
+    files: ["*.config.js", "rollup.config.js", "build/**/*.{js,mjs}"],
     rules: {
       // build/ascii.js matches the non-ASCII range as /[^\x00-\x7F]/, which is
       // exactly the point of the file - the control characters are deliberate.

@@ -1,0 +1,54 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>Categorical palettes</title>
+<div id="nv"></div>
+
+<script src="/node_modules/d3/dist/d3.js"></script>
+<script src="/node_modules/popper.js/dist/umd/popper.js"></script>
+<script src="/dist/navio.js"></script>
+<script>
+  /* global d3, navio */
+  // ?cats= sets how many categories the column has, which is the whole point:
+  // past ten, the old default drew the eleventh in the colour of the first.
+  const params = new URLSearchParams(location.search);
+  const CATS = +(params.get("cats") || 25);
+  const rows = d3.range(CATS * 8).map((i) => ({
+    id: i,
+    cat: "c" + (i % CATS),
+  }));
+
+  window.nv = new navio(d3.select("#nv"), {
+    height: 400,
+    settings: false,
+    showSelectedAttrib: false,
+    showSequenceIDAttrib: false,
+    attribWidth: 40,
+    // Force the column to be CATEGORICAL whatever the threshold is: this
+    // fixture is about palettes, not about how addAllAttribs types a column.
+    maxNumDistinctForCategorical: 200,
+  });
+
+  // ?palette= picks a built-in by name; ?custom=fn installs a function of the
+  // category count; ?custom=array installs a short array.
+  if (params.get("palette"))
+    nv.defaultColorCategorical = navio.palettes[params.get("palette")];
+  if (params.get("custom") === "fn") {
+    window.calledWith = [];
+    nv.defaultColorCategorical = (n) => {
+      window.calledWith.push(n);
+      return d3.range(n).map((i) => d3.interpolateCool(i / n));
+    };
+  }
+  if (params.get("custom") === "array")
+    nv.defaultColorCategorical = ["#ff0000", "#00ff00", "#0000ff"];
+
+  nv.id("id");
+  nv.data(rows);
+  nv.addAllAttribs();
+
+  /** The colours actually assigned, one per category. */
+  window.assigned = () => {
+    const scale = nv.getColorScale("cat");
+    return scale.domain().map((v) => d3.rgb(scale(v)).formatHex());
+  };
+</script>
