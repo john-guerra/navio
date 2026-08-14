@@ -64,7 +64,7 @@ Pass any of these in the options object, or set them on the instance. A few are 
 | `divisionsColor` | colour | null | `null` | Colour of the lines drawn between rows when they are tall enough. null follows the theme; a colour you set is used in both. |
 | `levelConnectionsColor` | colour | `"rgba(205, 220, 163, 0.5)"` | Colour of the ribbons linking a level to the rows it came from. |
 | `linkColor` | colour | `"#ccc"` | Colour of the curves drawn for links passed via nv.links(). |
-| `nullColor` | colour | null | `null` | Colour for a missing value, in every scale type. null follows the theme - the light value is a near-white pink, which is invisible on a dark ground. Set a colour and it is used in both themes, because then it is yours. |
+| `nullColor` | colour | `"#ffedfd"` | Colour for a missing value, in every scale type. The same in both themes on purpose: a gap is not a value, and it should look like the same gap on a dark page as on a light one. |
 
 ### Tooltip
 

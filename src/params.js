@@ -275,11 +275,11 @@ export const PARAMS = [
   },
   {
     key: "nullColor",
-    type: "colour | null",
-    default: null,
+    type: "colour",
+    default: "#ffedfd",
     section: "Rows",
     label: "Null colour",
-    hint: "Colour for a missing value, in every scale type. null follows the theme - the light value is a near-white pink, which is invisible on a dark ground. Set a colour and it is used in both themes, because then it is yours.",
+    hint: "Colour for a missing value, in every scale type. The same in both themes on purpose: a gap is not a value, and it should look like the same gap on a dark page as on a light one.",
   },
   // --------------------------------------------------------------- tooltip
   {

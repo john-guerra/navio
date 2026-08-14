@@ -39,8 +39,10 @@ test("headers are dark on a light page", async ({ page }) => {
 });
 
 test("headers are light on a dark page", async ({ page }) => {
+  // The page paints itself dark. That, not the reader's OS setting, is what
+  // makes black labels unreadable.
   await page.emulateMedia({ colorScheme: "dark" });
-  await load(page);
+  await load(page, "?page=dark");
 
   // The whole complaint: a label the colour of the background is not a label.
   expect(await page.evaluate(() => window.resolved())).toBe("dark");
@@ -51,7 +53,7 @@ test("headers are light on a dark page", async ({ page }) => {
 
 test("the settings panel follows too", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "dark" });
-  await load(page);
+  await load(page, "?page=dark");
   await page.locator("#nv ._nv_gear").click();
 
   const { background, color } = await page.evaluate(() =>
@@ -89,8 +91,10 @@ test("theme: dark wins over a light page, and the reverse", async ({
 // nv.data() then re-ran on every call. emulateMedia dispatches the event
 // perfectly well; there was simply nothing listening. A code review caught it.
 test("it follows the system changing under it", async ({ page }) => {
+  // A page that DECLARED color-scheme and paints no background of its own, so
+  // the browser canvas - and therefore the widget - follows the reader.
   await page.emulateMedia({ colorScheme: "light" });
-  await load(page);
+  await load(page, "?scheme=1");
   expect(
     lightness(await page.evaluate(() => window.headerFill()))
   ).toBeLessThan(90);
@@ -107,7 +111,7 @@ test("it keeps following after data() is called again", async ({ page }) => {
   // - so a widget that was re-fed data lost the listener even once init() was
   // fixed. Re-feeding data is routine: addAllAttribs ends with nv.data(data).
   await page.emulateMedia({ colorScheme: "light" });
-  await load(page);
+  await load(page, "?scheme=1");
   await page.evaluate(() => window.nv.data(window.nv.data()));
 
   await page.emulateMedia({ colorScheme: "dark" });
@@ -151,6 +155,56 @@ test("the tooltip arrow follows the theme with the tooltip", async ({
   expect(new Set(sides), "arrow matches the tooltip body").toEqual(
     new Set([body])
   );
+});
+
+// "auto" means MATCH WHAT IS BEHIND ME, not "match the reader's operating
+// system". Following prefers-color-scheme alone put a dark-themed widget on
+// the ten examples in this repo that never opted into dark mode - a white page
+// with pale grey labels on it - which is how John found this, twice.
+test("a light page that never opted in keeps a light widget", async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: "dark" });
+  await load(page, "?page=light");
+
+  // The reader prefers dark. The page is white regardless, so the widget has
+  // to be readable on white.
+  expect(await page.evaluate(() => window.resolved())).toBe("light");
+  expect(
+    lightness(await page.evaluate(() => window.headerFill()))
+  ).toBeLessThan(90);
+});
+
+test("a page that paints itself dark gets a dark widget", async ({ page }) => {
+  // No color-scheme declared, light system preference: only the background
+  // says what is going on, and it is what matters.
+  await page.emulateMedia({ colorScheme: "light" });
+  await load(page, "?page=dark");
+
+  expect(await page.evaluate(() => window.resolved())).toBe("dark");
+  expect(
+    lightness(await page.evaluate(() => window.headerFill()))
+  ).toBeGreaterThan(140);
+});
+
+test("a dark panel on a light page gets a dark widget", async ({ page }) => {
+  // The nearest painted ancestor wins, not the page.
+  await page.emulateMedia({ colorScheme: "light" });
+  await load(page, "?page=light&box=dark");
+
+  expect(await page.evaluate(() => window.resolved())).toBe("dark");
+});
+
+test("a page that opts in follows the reader", async ({ page }) => {
+  // Nothing paints a background here, so the browser canvas decides - and that
+  // follows the declared color-scheme.
+  await page.emulateMedia({ colorScheme: "dark" });
+  await load(page, "?scheme=1");
+  expect(await page.evaluate(() => window.resolved())).toBe("dark");
+
+  await page.emulateMedia({ colorScheme: "light" });
+  await load(page, "?scheme=1");
+  expect(await page.evaluate(() => window.resolved())).toBe("light");
 });
 
 test("the widget never paints its own background", async ({ page }) => {

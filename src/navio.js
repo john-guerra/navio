@@ -220,10 +220,11 @@ function navio(selection, _h) {
   // change what a colour means, and a palette chosen for contrast on white does
   // not become correct by flipping it.
   nv.theme = "auto";
-  // Colour for null values. `null` means "follow the theme" - a near-white pink
-  // is invisible on a dark ground. Set it to a colour and that colour is used
-  // in both themes, because then it is yours.
-  nv.nullColor = null;
+  // Colour for missing values. Deliberately the SAME in both themes: a missing
+  // value is not a value, and a reader who has learnt to recognise this pink
+  // should not have to learn a second colour for it on a dark page. It is
+  // bright on a dark ground, which is the point - a gap should be visible.
+  nv.nullColor = "#ffedfd";
   nv.levelConnectionsColor = "rgba(205, 220, 163, 0.5)"; // Color for the connections between levels
   nv.divisionsThreshold = 4; // What's the minimum row height needed to draw divisions
   nv.fmtCounts = d3.format(",.0d"); // Format used to display the counts on the bottom
@@ -1711,7 +1712,6 @@ function navio(selection, _h) {
       surface: "#1b1e24",
       hairline: "#3a3f48",
       divisions: "#1b1e24",
-      nulls: "#4a2f46",
       tooltipBg: "#204a5e",
       tooltipInk: "#eef4f8",
     },
@@ -1723,13 +1723,56 @@ function navio(selection, _h) {
    * setting, and a widget that only looked once would be wrong for the rest of
    * the session.
    */
+  /**
+   * The colour actually painted behind the widget, or null if nothing paints
+   * one all the way up.
+   *
+   * Backgrounds are transparent by default, so the nearest ancestor that
+   * actually sets one is what a reader sees behind the labels - a dark panel on
+   * a light page included.
+   */
+  function backgroundBehind() {
+    if (typeof window === "undefined" || !selection || !selection.node())
+      return null;
+    let el = selection.node();
+    while (el) {
+      const c = d3.color(getComputedStyle(el).backgroundColor);
+      if (c && c.opacity > 0) return c;
+      el = el.parentElement;
+    }
+    return null;
+  }
+
+  /**
+   * Which way to colour the chrome.
+   *
+   * "auto" means MATCH WHAT IS BEHIND ME, not "match the reader's operating
+   * system". Following prefers-color-scheme alone put a dark-themed widget on
+   * every page that had never opted into dark mode: the reader's system says
+   * dark, the page is still white, and the labels came out pale grey on white.
+   * Ten of the twelve examples in this repo are such pages, and so is most of
+   * the web.
+   *
+   * So the background decides. Only when NOTHING paints one - the browser's own
+   * canvas is showing - does the reader's preference get a say, and then only
+   * if the page declared `color-scheme`, which is precisely the page saying "I
+   * follow the reader".
+   */
   nv.resolvedTheme = function () {
     if (nv.theme === "dark" || nv.theme === "light") return nv.theme;
-    return typeof window !== "undefined" &&
+    if (typeof window === "undefined") return "light";
+
+    const bg = backgroundBehind();
+    // L* is perceptual lightness: 50 is the middle of the range, and a ground
+    // below it needs light ink on top.
+    if (bg) return d3.lab(bg).l < 50 ? "dark" : "light";
+
+    const declared =
+      getComputedStyle(document.documentElement).colorScheme || "";
+    const prefersDark =
       window.matchMedia &&
-      window.matchMedia("(prefers-color-scheme: dark)").matches
-      ? "dark"
-      : "light";
+      window.matchMedia("(prefers-color-scheme: dark)").matches;
+    return declared.indexOf("dark") !== -1 && prefersDark ? "dark" : "light";
   };
 
   /** The current chrome colours. */
@@ -1752,11 +1795,6 @@ function navio(selection, _h) {
     return nv.tooltipBgColor === null || nv.tooltipBgColor === undefined
       ? theme().tooltipBg
       : nv.tooltipBgColor;
-  }
-  function nullColour() {
-    return nv.nullColor === null || nv.nullColor === undefined
-      ? theme().nulls
-      : nv.nullColor;
   }
 
   /**
@@ -2840,7 +2878,7 @@ function navio(selection, _h) {
 
       context.strokeStyle =
         val === undefined || val === null || val === "" || val === "none"
-          ? nullColour()
+          ? nv.nullColor
           : colScales.get(attrib)(val);
 
       context.stroke();
@@ -5005,7 +5043,7 @@ function navio(selection, _h) {
     const scale =
       _scale ||
       scaleText(
-        nullColour(),
+        nv.nullColor,
         nv.digitsForText,
         nv.defaultColorInterpolatorText
       );
@@ -5017,7 +5055,7 @@ function navio(selection, _h) {
 
   nv.addOrderedAttrib = function (attr, _scale) {
     const scale =
-      _scale || scaleOrdered(nullColour(), nv.defaultColorInterpolatorOrdered);
+      _scale || scaleOrdered(nv.nullColor, nv.defaultColorInterpolatorOrdered);
 
     nv.addAttrib(attr, scale);
 
@@ -5043,7 +5081,7 @@ function navio(selection, _h) {
     const scale =
       _scale ||
       scaleText(
-        nullColour(),
+        nv.nullColor,
         nv.digitsForObjects, // nv.digitsForText,
         nv.defaultColorInterpolatorObject
       );
