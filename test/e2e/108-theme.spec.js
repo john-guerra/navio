@@ -327,3 +327,76 @@ test("but a colour chosen since is still honoured", async ({ page }) => {
   expect(round.version).toBeGreaterThan(0);
   expect(round.divisions).toBe("white");
 });
+
+// The theme was reachable only from code. Someone reading a widget on a page
+// whose background Navio guessed wrong - or who simply wants the other one -
+// has the settings panel and nothing else.
+test("the panel can switch the theme, both ways", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await load(page, "?page=light");
+  expect(await page.evaluate(() => window.resolved())).toBe("light");
+
+  await page.locator("#nv ._nv_gear").click();
+  const select = page
+    .locator("#nv ._nv_settings label")
+    .filter({ hasText: "Theme" })
+    .locator("select");
+
+  await expect(select, "starts on what nv.theme is").toHaveValue("auto");
+  await select.selectOption("dark");
+
+  expect(await page.evaluate(() => window.resolved())).toBe("dark");
+  expect(
+    lightness(await page.evaluate(() => window.headerFill())),
+    "light ink on a light page, because it was asked for"
+  ).toBeGreaterThan(140);
+
+  // And back, without a reload.
+  await select.selectOption("light");
+  expect(await page.evaluate(() => window.resolved())).toBe("light");
+
+  // "auto" has to be reachable again, or the control is one-way.
+  await select.selectOption("auto");
+  expect(await page.evaluate(() => window.nv.theme)).toBe("auto");
+  expect(await page.evaluate(() => window.resolved())).toBe("light");
+});
+
+test("the chosen theme is remembered", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await load(page, "?page=light");
+  await page.locator("#nv ._nv_gear").click();
+  await page
+    .locator("#nv ._nv_settings label")
+    .filter({ hasText: "Theme" })
+    .locator("select")
+    .selectOption("dark");
+
+  expect(await page.evaluate(() => window.nv.getSettings().theme)).toBe("dark");
+});
+
+// The constructor is the primary way to set this: a page that knows it is dark
+// says so once, at construction, and never depends on Navio guessing from the
+// background or on the reader finding the settings panel.
+test("theme is a constructor option, and the panel agrees with it", async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  // A white page, a light system preference, and an explicit dark widget: only
+  // the option can produce this, so nothing else can be passing the test.
+  await load(page, "?page=light&theme=dark");
+
+  expect(await page.evaluate(() => window.nv.theme)).toBe("dark");
+  expect(await page.evaluate(() => window.resolved())).toBe("dark");
+  expect(
+    lightness(await page.evaluate(() => window.headerFill()))
+  ).toBeGreaterThan(140);
+
+  // The panel must open showing what was passed in, not its own default.
+  await page.locator("#nv ._nv_gear").click();
+  await expect(
+    page
+      .locator("#nv ._nv_settings label")
+      .filter({ hasText: "Theme" })
+      .locator("select")
+  ).toHaveValue("dark");
+});

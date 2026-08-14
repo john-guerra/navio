@@ -45,6 +45,7 @@ export const PARAMS = [
     section: "Layout",
     label: "Orientation",
     hint: 'Which way the two axes run. "horizontal" puts attributes across and records down; "vertical" transposes both. All geometry goes through toXY, so everything follows.',
+    control: "select",
   },
   {
     key: "attribWidth",
@@ -129,7 +130,8 @@ export const PARAMS = [
     values: ["auto", "light", "dark"],
     section: "Layout",
     label: "Theme",
-    hint: "Which way the widget's CHROME is coloured - labels, counts, borders, the panel, the tooltip. \"auto\" follows the page's prefers-color-scheme and keeps following it. The DATA colours never follow it: inverting a categorical scale would change what a colour means. The widget stays transparent in every theme, so it sits on the page's own background.",
+    hint: "Which way the widget's CHROME is coloured - labels, counts, borders, the panel, the tooltip. \"auto\" reads the background behind the widget and picks ink to suit, re-reading on every redraw. The DATA colours never follow it: inverting a categorical scale would change what a colour means. The widget stays transparent in every theme, so it sits on the page's own background.",
+    control: "select",
   },
   // --------------------------------------------------------------- headers
   {
@@ -487,6 +489,7 @@ export const PARAMS = [
     section: "Settings panel",
     label: "Panel placement",
     hint: "Where the panel opens relative to the widget. A modal placement was built and removed: it centres in the VIEWPORT, so with two Navios the panel appeared nowhere near the one it belonged to.",
+    control: "select",
   },
   {
     key: "settingsMaxAttribRows",

@@ -363,8 +363,15 @@ test("a hovered header grows only as far as it can be seen", async ({
     expect(n, query).toBeGreaterThan(0);
 
     for (let i = 0; i < n; i++) {
+      // force: SVG text hit-tests by its ink, so Playwright's actionability
+      // check sees a rotated label as unstable and never settles on it. The
+      // hover is the thing under test, not the reachability of the element.
+      // eslint-disable-next-line playwright/no-force-option
       await labels.nth(i).hover({ force: true });
-      // The growth is animated, so wait for it to settle.
+      // The growth is a 150ms transition and there is no state to poll on -
+      // the assertion is about the geometry DURING the settled state, so
+      // waiting for it is the point rather than a workaround.
+      // eslint-disable-next-line playwright/no-wait-for-timeout
       await page.waitForTimeout(450);
 
       const over = await page.evaluate((idx) => {

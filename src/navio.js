@@ -1273,6 +1273,15 @@ function navio(selection, _h) {
    */
   const OPTION_ACCESSORS = {
     height: { get: () => nv.height(), set: (v) => nv.height(v) },
+    settingsPlacement: {
+      // Modal and non-modal are two different open() calls, so a live switch
+      // cannot restyle what is already showing - it has to reopen.
+      set: (v) => {
+        nv.settingsPlacement = v;
+        toggleSettings(false);
+        toggleSettings(true);
+      },
+    },
     y0: {
       // Touching the slider hands control over. Without this the measurement
       // would overwrite the chosen value on the very next update, so the
@@ -1299,6 +1308,17 @@ function navio(selection, _h) {
   const LIVE_OPTIONS = fromParams("range");
 
   const LIVE_COLOURS = fromParams("color");
+
+  /**
+   * One-of-a-few options, drawn as a <select>.
+   *
+   * Orientation and panel placement were two hand-rolled copies of the same
+   * twelve lines, each carrying its own copy of a hint that PARAMS already
+   * held - so the panel and the docs could describe the same option
+   * differently, which is the drift this table exists to prevent. Theme is the
+   * third and was not reachable from the panel at all.
+   */
+  const LIVE_SELECTS = fromParams("select");
 
   /**
    * What an option is actually drawing right now. For the options whose default
@@ -1351,11 +1371,9 @@ function navio(selection, _h) {
   };
 
   nv.getSettings = function () {
-    const out = {
-      version: SETTINGS_VERSION,
-      orientation: nv.orientation,
-      height: height,
-    };
+    const out = { version: SETTINGS_VERSION, height: height };
+    // orientation used to be listed here by hand; it is one of the selects.
+    for (const o of LIVE_SELECTS) out[o.key] = nv[o.key];
     for (const o of LIVE_OPTIONS)
       if (o.key !== "height") out[o.key] = nv[o.key];
     for (const c of LIVE_COLOURS) out[c.key] = nv[c.key];
@@ -2365,66 +2383,36 @@ function navio(selection, _h) {
 
     // --- layout ----------------------------------------------------------
     const layout = settingsSection(settingsPanel, "Layout");
-    const orient = layout
-      .append("label")
-      .style("display", "flex")
-      .style("align-items", "center")
-      .style("gap", "6px")
-      .style("margin-bottom", "6px");
-    orient
-      .attr(
-        "title",
-        "Which way the two axes run. Horizontal puts attributes across and one row per pixel line down; vertical transposes both."
-      )
-      .append("span")
-      .style("flex", "1")
-      .text("Orientation");
-    const orientSel = orient.append("select").on("change", function () {
-      nv.orientation = this.value;
-      nv.hardUpdate();
-      announce(`Orientation ${this.value}`);
-    });
-    orientSel
-      .selectAll("option")
-      .data(["horizontal", "vertical"])
-      .enter()
-      .append("option")
-      .attr("value", (d) => d)
-      .property("selected", (d) => d === nv.orientation)
-      .text((d) => d);
 
-    // Where this very panel opens. Changing it has to reopen the dialog,
-    // because modal and non-modal are two different open() calls - a live
-    // switch cannot just restyle what is already showing.
-    const place = layout
-      .append("label")
-      .style("display", "flex")
-      .style("align-items", "center")
-      .style("gap", "6px")
-      .style("margin-bottom", "6px");
-    place
-      .attr(
-        "title",
-        "Where this panel opens. Below keeps the widget visible and does not move while you drag a slider; beside needs room to the right; over is for tight layouts."
-      )
-      .append("span")
-      .style("flex", "1")
-      .text("Settings panel");
-    const placeSel = place.append("select").on("change", function () {
-      nv.settingsPlacement = this.value;
-      persistSettings();
-      toggleSettings(false);
-      toggleSettings(true);
-      announce(`Settings panel ${this.value}`);
-    });
-    placeSel
-      .selectAll("option")
-      .data(["below", "beside", "over"])
-      .enter()
-      .append("option")
-      .attr("value", (d) => d)
-      .property("selected", (d) => d === nv.settingsPlacement)
-      .text((d) => d);
+    for (const opt of LIVE_SELECTS) {
+      const row = layout
+        .append("label")
+        .style("display", "flex")
+        .style("align-items", "center")
+        .style("gap", "6px")
+        .style("margin-bottom", "6px")
+        .attr("title", opt.hint || opt.label);
+      row.append("span").style("flex", "1").text(opt.label);
+      const write = opt.set || ((v) => (nv[opt.key] = v));
+      row
+        .append("select")
+        .attr("aria-label", opt.label)
+        .on("change", function () {
+          write(this.value);
+          // A setter that reopens the panel has already redrawn what it needs;
+          // everything else is read on the next update.
+          if (!opt.set) nv.hardUpdate();
+          persistSettings();
+          announce(`${opt.label} ${this.value}`);
+        })
+        .selectAll("option")
+        .data(opt.values)
+        .enter()
+        .append("option")
+        .attr("value", (d) => d)
+        .property("selected", (d) => d === nv[opt.key])
+        .text((d) => d);
+    }
 
     for (const opt of LIVE_OPTIONS) {
       const row = layout

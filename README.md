@@ -53,9 +53,20 @@ just-noticeable difference. `nv.defaultColorCategorical = navio.palettes.categor
 restores the old look exactly, recycling included.
 
 Navio also follows the page's background now, so its labels and chrome are
-readable on a dark one. Settings stored by 0.2.x that spell out the old row
-divider and tooltip colours are migrated rather than honoured, since those
-were defaults and not choices.
+readable on a dark one. Tell it directly if you already know:
+
+```javascript
+const nv = navio(d3.select("#nv"), { height: 400, theme: "dark" });
+```
+
+`theme` defaults to `"auto"`, which reads the background behind the widget and
+re-reads it on every redraw — so a widget in a dark panel on a light page comes
+out dark, which the reader's OS setting could never have told it. There is a
+Theme control in the settings panel as well. The DATA colours never change with
+it: inverting a categorical scale would change what a colour means.
+
+Settings stored by 0.2.x that spell out the old row divider and tooltip colours
+are migrated rather than honoured, since those were defaults and not choices.
 
 ## Try it!
 

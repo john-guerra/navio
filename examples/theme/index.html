@@ -96,12 +96,22 @@
 
     <div id="nv"></div>
 
-    <pre>// reads the background behind it, and re-reads on every redraw (default)
+    <pre>// if you know what your page looks like, say so once
+const nv = navio(d3.select("#nv"), { height: 400, theme: "dark" });
+
+// "auto" is the default: read the background behind the widget, and
+// re-read it on every redraw
 const nv = navio(d3.select("#nv"), { height: 400 });
 
-// or pin it, whatever the page is doing
-nv.theme = "dark";
+// or change it later
+nv.theme = "light";
 nv.hardUpdate();</pre>
+
+    <p>
+      There is a <strong>Theme</strong> control in the settings panel too
+      &mdash; the gear, under Layout &mdash; so a reader can override whatever
+      the page chose. It is remembered with the rest of the panel's settings.
+    </p>
 
     <p>
       Navio only redraws when something asks it to, so a page that repaints
