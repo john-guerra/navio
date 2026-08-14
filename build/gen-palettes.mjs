@@ -288,8 +288,60 @@ const minPair = (cols, type) => {
 };
 const worst = (cols) => Math.min(...TYPES.map((t) => minPair(cols, t)));
 
+/**
+ * Put the colours a reader already knows at the front.
+ *
+ * The palette's own order is farthest-point, which is right for "any prefix is
+ * well separated" and says nothing about familiarity. d3.schemeCategory10 is
+ * what most charts on the web use, so a four-category column looks ordinary if
+ * it opens near its blue, orange, green and red. For each scheme colour in ITS
+ * order, take the nearest colour we have.
+ *
+ * With one constraint, because matching alone was a bad trade. Nearest-match
+ * on its own dropped the opening four from 35.4 minimum pairwise CIEDE2000 to
+ * 5.6: schemeCategory10 contains two greys and its own near-pairs, and matching
+ * it inherits them. Requiring each pick to stay FLOOR from the ones already
+ * chosen keeps the same recognisable sequence - blue, orange, green, red,
+ * purple, brown - at 9.8 instead:
+ *
+ *     floor   first4  first6  first8  first10   opening
+ *         0      5.6     5.6     5.4      5.4   blue orange green red purple
+ *         8      9.8     9.8     9.8      9.8   blue orange green red purple
+ *        10     11.4    11.4    10.2     10.2   blue orange green PINK purple
+ *
+ * 10 measures better and loses the red, which is one of the four colours anyone
+ * would notice missing. 8 is the trade taken.
+ */
+const FAMILIAR_FLOOR = 8;
+
+function anchorToFamiliar(colours) {
+  const worstAcross = (a, b) =>
+    Math.min(...TYPES.map((t) => de00(simulate(a, t), simulate(b, t))));
+  const taken = new Set();
+  const front = [];
+  for (const target of d3.schemeCategory10.map(hex)) {
+    let best = null,
+      bestD = Infinity;
+    for (const c of colours) {
+      if (taken.has(c)) continue;
+      // Never buy familiarity with a pair a reader cannot tell apart.
+      if (front.some((f) => worstAcross(f, c) < FAMILIAR_FLOOR)) continue;
+      const d = de00(c, target);
+      if (d < bestD) {
+        bestD = d;
+        best = c;
+      }
+    }
+    if (best) {
+      taken.add(best);
+      front.push(best);
+    }
+  }
+  return front.concat(colours.filter((c) => !taken.has(c)));
+}
+
 const N = 50;
-const nameable = maxMin(N, { salFloor: 0.4, order: true });
+const nameable = anchorToFamiliar(maxMin(N, { salFloor: 0.4, order: true }));
 const distinct = maxMin(N);
 
 const report = (name, cols) => {
