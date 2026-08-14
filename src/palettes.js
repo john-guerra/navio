@@ -14,12 +14,22 @@
  *
  *     n=16  9.4      n=24  7.2      n=32  5.6      n=50  4.5
  *
- * with every colour above the naming-confusion threshold. See
- * docs/ai/COLOR-CATEGORICAL.md.
+ * with every colour above the naming-confusion threshold.
+ *
+ * How these were derived, and by whom, is documented in
+ * build/gen-palettes.mjs; the review behind the choices, with its caveats, is
+ * in docs/ai/COLOR-CATEGORICAL.md. Each palette below cites its own source.
  */
 import * as d3 from "d3";
 
-/** Maximally separated AND nameable. The default. */
+/**
+ * Maximally separated AND nameable. The default.
+ *
+ * Greedy farthest-point over a sampled HCL gamut (Glasbey et al. 2007), scored
+ * with CIEDE2000 (Sharma et al. 2005) on the worst of normal vision and three
+ * simulated deficiencies (Vienot et al. 1999), searching only over colours with
+ * naming saliency >= 0.4 (Heer & Stone 2012).
+ */
 export const nameable = [
   "#5c3f3a",
   "#aadcff",
@@ -73,7 +83,11 @@ export const nameable = [
   "#436824",
 ];
 
-/** Maximally separated, ignoring whether a colour has a name. */
+/**
+ * Maximally separated, ignoring whether a colour has a name. Same search as
+ * 'nameable' without the saliency floor: about 1.4 more CIEDE2000 of
+ * separation, at the cost of 9 of 25 colours nobody can name.
+ */
 export const distinct = [
   "#5d3e47",
   "#afe523",
@@ -132,6 +146,11 @@ export const distinct = [
  * Euclidean CIELAB for normal vision. Vivid, and the best of the field on that
  * metric - but colour blindness is not in its objective, and its limegreen and
  * tomato are 0.7 apart under deuteranopia.
+ *
+ * Source: https://mokole.com/palette.html (50 colours, default luminosity
+ * bounds). Note their metric is Euclidean CIELAB; Heer & Stone (2012) use
+ * CIEDE2000 and warn that Euclidean CIELAB is unreliable for comparisons
+ * across the whole space, which is what a minimum-pairwise score is.
  */
 export const mokole = [
   "#d3d3d3",
@@ -186,23 +205,52 @@ export const mokole = [
   "#ffc0cb",
 ];
 
-/** What Navio drew before 0.3.0. Ten colours, and it recycles past them. */
+/**
+ * What Navio drew before 0.3.0. Ten colours, and d3.scaleOrdinal recycles past
+ * them. Kept so the old look is one line away. Measured at ten categories it is
+ * 16.2 CIEDE2000 for normal vision but 1.6 under protanopia - below the ~2.3
+ * just-noticeable difference - so two of its ten are the same colour for those
+ * readers before any recycling.
+ *
+ * Source: d3-scale-chromatic, https://d3js.org/d3-scale-chromatic/categorical
+ * (originally Tableau's 10-colour palette by way of matplotlib).
+ */
 export const category10 = d3.schemeCategory10.slice();
 
-/** Best salience and least name overlap of the palettes Heer & Stone measured. */
+/**
+ * Best salience and least name overlap of the qualitative palettes Heer & Stone
+ * characterised: "The Tableau-10 palette provides the best color salience and
+ * minimal name overlap."
+ *
+ * Source: d3-scale-chromatic, https://d3js.org/d3-scale-chromatic/categorical
+ * Designed by Maureen Stone for Tableau; see Stone, M. (2006), Choosing colors
+ * for data visualization, https://www.perceptualedge.com/articles/b-eye/choosing_colors.pdf
+ */
 export const tableau10 = d3.schemeTableau10.slice();
 
 /**
  * Sampled at i/n rather than d3.quantize's i/(n-1). Rainbow and Sinebow are
  * CYCLICAL - t=0 and t=1 are the same colour - so quantize puts an exact
  * duplicate at the ends, which is the bug these palettes exist to avoid.
+ *
+ * Sources: d3-scale-chromatic, https://d3js.org/d3-scale-chromatic/cyclical
+ * Sinebow is after Jim Bumgardner's and Charlie Loyd's construction,
+ * https://basecase.org/env/on-rainbows
  */
 export const rainbow = (n) =>
   d3.range(n).map((i) => d3.interpolateRainbow(i / n));
 export const sinebow = (n) =>
   d3.range(n).map((i) => d3.interpolateSinebow(i / n));
 
-/** Built for sequential data. Included because it is the obvious thing to try. */
+/**
+ * Built for SEQUENTIAL scalar data, not for categories - included because it is
+ * the obvious thing to reach for. Google state it is "not perceptually linear"
+ * and designed it by interactive comparison rather than by pairwise distance.
+ *
+ * Source: Mikhailov, A. (2019). Turbo, an improved rainbow colormap for
+ * visualization. https://research.google/blog/turbo-an-improved-rainbow-colormap-for-visualization/
+ * via d3-scale-chromatic, https://d3js.org/d3-scale-chromatic/sequential
+ */
 export const turbo = (n) => d3.quantize(d3.interpolateTurbo, n);
 
 export const palettes = {
