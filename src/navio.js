@@ -5356,15 +5356,23 @@ function navio(selection, _h) {
       // Sorting by a column that was never added silently did nothing - the
       // comparator read undefined for every row, so the order came out
       // unchanged and looked like a Navio bug rather than a typo.
-      if (!dAttribs.has(getAttribName(_attrib))) {
+      const name = getAttribName(_attrib);
+      if (!dAttribs.has(name)) {
         console.warn(
-          `navio.sortBy: "${getAttribName(_attrib)}" is not one of the ` +
+          `navio.sortBy: "${name}" is not one of the ` +
             `attributes. Nothing was sorted. Available: ` +
             `${Array.from(dAttribs.keys()).join(", ")}`
         );
         return nv;
       }
-      return applySort(level, _attrib, _desc);
+      // Sort by the REGISTERED attribute, not by what was passed (#104). The
+      // guard above matches on the name, so a column added as an accessor
+      // function passed it - and then the comparator was handed the string and
+      // read `row["palette A"]`, undefined for every row. The order came back
+      // unchanged with nothing said, which is the worst of both: too valid to
+      // warn, too wrong to work. dAttribs stores the attribute itself, so this
+      // hands back the function. setFilters resolves names the same way.
+      return applySort(level, dAttribs.get(name), _desc);
     } else {
       return dSortBy[level];
     }
