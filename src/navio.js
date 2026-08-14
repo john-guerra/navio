@@ -629,13 +629,18 @@ function navio(selection, _h) {
       // .on("touchstart", nozoom)
       // .on("touchmove", nozoom)
       .style("height", height + "px")
-      .attr("class", "navio")
+      // ADDS the class, never replaces the attribute (#101). This was
+      // `.attr("class", "navio")`, which dropped every class the host page had
+      // put on the container it handed us, so the page's own styling stopped
+      // applying with nothing to say why. Navio is a guest in this element.
+      .classed("navio", true)
       .append("div")
       // Lets a widget with many levels scroll sideways. Note that this CLIPS
       // vertically too: CSS forces the other axis to `auto` when one axis is
       // not `visible`, so `overflow-x: auto` alone is never what it looks
       // like. applyContainerSize sizes this box to include the filter chips.
       .style("overflow-x", "auto")
+      .style("overflow-y", "visible")
       .style("position", "relative");
 
     divNavio.append("canvas");
@@ -5397,6 +5402,10 @@ function navio(selection, _h) {
 
     // Everything else Navio rendered lives under the container it was given.
     if (selection && selection.selectAll) selection.selectAll("*").remove();
+    // The class attribute is shared with the page (#101), so take out the one
+    // entry that is ours and leave the rest - the same reason a lifted
+    // `overflow` goes back when the settings panel closes.
+    if (selection && selection.classed) selection.classed("navio", false);
 
     svg = canvas = context = undefined;
 
