@@ -3744,6 +3744,19 @@ function navio(selection, _h) {
     );
     hits.exit().remove();
 
+    /**
+     * How far back along the record axis the clickable header strip reaches.
+     *
+     * The band before the records, less the margin - and never negative. The
+     * band is measured now, so it is 0 whenever showAttribTitles is off, and
+     * `y0 - margin` is then -10. The browser rejects a negative rect height and
+     * says so once per column per redraw, which is invisible unless you have
+     * the console open: nine widgets on a page produced nine identical errors
+     * and no visible symptom. It could not happen while y0 was a fixed 100.
+     */
+    const hitDepth = (level) =>
+      Math.max(0, yScales[level].range()[0] - nv.margin);
+
     const headerHit = hits
       .enter()
       .append("rect")
@@ -3755,19 +3768,12 @@ function navio(selection, _h) {
         const p = toXY(x(d.name, d.level), yScales[d.level].range()[0]);
         return `translate(${p.x}, ${p.y})`;
       })
-      .attr("x", (d) => toXY(0, -(yScales[d.level].range()[0] - nv.margin)).x)
-      .attr("y", (d) => toXY(0, -(yScales[d.level].range()[0] - nv.margin)).y)
-      .attr(
-        "width",
-        (d) =>
-          toWH(xScale.bandwidth(), yScales[d.level].range()[0] - nv.margin)
-            .width
-      )
+      .attr("x", (d) => toXY(0, -hitDepth(d.level)).x)
+      .attr("y", (d) => toXY(0, -hitDepth(d.level)).y)
+      .attr("width", (d) => toWH(xScale.bandwidth(), hitDepth(d.level)).width)
       .attr(
         "height",
-        (d) =>
-          toWH(xScale.bandwidth(), yScales[d.level].range()[0] - nv.margin)
-            .height
+        (d) => toWH(xScale.bandwidth(), hitDepth(d.level)).height
       );
 
     drawAttribHeaders(attribOverlay, attribOverlayEnter, headerHit);

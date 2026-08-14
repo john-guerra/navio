@@ -90,6 +90,23 @@ test("short names cost little once the derived columns are off", async ({
   expect(m.dataExtent).toBe(180);
 });
 
+// A zero band was impossible while y0 was a fixed 100, so nothing sized off it
+// had to cope with zero. The header hit strip is `y0 - margin` tall, which
+// turns negative the moment the band goes away, and the browser rejects the
+// attribute once per column per redraw - visible only in the console.
+test("a zero band draws no invalid geometry", async ({ page }) => {
+  const bad = [];
+  page.on("console", (m) => {
+    if (m.type() === "error") bad.push(m.text());
+  });
+
+  await page.goto(`${F}?names=long&titles=0&height=180`);
+  await ready(page);
+
+  expect(await page.evaluate(() => window.nv.y0)).toBe(0);
+  expect(bad.filter((t) => /negative|NaN|not valid/i.test(t))).toEqual([]);
+});
+
 test("headers turned off cost nothing", async ({ page }) => {
   await page.goto(`${F}?names=long&titles=0&height=180`);
   await ready(page);
