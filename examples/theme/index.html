@@ -115,26 +115,33 @@ nv.hardUpdate();</pre>
     <script src="../../dist/navio.js"></script>
     <script>
       /* global d3, navio */
-      const GROUPS = ["Vegetables", "Beef", "Baked", "Cereals", "Poultry", "Sweets"];
-      const rows = d3.range(600).map((i) => ({
-        id: i,
-        group: GROUPS[i % GROUPS.length],
-        // A few gaps, so the null colour is actually on screen.
-        calories: i % 11 === 0 ? null : Math.round(Math.abs(Math.sin(i) * 500)),
-        protein: Math.round(Math.abs(Math.cos(i) * 40)),
-      }));
+      // The whole nutrients dataset - every column, including the ones with
+      // gaps. Missing values are drawn in nullColor, which follows the theme:
+      // the light default is a near-white pink that would be invisible on a
+      // dark ground. sugars and fiber are about half empty, so there is plenty
+      // to see.
+      d3.csv("../palettes/nutrients.csv", (d) => {
+        const row = {};
+        for (const key of Object.keys(d))
+          // An empty cell is MISSING, not zero. Coercing "" with + would draw
+          // it as a real value at the bottom of the scale.
+          row[key] = d[key] === "" ? null : isNaN(+d[key]) ? d[key] : +d[key];
+        return row;
+      }).then((rows) => {
+        const nv = navio(d3.select("#nv"), { height: 420, attribWidth: 22 });
+        nv.id("id");
+        nv.data(rows);
+        nv.addAllAttribs();
+        window.nv = nv;
+        buttons(nv);
+      });
 
-      const nv = navio(d3.select("#nv"), { height: 420, attribWidth: 26 });
-      nv.id("id");
-      nv.data(rows);
-      nv.addAllAttribs();
-      window.nv = nv;
-
-      for (const [value, label] of [
-        ["system", "Follow system"],
-        ["light", "Light page"],
-        ["dark", "Dark page"],
-      ]) {
+      function buttons(nv) {
+        for (const [value, label] of [
+          ["system", "Follow system"],
+          ["light", "Light page"],
+          ["dark", "Dark page"],
+        ]) {
         const b = document.createElement("button");
         b.type = "button";
         b.textContent = label;
@@ -149,9 +156,12 @@ nv.hardUpdate();</pre>
           for (const other of document.querySelectorAll("#buttons button"))
             other.setAttribute("aria-pressed", String(other.dataset.value === value));
         });
-        document.getElementById("buttons").append(b);
+          document.getElementById("buttons").append(b);
+        }
+        document
+          .querySelector("#buttons button")
+          .setAttribute("aria-pressed", "true");
       }
-      document.querySelector("#buttons button").setAttribute("aria-pressed", "true");
     </script>
   </body>
 </html>

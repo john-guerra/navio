@@ -69,7 +69,7 @@
  */
 import * as d3 from "d3";
 import { writeFileSync } from "node:fs";
-import { saliency, scorePalette } from "./name-metrics.mjs";
+import { saliency, scorePalette, nameOf } from "./name-metrics.mjs";
 
 const hex = (c) => d3.rgb(c).formatHex();
 const TYPES = ["normal", "protan", "deutan", "tritan"];
@@ -181,7 +181,27 @@ const de00 = (x, y) => {
   return ciede2000(A.l, A.a, A.b, B.l, B.a, B.b);
 };
 
-function maxMin(n, { salFloor = 0 } = {}) {
+/**
+ * How good a colour is to meet FIRST, independent of how far it is from the
+ * others. Farthest-point alone answers "which colour is most different", never
+ * "which is nicest to look at", so its opening picks were a dark brown and two
+ * greys - fine in a 50-colour set, poor as the first three a reader sees when a
+ * column has four categories.
+ *
+ * Three measurable things, and no claim that this measures beauty:
+ *   - saliency: can a reader name it at all (Heer & Stone).
+ *   - chroma: vivid colours survive being one pixel tall; the muddy middle of
+ *     the space does not. Capped, because maximum chroma is not the goal.
+ *   - a fresh NAME: two blues in the first four is worse than a blue and a
+ *     green, however far apart they measure.
+ */
+function appealOf(colour, sal, name, usedNames) {
+  const chroma = Math.min(d3.hcl(colour).c, 70) / 70;
+  const fresh = usedNames.has(name) ? 0.35 : 1;
+  return sal * (0.4 + 0.6 * chroma) * fresh;
+}
+
+function maxMin(n, { salFloor = 0, order = false } = {}) {
   let cand = [];
   for (let L = 30; L <= 85; L += 5)
     for (let C = 15; C <= 110; C += 5)
@@ -203,7 +223,23 @@ function maxMin(n, { salFloor = 0 } = {}) {
   const sims = TYPES.map((t) => cand.map((c) => simulate(c, t)));
   const dist = (i, colour) =>
     Math.min(...TYPES.map((t, k) => de00(sims[k][i], simulate(colour, t))));
-  const out = [cand[0]];
+  // Precomputed once: nameOf walks the whole term table, and this loop runs
+  // thousands of candidates times fifty picks.
+  const sal = order ? cand.map(saliency) : null;
+  const names = order ? cand.map(nameOf) : null;
+  const used = new Set();
+
+  let start = 0;
+  if (order)
+    for (let i = 1; i < cand.length; i++)
+      if (
+        appealOf(cand[i], sal[i], names[i], used) >
+        appealOf(cand[start], sal[start], names[start], used)
+      )
+        start = i;
+  const out = [cand[start]];
+  if (order) used.add(names[start]);
+
   const best = new Float64Array(cand.length).fill(Infinity);
   const absorb = (colour) => {
     for (let i = 0; i < cand.length; i++)
@@ -218,6 +254,25 @@ function maxMin(n, { salFloor = 0 } = {}) {
         bd = best[i];
         bi = i;
       }
+    if (order) {
+      // Among the candidates ALMOST as far away as the best one, take the most
+      // appealing. The 10% band is what buys a good opening sequence; widening
+      // it would start costing real separation, which is the property the whole
+      // palette exists for.
+      const cutoff = bd * 0.9;
+      let aj = bi,
+        aBest = -1;
+      for (let i = 0; i < cand.length; i++) {
+        if (best[i] < cutoff) continue;
+        const a = appealOf(cand[i], sal[i], names[i], used);
+        if (a > aBest) {
+          aBest = a;
+          aj = i;
+        }
+      }
+      bi = aj;
+      used.add(names[bi]);
+    }
     out.push(cand[bi]);
     absorb(cand[bi]);
   }
@@ -234,7 +289,7 @@ const minPair = (cols, type) => {
 const worst = (cols) => Math.min(...TYPES.map((t) => minPair(cols, t)));
 
 const N = 50;
-const nameable = maxMin(N, { salFloor: 0.4 });
+const nameable = maxMin(N, { salFloor: 0.4, order: true });
 const distinct = maxMin(N);
 
 const report = (name, cols) => {

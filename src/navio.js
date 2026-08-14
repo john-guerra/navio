@@ -509,7 +509,8 @@ function navio(selection, _h) {
       .style("font-family", "sans-serif")
       .style("font-size", nv.tooltipFontSize)
       .style("text-align", "center")
-      .style("background", tooltipBackground())
+      .style("--nv-tooltip-bg", tooltipBackground())
+      .style("background", "var(--nv-tooltip-bg)")
       .style("position", "absolute")
       .style("color", theme().tooltipInk)
       // High, because the tooltip is a <body> child now: at z-index 4 it painted
@@ -530,7 +531,11 @@ function navio(selection, _h) {
           border-style: solid;
           position: absolute;
           margin: ${nv.tooltipArrowSize}px;
-          border-color: ${tooltipBackground()}
+          /* One property drives the body and the arrow. The arrow's colour
+             used to be baked into this stylesheet, which is built once - so a
+             theme change repainted the tooltip body and left a dark triangle
+             stuck to a light panel. */
+          border-color: var(--nv-tooltip-bg);
         }
 
         ._nv_popover[x-placement="left"] {
@@ -1777,7 +1782,9 @@ function navio(selection, _h) {
     if (tooltipElement)
       tooltipElement
         // The OPTION wins if it was set; only the default follows the theme.
-        .style("background", tooltipBackground())
+        // Setting the custom property repaints the arrow too - its colour is in
+        // a stylesheet built once, so it cannot be restyled directly.
+        .style("--nv-tooltip-bg", tooltipBackground())
         .style("color", t.tooltipInk);
   }
 

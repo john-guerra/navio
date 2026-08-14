@@ -116,6 +116,43 @@ test("it keeps following after data() is called again", async ({ page }) => {
     .toBeGreaterThan(140);
 });
 
+test("the tooltip arrow follows the theme with the tooltip", async ({
+  page,
+}) => {
+  // The arrow's colour lives in a stylesheet built once, while the body is an
+  // inline style - so switching theme repainted the body and left a dark
+  // triangle stuck to a light panel. Both are driven by one custom property now.
+  await page.emulateMedia({ colorScheme: "dark" });
+  await load(page);
+  await page.emulateMedia({ colorScheme: "light" });
+  await expect.poll(() => page.evaluate(() => window.resolved())).toBe("light");
+
+  const read = () =>
+    page.evaluate(() => {
+      const tip = document.querySelector("._nv_popover");
+      const arrowEl = tip.querySelector("[x-arrow]");
+      const cs = getComputedStyle(arrowEl);
+      // Each placement paints three sides transparent, so the arrow's real
+      // colour is whichever side is left. Reading one named side would depend
+      // on where popper happened to put the tooltip.
+      const sides = [
+        cs.borderTopColor,
+        cs.borderRightColor,
+        cs.borderBottomColor,
+        cs.borderLeftColor,
+      ].filter((c) => !/rgba\(0, 0, 0, 0\)|transparent/.test(c));
+      return { body: getComputedStyle(tip).backgroundColor, sides };
+    });
+
+  // The redraw that repaints the tooltip is queued by the scheme listener.
+  await expect.poll(async () => (await read()).body).toBe("rgb(178, 221, 241)");
+  const { body, sides } = await read();
+  expect(sides.length, "the arrow has a colour").toBeGreaterThan(0);
+  expect(new Set(sides), "arrow matches the tooltip body").toEqual(
+    new Set([body])
+  );
+});
+
 test("the widget never paints its own background", async ({ page }) => {
   for (const scheme of ["light", "dark"]) {
     await page.emulateMedia({ colorScheme: scheme });
