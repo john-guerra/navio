@@ -118,6 +118,9 @@ function navio(selection, _h) {
     // Ancestors whose `overflow` was lifted to show the settings panel, with
     // what to put back. Null when the panel is closed. See liftClipsForPanel.
     liftedClips = null,
+    // How much of the header band did not fit inside headerMaxSpace and is
+    // hanging above the widget instead. See applyHeaderBand.
+    headerSpill = 0,
     // What this widget looked like before any stored settings landed on it -
     // the state Reset goes back to. Captured once, the first time there are
     // attributes to capture.
@@ -167,6 +170,16 @@ function navio(selection, _h) {
   // means y0 is yours to set. Dragging "Top offset" in the settings panel turns
   // this off for you, so the slider is never silently overridden.
   nv.autoHeaderSpace = true;
+  // The most the header band will RESERVE. Past this the labels still draw in
+  // full, but the extra hangs above the widget instead of growing it - a
+  // 40-character attribute name is 216px of page otherwise, whatever the widget
+  // is actually for.
+  //
+  // What spills, overlaps: a label hanging above the widget owns the pixels it
+  // covers, so it takes clicks meant for whatever is up there. pointer-events
+  // cannot fix that, because the headers need those clicks themselves to sort
+  // and to Shift-drag. Set this high to never spill, or 0 to always.
+  nv.headerMaxSpace = 140;
   // addAllAttribs decides an attribute is categorical below the first
   // threshold, ordered below the second, and text above it. Set the second to
   // Infinity to never choose text.
@@ -1875,6 +1888,13 @@ function navio(selection, _h) {
 
     if (!open) {
       if (node.open) node.close();
+      // Give the page its overflow back HERE, not only in the close handler.
+      // <dialog>.close() queues the `close` event as a task rather than firing
+      // it synchronously, so for one turn of the loop the panel reads as closed
+      // while the host is still unclipped - which is long enough for anything
+      // watching `open` to see the wrong state. dropClipsForPanel is idempotent,
+      // and the close handler stays for the closes we do not make ourselves.
+      dropClipsForPanel();
       settingsButton.attr("aria-expanded", "false");
       return;
     }
@@ -3560,10 +3580,22 @@ function navio(selection, _h) {
    * change whether or not anything moved.
    */
   function applyHeaderBand() {
-    if (!nv.autoHeaderSpace) return false;
+    if (!nv.autoHeaderSpace) {
+      headerSpill = 0;
+      return false;
+    }
     const band = measureHeaderBand();
-    if (band === nv.y0) return false;
-    nv.y0 = band;
+    // Vertical never spills. Its headers are upright and run BACK along the
+    // record axis, which is the screen's horizontal - so the overspill would
+    // hang off the left edge of the container, where a page is far more likely
+    // to have a real scroll boundary than it is above a block. Reserve the
+    // whole band there and let the widget be as wide as it needs.
+    const cap = isVertical() ? band : Math.max(0, nv.headerMaxSpace),
+      reserve = Math.min(band, cap),
+      spill = band - reserve;
+    if (reserve === nv.y0 && spill === headerSpill) return false;
+    nv.y0 = reserve;
+    headerSpill = spill;
     return true;
   }
 
@@ -4484,6 +4516,12 @@ function navio(selection, _h) {
 
     svg.attr("width", ctxWidth).attr("height", ctxHeight);
 
+    // The scroll box was moved up by headerSpill, so everything inside it moves
+    // down by the same amount to stay exactly where it was on screen. Only the
+    // room above the drawing changed; the drawing did not.
+    canvas.style.marginTop = headerSpill ? `${headerSpill}px` : "";
+    svg.style("top", headerSpill ? `${headerSpill}px` : 0);
+
     applyContainerSize();
 
     // Keep the gear against the bottom of the CANVAS, not of the container.
@@ -4522,9 +4560,26 @@ function navio(selection, _h) {
   function applyContainerSize() {
     const alongA = levelScale.range()[1] + nv.margin + nv.x0,
       { height: ctxHeight } = toWH(alongA, recordAxisTotal()),
-      full = ctxHeight + explanationsPad + "px";
-    selection.style("height", full);
-    if (divNavio) divNavio.style("height", full);
+      full = ctxHeight + explanationsPad;
+
+    // The CONTAINER is the widget's footprint on the page and never includes
+    // the spill - that is the whole point of spilling.
+    selection.style("height", full + "px");
+    if (!divNavio) return;
+
+    // The scroll box, though, has to contain what it draws. It starts
+    // headerSpill px ABOVE the container and is that much taller, so labels
+    // that would sit at a negative offset sit at a positive one instead. A
+    // scroll box only exposes overflow in the positive direction - content
+    // above its top edge has no scrollbar and is simply destroyed - which is
+    // the whole reason this is an offset rather than more overflow.
+    //
+    // `top`, never `margin-top`: a negative top margin collapses with the
+    // parent's and moves the WHOLE widget up instead of just this box.
+    // Measured at 60px of drift in a prototype, overlapping the content above.
+    divNavio
+      .style("height", full + headerSpill + "px")
+      .style("top", headerSpill ? `${-headerSpill}px` : null);
   }
 
   /** Room after the last record, where the per-level count labels are drawn. */

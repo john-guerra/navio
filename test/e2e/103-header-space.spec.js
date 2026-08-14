@@ -28,7 +28,10 @@ const ready = async (page) => {
 const read = (page) =>
   page.evaluate(() => ({
     dataExtent: window.dataExtent(),
+    // Past the CONTAINER: expected once the band is capped, that is the spill.
     headerOverflow: window.headerOverflow(),
+    // Past the SCROLL BOX: never expected, that is destroyed pixels.
+    headerClipped: window.headerClipped(),
     y0: window.nv.y0,
   }));
 
@@ -59,8 +62,12 @@ test("the band fits the longest label instead of a fixed 100", async ({
 
   // The band tracks the labels instead of sitting at a constant...
   expect(long.y0).toBeGreaterThan(short.y0);
-  // ...and long names get what they need instead of being cut off.
-  expect(long.headerOverflow).toBe(0);
+  // ...and long names are drawn in full instead of being cut off. Measured
+  // against the scroll box, not the container: past the default 140px cap the
+  // rest hangs above the widget deliberately, and only what falls outside the
+  // BOX is destroyed.
+  expect(long.headerClipped).toBe(0);
+  expect(short.headerClipped).toBe(0);
 });
 
 // With the derived columns on - the default - "sequential Index" is the widest
@@ -99,7 +106,57 @@ test("it transposes: vertical measures along the record axis too", async ({
   const m = await read(page);
 
   expect(m.dataExtent).toBe(180);
-  expect(m.headerOverflow).toBe(0);
+  expect(m.headerClipped).toBe(0);
+});
+
+// A4. Long names would otherwise grow the widget without limit - the band is
+// added on top of `height`, so a 40-character attribute name is 216px of page
+// whatever the widget is for. headerMaxSpace bounds what the band RESERVES; the
+// rest spills above the container, costing no layout space at all.
+//
+// The spill is not free: what it paints over, it also owns. A label hanging
+// above the widget intercepts clicks on whatever is up there, and pointer-events
+// cannot rescue it because the headers need those clicks themselves for sort and
+// Shift-drag. Same trade-off as the settings panel in #100, taken deliberately.
+test("a capped band stops the widget growing, and the rest spills", async ({
+  page,
+}) => {
+  await page.goto(`${F}?names=long&height=180&cap=60`);
+  await ready(page);
+
+  const m = await page.evaluate(() => ({
+    y0: window.nv.y0,
+    containerH: Math.round(
+      document.querySelector("#nv").getBoundingClientRect().height
+    ),
+    clipped: window.headerClipped(),
+    spilled: window.headerOverflow(),
+  }));
+
+  // The reserve is bounded, so the widget is bounded: 180 of records + 60 of
+  // band + 40 of count reserve. Uncapped this case measured 216px of band.
+  expect(m.y0).toBe(60);
+  expect(m.containerH).toBe(180 + 60 + 40);
+  // The part that did not fit hangs above the widget...
+  expect(m.spilled).toBeGreaterThan(0);
+  // ...and is still drawn there, not destroyed.
+  expect(m.clipped).toBe(0);
+});
+
+test("the spilled header does not move the widget itself", async ({ page }) => {
+  await page.goto(`${F}?names=long&height=180&cap=60`);
+  await ready(page);
+
+  // The block above the widget must stay exactly where the page put it. A
+  // negative margin-top would have collapsed with the parent's and dragged the
+  // whole widget up instead - measured at 60px in a prototype, which is why
+  // this uses `top`.
+  const m = await page.evaluate(() => {
+    const a = document.querySelector("#above").getBoundingClientRect();
+    const nv = document.querySelector("#nv").getBoundingClientRect();
+    return { aboveBottom: Math.round(a.bottom), nvTop: Math.round(nv.top) };
+  });
+  expect(m.nvTop).toBe(m.aboveBottom);
 });
 
 test("moving the Top offset slider takes control of the band", async ({

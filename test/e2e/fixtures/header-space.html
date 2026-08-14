@@ -10,7 +10,7 @@
     padding: 16px;
   }
   #above {
-    height: 40px;
+    height: 200px;
     background: #eef;
   }
 </style>
@@ -61,6 +61,7 @@
   // An explicit y0 is the manual override, and must win over the measurement.
   if (params.get("y0") !== null) options.y0 = +params.get("y0");
   if (params.get("auto") === "0") options.autoHeaderSpace = false;
+  if (params.get("cap") !== null) options.headerMaxSpace = +params.get("cap");
 
   window.nv = new navio(d3.select("#nv"), options);
   window.nv.id("id");
@@ -77,6 +78,31 @@
     return Math.round(
       window.nv.orientation === "vertical" ? b.width : b.height
     );
+  };
+
+  // How far any header label reaches past the leading edge of the SCROLL BOX -
+  // which is what actually destroys pixels. A scroll box exposes overflow in
+  // the positive direction only, so anything before its top edge has no
+  // scrollbar and is simply gone. Zero means nothing was destroyed, whether or
+  // not the label hangs outside the CONTAINER.
+  //
+  // Geometric rather than a hit test on the glyphs: rotated text is a few
+  // pixels of ink on a diagonal, and elementFromPoint also answers null for any
+  // point above the viewport, which reports a perfectly drawn label as missing.
+  window.headerClipped = () => {
+    const box = document
+      .querySelector("#nv")
+      .querySelector("div")
+      .getBoundingClientRect();
+    const vertical = window.nv.orientation === "vertical";
+    let worst = 0;
+    document.querySelectorAll("#nv svg text").forEach((t) => {
+      const r = t.getBoundingClientRect();
+      if (!r.width && !r.height) return;
+      const over = vertical ? box.left - r.left : box.top - r.top;
+      if (over > worst) worst = over;
+    });
+    return Math.round(worst);
   };
 
   // How far the drawn headers reach past the top of the container - i.e. how
