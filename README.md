@@ -19,7 +19,7 @@ Use it to <strong>summarize</strong>, <strong>explore</strong> and <strong>navig
 
 ## Upgrading to 0.3.0
 
-Two changes need a look before you upgrade.
+Three changes need a look before you upgrade.
 
 **`height` is now the RECORD extent, not the widget's total size.** The column
 headers are drawn in a band that is *added* on top of it rather than carved out
@@ -40,6 +40,22 @@ two Navios in a different order on the next load and each restored the other's
 hidden columns and attribute types. Give the container a stable `id`, or set
 `settingsKey` yourself, and persistence works as before. `settingsKey` passed in
 the options object also works now — it was being rejected as an unknown option.
+
+**Categorical columns are a different colour, and there are more of them.**
+`defaultColorCategorical` was `d3.schemeCategory10`; it is now a generated
+50-colour palette, and `maxNumDistinctForCategorical` goes from 10 to 30 — the
+old value was the length of that scheme rather than a judgement about data, so
+a column with 12 categories used to fall back to being treated as text. The new
+palette opens on colours close to `schemeCategory10`'s, so a small column still
+looks ordinary, and it measures 9.8 minimum pairwise CIEDE2000 across normal and
+the three dichromacies where `schemeCategory10` itself measures 1.6 — below the
+just-noticeable difference. `nv.defaultColorCategorical = navio.palettes.category10`
+restores the old look exactly, recycling included.
+
+Navio also follows the page's background now, so its labels and chrome are
+readable on a dark one. Settings stored by 0.2.x that spell out the old row
+divider and tooltip colours are migrated rather than honoured, since those
+were defaults and not choices.
 
 ## Try it!
 
@@ -195,16 +211,24 @@ nv.digitsForText = 2;         // how many leading characters text is bucketed by
 nv.id("attribName");          // the field that identifies a row
 
 // Colours
-nv.nullColor = "#ffedfd";
+nv.nullColor = "#ffedfd";     // missing values, the same in both themes
 nv.defaultColorInterpolator = d3.interpolateBlues;
-nv.defaultColorCategorical = d3.schemeCategory10;
 
-// // Discouraged: to break perceptual rules for many more categories, "Piñata mode 🎉"
-// nv.defaultColorCategorical = d3.schemeCategory10
-//   .concat(d3.schemeAccent)
-//   .concat(d3.schemePastel1);
-// nv.maxNumDistinctForCategorical = nv.defaultColorCategorical.length;
+// 50 colours, generated to stay apart for colour-blind readers and to be
+// nameable, opening on the ten everyone knows. navio.palettes has the others;
+// a function of the category count works too.
+nv.defaultColorCategorical = navio.palettes.nameable;
+nv.maxNumDistinctForCategorical = 30;  // above this a column is treated as text
+
+// nv.defaultColorCategorical = navio.palettes.category10;  // the pre-0.3.0 look
+// nv.defaultColorCategorical = (n) => d3.quantize(d3.interpolateCool, n);
 ```
+
+`d3.scaleOrdinal` recycles its range, so before 0.3.0 an eleventh category was
+drawn in exactly the colour of the first and nothing said so. It warns now, and
+the default carries enough colours that it rarely comes up. The
+[palettes example](https://john-guerra.github.io/navio/examples/palettes/)
+measures every built-in against the alternatives.
 
 4. [Optional] **Add your attributes manually**. Navio supports six types of attributes: categorical, sequential (numerical), diverging (numerical with negative values), text, date and boolean. You can either add them manually or use `nv.addAllAttribs()` to auto detect them (must be called after seting the data with `nv.data(your_data)`)
 
