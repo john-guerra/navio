@@ -18,8 +18,11 @@ test("re-sorting a level keeps exactly the rows the brush selected", async ({
   await page.goto("/test/e2e/fixtures/sort-after-range.html");
   const nvEl = page.locator("#nv");
   const box = await page.locator("#nv canvas").boundingBox();
-  const rowSpan = (400 - 10 - 30 - 100) / 6;
-  const rowMid = (i) => box.y + 100 + rowSpan * i + rowSpan / 2;
+  // The record axis is `height` long and starts at the header band, which is
+  // MEASURED from the labels - so read it rather than hardcoding the old 100.
+  const y0 = await page.evaluate(() => window.nv.y0);
+  const rowSpan = 400 / 6;
+  const rowMid = (i) => box.y + y0 + rowSpan * i + rowSpan / 2;
 
   const report = async (step, label) => {
     const s = await page.evaluate(() => ({

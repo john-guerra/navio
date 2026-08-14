@@ -53,7 +53,7 @@ test("interacting with a bound peer does not crash", async ({ page }) => {
     const n = document.querySelector("#navioB").firstChild.navio;
     return { y0: n.y0, margin: n.margin, aw: n.attribWidth };
   });
-  const rowSpan = (380 - g.margin - 30 - g.y0) / 40;
+  const rowSpan = 380 / 40; // the record axis IS `height` now
   const x = box.x + g.aw * 2.5;
   await page.mouse.move(x, box.y + g.y0 + rowSpan * 3);
   await page.mouse.down();
@@ -157,7 +157,7 @@ test("the brush is restored in the bound peer, and is draggable there", async ({
       const n = document.querySelector(s).firstChild.navio;
       return { y0: n.y0, margin: n.margin, aw: n.attribWidth };
     }, sel);
-    return { box, g, rowSpan: (380 - g.margin - 30 - g.y0) / 120 };
+    return { box, g, rowSpan: 380 / 120 };
   };
   const brushHeights = (sel) =>
     page.evaluate(

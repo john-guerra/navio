@@ -34,7 +34,7 @@ async function clickCell(page, column, rowIndex, opts = {}) {
     })
   );
   const col = cols.find((c) => c.label === column);
-  const rowSpan = (400 - geo.margin - 30 - geo.y0) / 5;
+  const rowSpan = 400 / 5; // the record axis IS `height` now
   const x = box.x + col.x + geo.attribWidth / 2;
   const y = box.y + geo.y0 + rowSpan * rowIndex + rowSpan / 2;
   if (opts.shift) await page.keyboard.down("Shift");

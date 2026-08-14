@@ -29,7 +29,7 @@ async function clickCell(page, rowIndex) {
     })
   );
   const col = cols.find((c) => c.label === "category");
-  const rowSpan = (400 - geo.margin - 30 - geo.y0) / 5;
+  const rowSpan = 400 / 5; // the record axis IS `height` now
   await page.mouse.click(
     box.x + col.x + geo.attribWidth / 2,
     box.y + geo.y0 + rowSpan * rowIndex + rowSpan / 2

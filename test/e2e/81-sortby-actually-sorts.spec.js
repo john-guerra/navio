@@ -69,8 +69,10 @@ test("sorting programmatically preserves an existing selection, like the UI does
 }) => {
   await page.goto("/test/e2e/fixtures/sort-after-range.html");
   const box = await page.locator("#nv canvas").boundingBox();
-  const rowSpan = (400 - 10 - 30 - 100) / 6;
-  const rowMid = (i) => box.y + 100 + rowSpan * i + rowSpan / 2;
+  // y0 is measured from the labels now, so read it instead of hardcoding 100.
+  const y0 = await page.evaluate(() => window.nv.y0);
+  const rowSpan = 400 / 6;
+  const rowMid = (i) => box.y + y0 + rowSpan * i + rowSpan / 2;
 
   await page.mouse.move(box.x + 37, rowMid(1));
   await page.mouse.down();

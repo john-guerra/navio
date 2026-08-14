@@ -40,7 +40,7 @@ async function setup(page) {
     attribWidth: window.nv.attribWidth,
   }));
   const x = await columnCenterX(page, box, "category", geo.attribWidth);
-  const rowSpan = (400 - geo.margin - 30 - geo.y0) / 5;
+  const rowSpan = 400 / 5; // the record axis IS `height` now
   const rowY = (i) => box.y + geo.y0 + rowSpan * i + rowSpan / 2;
   return { x, rowY };
 }

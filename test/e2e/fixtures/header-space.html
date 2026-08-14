@@ -1,0 +1,98 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>Header band sizing</title>
+<style>
+  body {
+    font:
+      14px system-ui,
+      sans-serif;
+    margin: 0;
+    padding: 16px;
+  }
+  #above {
+    height: 40px;
+    background: #eef;
+  }
+</style>
+
+<div id="above">content above the widget</div>
+<div id="nv"></div>
+
+<script src="/node_modules/d3/dist/d3.js"></script>
+<script src="/node_modules/popper.js/dist/umd/popper.js"></script>
+<script src="/dist/navio.js"></script>
+<script>
+  /* global d3, navio */
+  const params = new URLSearchParams(location.search);
+
+  // The header band is driven by the LONGEST attribute name, so the two sets
+  // differ only in name length - same shape, same values, same column count.
+  const LONG = {
+    "Nombre completo del estudiante matriculado": (i) => i % 7,
+    "Departamento academico responsable": (i) => "d" + (i % 4),
+    "Resultado final consolidado del semestre": (i) => (i * 13) % 50,
+  };
+  const SHORT = {
+    a: (i) => i % 7,
+    b: (i) => "d" + (i % 4),
+    c: (i) => (i * 13) % 50,
+  };
+
+  const spec = params.get("names") === "short" ? SHORT : LONG;
+  const rows = d3.range(60).map((i) => {
+    const row = { id: i + 1 };
+    for (const [name, fn] of Object.entries(spec)) row[name] = fn(i);
+    return row;
+  });
+
+  const options = {
+    height: +(params.get("height") || 180),
+    orientation: params.get("orientation") || "horizontal",
+  };
+  if (params.get("titles") === "0") options.showAttribTitles = false;
+  // The derived columns carry fixed labels, and "sequential Index" is ~110px
+  // wide at the default font - wider than any short attribute name, so it sets
+  // the floor on the band on its own. Turning them off is the only way to see
+  // what the user's OWN names cost.
+  if (params.get("derived") === "0") {
+    options.showSequenceIDAttrib = false;
+    options.showSelectedAttrib = false;
+  }
+  // An explicit y0 is the manual override, and must win over the measurement.
+  if (params.get("y0") !== null) options.y0 = +params.get("y0");
+  if (params.get("auto") === "0") options.autoHeaderSpace = false;
+
+  window.nv = new navio(d3.select("#nv"), options);
+  window.nv.id("id");
+  window.nv.data(rows);
+  window.nv.addAllAttribs();
+
+  // The brush spans the record axis from yScales.range()[0] to range()[1], so
+  // the brushable rect IS the data area. Reported rather than asserted on a
+  // private scale, and it is what a user can actually select over.
+  window.dataExtent = () => {
+    const o = document.querySelector("#nv .brush .overlay");
+    if (!o) return null;
+    const b = o.getBoundingClientRect();
+    return Math.round(
+      window.nv.orientation === "vertical" ? b.width : b.height
+    );
+  };
+
+  // How far the drawn headers reach past the top of the container - i.e. how
+  // much is being destroyed. Along the RECORD axis, so it transposes.
+  window.headerOverflow = () => {
+    const host = document.querySelector("#nv").getBoundingClientRect();
+    let worst = 0;
+    document.querySelectorAll("#nv svg text").forEach((t) => {
+      const r = t.getBoundingClientRect();
+      if (!r.width && !r.height) return;
+      const over =
+        window.nv.orientation === "vertical"
+          ? host.left - r.left
+          : host.top - r.top;
+      if (over > worst) worst = over;
+    });
+    return Math.round(worst);
+  };
+</script>

@@ -152,7 +152,21 @@ function navio(selection, _h) {
 
   // Default parameters
   nv.x0 = 0; //Where to start drawing navio in x
-  nv.y0 = 100; //Where to start drawing navio in y, useful if your attrib names are too long
+  // The header band: room before the RECORD axis starts, where the column
+  // headers are drawn. Measured from the labels themselves when
+  // autoHeaderSpace is on, which is the default - the 100 below is only the
+  // starting value and what you get back if you turn the measurement off.
+  //
+  // It is NOT taken out of `height`. `height` is the record extent, so the data
+  // area is `height` whatever the attributes are called; the band is added on
+  // top of it. It used to be carved out, which made naming an attribute cost
+  // the user their data: a 180px widget with this at 100 drew 40px of rows, and
+  // setting it to 140 drew none at all.
+  nv.y0 = 100;
+  // Size the header band from the labels actually drawn, every update. Off
+  // means y0 is yours to set. Dragging "Top offset" in the settings panel turns
+  // this off for you, so the slider is never silently overridden.
+  nv.autoHeaderSpace = true;
   // addAllAttribs decides an attribute is categorical below the first
   // threshold, ordered below the second, and text above it. Set the second to
   // Infinity to never choose text.
@@ -1233,11 +1247,19 @@ function navio(selection, _h) {
     },
     {
       key: "y0",
-      hint: "Offset of the whole drawing from the container's top edge. Headroom for the rotated column headers, which are drawn above the data.",
+      hint: "Room for the rotated column headers, before the records start. Measured from the labels by default; moving this slider takes that over and keeps whatever you set.",
       label: "Top offset",
       min: 0,
       max: 300,
       step: 5,
+      // Touching the slider hands control over. Without this the measurement
+      // would overwrite the chosen value on the very next update, so the
+      // control would appear to do nothing at all - which is exactly how the
+      // Show checkboxes behaved before #100-show-options.
+      set: (v) => {
+        nv.autoHeaderSpace = false;
+        nv.y0 = v;
+      },
     },
     {
       key: "divisionsThreshold",
@@ -1309,6 +1331,10 @@ function navio(selection, _h) {
       "showSelectedAttrib",
       "showSequenceIDAttrib",
       "nestedFilters",
+      // Without this, turning the measurement off did not survive a reload: the
+      // stored y0 came back and was then immediately overwritten by a
+      // measurement the user had switched off.
+      "autoHeaderSpace",
     ])
       out[k] = nv[k];
     out.hiddenAttribs = Array.from(hiddenAttribs);
@@ -3479,6 +3505,68 @@ function navio(selection, _h) {
     );
   }
 
+  /**
+   * How much room the column headers need before the record axis starts.
+   *
+   * Measured with the canvas's own measureText rather than by reading the DOM.
+   * A DOM read would be a layout dependency in the middle of layout: the band
+   * decides where the labels go, so measuring the placed labels to decide the
+   * band is a loop. measureText only needs the font, and the geometry after
+   * that is trigonometry.
+   *
+   * Mirrors drawAttribHeaders exactly, and has to keep mirroring it:
+   *   - horizontal: the label is anchored at (bandwidth/2, 0) and rotated by
+   *     attribRotation about the group's origin, so a name of width W reaches
+   *     (bandwidth/2 + W)·|sin θ| back along the record axis, plus the glyph
+   *     height carried by |cos θ|;
+   *   - vertical: the label is upright and right-aligned 6px before the row, so
+   *     it simply needs its own width.
+   *
+   * Zero when the headers are not drawn at all - the fixed default reserved
+   * 100px for labels that showAttribTitles had removed.
+   */
+  function measureHeaderBand() {
+    if (!nv.showAttribTitles || !context) return 0;
+    const attribs = visibleAttribs();
+    if (!attribs.length) return 0;
+
+    const fontSize = Math.min(nv.attribFontSize, nv.attribWidth);
+    context.save();
+    context.font = `${fontSize}px sans-serif`;
+    let widest = 0;
+    for (const a of attribs) {
+      const name = getAttribName(a),
+        label = name === "__seqId" ? "sequential Index" : name;
+      // " ↓" is appended to whichever column is sorted, so leave room for it
+      // rather than letting sorting change the layout.
+      const w = context.measureText(label + " ↓").width;
+      if (w > widest) widest = w;
+    }
+    context.restore();
+
+    if (isVertical()) return Math.ceil(widest + 6 + nv.margin);
+
+    const theta = (Math.abs(nv.attribRotation) * Math.PI) / 180,
+      reach = (xScale.bandwidth() / 2 + widest) * Math.sin(theta),
+      glyph = fontSize * Math.cos(theta);
+    return Math.ceil(reach + glyph + nv.margin);
+  }
+
+  /**
+   * Resolve the band into nv.y0, when it is ours to resolve.
+   *
+   * Guarded on change like explanationsPad: this runs inside the update path,
+   * and writing y0 unconditionally would mean every update reported a layout
+   * change whether or not anything moved.
+   */
+  function applyHeaderBand() {
+    if (!nv.autoHeaderSpace) return false;
+    const band = measureHeaderBand();
+    if (band === nv.y0) return false;
+    nv.y0 = band;
+    return true;
+  }
+
   function drawAttribHeaders(attribOverlay, attribOverlayEnter, headerHit) {
     // Sort and reorder are bound to BOTH the hit rect and the glyphs.
     //
@@ -4193,10 +4281,18 @@ function navio(selection, _h) {
     if (nv.DEBUG) console.log("Delete unnecessary scales");
     yScales.splice(lastLevel + 1, yScales.length);
 
+    // Before the scales are built: the band decides where the record axis
+    // starts, so it has to be resolved first.
+    applyHeaderBand();
+
     for (let levelToUp of levelsToUpdate) {
       yScales[levelToUp] = d3
         .scaleBand()
-        .range([nv.y0, height - nv.margin - 30])
+        // `height` is the RECORD extent, not a total to divide up, so the data
+        // area is `height` however long the attribute names are. The band sits
+        // before it and recordBottomReserve after it, and applyContainerSize
+        // grows the container to cover all three.
+        .range([nv.y0, nv.y0 + height])
         .paddingInner(0.0)
         .paddingOuter(0);
 
@@ -4373,7 +4469,7 @@ function navio(selection, _h) {
     // levelScale runs along A, `height` along R, so the two swap places on the
     // screen when the widget is vertical (#22).
     const alongA = levelScale.range()[1] + nv.margin + nv.x0,
-      { width: ctxWidth, height: ctxHeight } = toWH(alongA, height);
+      { width: ctxWidth, height: ctxHeight } = toWH(alongA, recordAxisTotal());
     nv.DEBUG && console.log("updateWidthAndHeight: ", ctxWidth, ctxHeight);
     const scale = window.devicePixelRatio || 1;
     d3.select(canvas)
@@ -4425,10 +4521,30 @@ function navio(selection, _h) {
    */
   function applyContainerSize() {
     const alongA = levelScale.range()[1] + nv.margin + nv.x0,
-      { height: ctxHeight } = toWH(alongA, height),
+      { height: ctxHeight } = toWH(alongA, recordAxisTotal()),
       full = ctxHeight + explanationsPad + "px";
     selection.style("height", full);
     if (divNavio) divNavio.style("height", full);
+  }
+
+  /** Room after the last record, where the per-level count labels are drawn. */
+  function recordBottomReserve() {
+    return nv.margin + 30;
+  }
+
+  /**
+   * Everything the record axis needs: the header band, the records themselves,
+   * and the reserve the count labels are written into.
+   *
+   * `height` is only the middle term. It used to be the whole thing, with the
+   * band and the reserve subtracted back out inside the scale's range, so
+   * sizing anything from `height` alone was correct by accident. It is not any
+   * more - the canvas kept that shape for one commit and drew the last rows and
+   * the count label off its own bottom edge, which is why both the canvas and
+   * the container ask this instead of doing the arithmetic themselves.
+   */
+  function recordAxisTotal() {
+    return nv.y0 + height + recordBottomReserve();
   }
 
   nv.initData = function (mData, mColScales) {

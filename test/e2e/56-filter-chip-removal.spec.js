@@ -27,7 +27,9 @@ async function attribColumnCenterX(page, canvasBox, attribLabel, attribWidth) {
 }
 
 function rowCenterY(canvasBox, y0, margin, height, rowCount, rowIndex) {
-  const rowSpan = (height - margin - 30 - y0) / rowCount;
+  // The record axis is `height` long now, starting at y0 - the band is added
+  // on top of height rather than carved out of it.
+  const rowSpan = height / rowCount;
   return canvasBox.y + y0 + rowSpan * rowIndex + rowSpan / 2;
 }
 

@@ -15,19 +15,29 @@ const openPanels = (page) =>
   page.evaluate(() => document.querySelectorAll("._nv_settings[open]").length);
 
 test("opening one panel closes the other instance's", async ({ page }) => {
+  // Two 400-record widgets, each now also carrying a header band and a count
+  // reserve, stack past the default 720px viewport - and a gear below the fold
+  // puts the panel's viewport clamp in charge of the geometry instead of the
+  // widget. Give them room, so this stays a test about two panels.
+  await page.setViewportSize({ width: 1280, height: 1400 });
   await page.goto(TWO);
   await expect(page.locator("canvas").first()).toBeVisible();
 
   await page.locator("#nv1 ._nv_gear").click();
   expect(await openPanels(page)).toBe(1);
 
-  // nv1's panel lies over nv2's gear, so the first pointer there is the light
-  // dismiss and the second reaches the gear. Never both panels at once.
+  // nv1's panel lies over nv2's gear, but the gear paints ABOVE it - both are
+  // z-index 6 and nv2's container comes later in the document - so the pointer
+  // reaches the gear itself. That one click does both jobs: light dismiss
+  // closes nv1's panel and the gear opens nv2's. Never both at once, which is
+  // the invariant this test exists for.
+  //
+  // It used to take two clicks, and that was an artifact of the fixture rather
+  // than of the widget: nv2's gear sat below the default 720px viewport, so
+  // Playwright scrolled before clicking. Measured on both builds, the gear is
+  // the topmost element at its own centre either way.
   await page.locator("#nv2 ._nv_gear").click();
-  expect(await openPanels(page)).toBe(0);
-  await page.locator("#nv2 ._nv_gear").click();
-
-  expect(await openPanels(page)).toBe(1);
+  await expect.poll(() => openPanels(page)).toBe(1);
   expect(
     await page.evaluate(
       () => !!document.querySelector("#nv2 ._nv_settings").open
@@ -44,6 +54,7 @@ test("opening one panel closes the other instance's", async ({ page }) => {
 test("the second widget's own controls are reachable, not covered", async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 1280, height: 1400 });
   await page.goto(TWO);
   await expect(page.locator("canvas").first()).toBeVisible();
   await page.locator("#nv1 ._nv_gear").click();
@@ -68,13 +79,12 @@ test("the second widget's own controls are reachable, not covered", async ({
     })
   ).toBe(true);
 
-  // Light dismiss is what makes that survivable: a pointer landing outside the
-  // panel closes it, so the user's next click reaches the control they were
-  // aiming at instead of being eaten by a panel from further up the page.
+  // And it is still reachable, in one click: the gear paints above the panel,
+  // so the pointer lands on the control the user aimed at rather than being
+  // eaten by a panel belonging to a widget further up the page. Light dismiss
+  // takes nv1's panel away in the same gesture.
   await page.locator("#nv2 ._nv_gear").click();
-  await expect.poll(() => openPanels(page)).toBe(0);
-
-  await page.locator("#nv2 ._nv_gear").click();
+  await expect.poll(() => openPanels(page)).toBe(1);
   expect(
     await page.evaluate(
       () => !!document.querySelector("#nv2 ._nv_settings").open

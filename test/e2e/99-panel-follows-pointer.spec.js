@@ -91,6 +91,7 @@ test("column width still leaves the panel alone", async ({ page }) => {
 
   const slider = sliderIn(page, "#nv", "Column width");
   const b = await slider.boundingBox();
+  const y0Before = await page.evaluate(() => window.nv.y0);
   await page.mouse.move(b.x + b.width * 0.3, b.y + b.height / 2);
   await page.mouse.down();
   await page.mouse.move(b.x + b.width * 0.8, b.y + b.height / 2, { steps: 8 });
@@ -101,10 +102,19 @@ test("column width still leaves the panel alone", async ({ page }) => {
   await expect
     .poll(() => page.evaluate(() => window.nv.attribWidth))
     .toBeGreaterThan(15);
-  // Column width changes the canvas WIDTH, and a below-placed panel is
-  // anchored to its bottom, so this one never moved it in the first place.
+
+  // Column width used to change only the canvas WIDTH, which a below-placed
+  // panel ignores. It changes the HEIGHT too now: the header band is measured,
+  // and a rotated label anchored at bandwidth/2 reaches further back along the
+  // record axis as the column grows, so the canvas bottom genuinely moves.
+  //
+  // The panel follows it, by exactly that much and no more. What matters for
+  // the reported bug is that the panel never moves while the pointer is holding
+  // the slider - that is panelPointerHeld, and the first test in this file is
+  // what pins it.
+  const y0After = await page.evaluate(() => window.nv.y0);
   const now = await slider.boundingBox();
-  expect(Math.abs(now.y - b.y)).toBeLessThanOrEqual(1);
+  expect(Math.abs(now.y - b.y - (y0After - y0Before))).toBeLessThanOrEqual(1);
 });
 
 // The report came from the binding example, which stacks two Navios - the case

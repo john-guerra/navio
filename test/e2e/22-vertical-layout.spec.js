@@ -343,11 +343,16 @@ test("in vertical the container fits the attributes, not the record extent", asy
       canvasH: Math.round(c.height),
       canvasW: Math.round(c.width),
       slack: Math.round(h.bottom - c.bottom),
+      y0: window.nv.y0,
+      bottomReserve: window.nv.margin + 30,
     };
   });
 
-  // `height` became the WIDTH: records run across.
-  expect(m.canvasW).toBe(m.heightOption);
+  // `height` became the WIDTH: records run across. It is the extent of the
+  // RECORDS - the header band sits before them and the count reserve after, and
+  // in vertical both of those are horizontal too, so the canvas is wider than
+  // `height` by exactly that much.
+  expect(m.canvasW).toBe(m.heightOption + m.y0 + m.bottomReserve);
   // And the container is exactly as tall as the columns need, with nothing
   // left over underneath.
   expect(m.containerH).toBe(m.canvasH);
@@ -390,6 +395,12 @@ test("horizontal keeps the container at the height option", async ({
     containerH: Math.round(
       document.querySelector("#nv").getBoundingClientRect().height
     ),
+    y0: window.nv.y0,
+    bottomReserve: window.nv.margin + 30,
   }));
-  expect(m.containerH).toBe(m.heightOption);
+  // `height` is the RECORD extent, not the container's total. The container is
+  // that plus the header band before the records and the count reserve after
+  // them - which is the point of the change: naming an attribute grows the
+  // widget instead of eating into the rows.
+  expect(m.containerH).toBe(m.heightOption + m.y0 + m.bottomReserve);
 });

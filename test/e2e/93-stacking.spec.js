@@ -74,8 +74,10 @@ test("the panel is not clipped to a fraction of a short widget", async ({
     };
   });
 
-  // The widget is 200px tall; 70% of that used to be the cap.
-  expect(m.widgetH).toBeLessThan(260);
+  // The widget asks for 200px of RECORDS; its container is that plus the header
+  // band and the count reserve. Still far shorter than the panel, which is the
+  // thing being tested - 70% of it used to be the cap.
+  expect(m.widgetH).toBeLessThan(400);
   expect(m.panelH).toBeGreaterThan(m.widgetH);
   // Bounded by the viewport instead, and not scrolling when there is room.
   // max-height sizes the CONTENT box, so the rendered border box is 70vh plus

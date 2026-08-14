@@ -17,8 +17,10 @@ const chips = (page) =>
 
 async function brushMiddleRows(page) {
   const box = await page.locator("#nv canvas").boundingBox();
-  const rowSpan = (400 - 10 - 30 - 100) / 6;
-  const rowMid = (i) => box.y + 100 + rowSpan * i + rowSpan / 2;
+  // y0 is measured from the labels now, so read it instead of hardcoding 100.
+  const y0 = await page.evaluate(() => window.nv.y0);
+  const rowSpan = 400 / 6;
+  const rowMid = (i) => box.y + y0 + rowSpan * i + rowSpan / 2;
   await page.mouse.move(box.x + 37, rowMid(1));
   await page.mouse.down();
   await page.mouse.move(box.x + 37, rowMid(3), { steps: 8 });
@@ -64,10 +66,11 @@ test("value chips are unaffected by a re-sort", async ({ page }) => {
     })
   );
   const cat = cols.find((c) => c.label === "category");
-  const rowSpan = (400 - 10 - 30 - 100) / 5;
+  const y0b = await page.evaluate(() => window.nv.y0);
+  const rowSpan = 400 / 5;
   await page.mouse.click(
     box.x + cat.x + 7.5,
-    box.y + 100 + rowSpan * 0 + rowSpan / 2
+    box.y + y0b + rowSpan * 0 + rowSpan / 2
   );
   expect(await chips(page)).toEqual(["Ⓧ category == a"]);
 
