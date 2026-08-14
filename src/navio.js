@@ -115,6 +115,9 @@ function navio(selection, _h) {
     // True while a pointer is held down on a control inside the settings
     // panel, so the panel cannot reposition itself mid-drag.
     panelPointerHeld = false,
+    // Ancestors whose `overflow` was lifted to show the settings panel, with
+    // what to put back. Null when the panel is closed. See liftClipsForPanel.
+    liftedClips = null,
     // What this widget looked like before any stored settings landed on it -
     // the state Reset goes back to. Captured once, the first time there are
     // attributes to capture.
@@ -1609,6 +1612,9 @@ function navio(selection, _h) {
       })
       .on("close", () => {
         if (settingsButton) settingsButton.attr("aria-expanded", "false");
+        // Whoever closed it - us, a peer instance opening its own, or the
+        // browser - the page's own overflow has to go back.
+        dropClipsForPanel();
         if (typeof document !== "undefined")
           document.removeEventListener(
             "pointerdown",
@@ -1730,6 +1736,78 @@ function navio(selection, _h) {
     );
   }
 
+  /**
+   * Ancestors that would clip the settings panel, nearest first.
+   *
+   * #100: the panel is a child of the container the caller passes, and anything
+   * absolutely positioned inside an element that clips is clipped with it.
+   * Navio does not set `overflow` on that container - the outer container
+   * computes to `visible` and on a plain page the panel hangs happily below a
+   * short widget - but the HOST page is free to: an Observable Framework card,
+   * a scrolling sidebar, any layout that gives the widget its own scroll box.
+   * The panel is several times taller than a compact widget, so it became a
+   * sliver with the rest unreachable, and scrolling the box scrolls the WIDGET
+   * rather than the panel. Measured on a 210px widget: a 722px panel with
+   * everything past the first ~200px clipped away.
+   *
+   * Note `overflow-x: auto` alone is enough to land here. CSS forces the other
+   * axis to `auto` when one axis is not `visible`, so a box that only meant to
+   * scroll sideways clips vertically too.
+   */
+  function clippingAncestorsOfPanel() {
+    const out = [];
+    if (!settingsPanel || typeof window === "undefined") return out;
+    let el = settingsPanel.node().parentElement;
+    while (el && el !== document.documentElement) {
+      const cs = getComputedStyle(el);
+      if (cs.overflowX !== "visible" || cs.overflowY !== "visible")
+        out.push(el);
+      el = el.parentElement;
+    }
+    return out;
+  }
+
+  /**
+   * Let the panel out of any scroll box it is sitting in, for as long as it is
+   * open.
+   *
+   * Moving the panel to <body> was the other candidate and was measured and
+   * rejected. It does make the panel unclippable, but a <body> child is a last
+   * sibling that paints over every widget on the page, and #97 depends on the
+   * opposite: with two Navios stacked, the upper panel overlays the lower
+   * widget's gear, and that gear has to stay clickable. Being unclippable and
+   * being click-through-able are the same z-order fact with opposite signs, so
+   * a <body> panel cannot have both. This keeps the stacking exactly as shipped
+   * and takes the clip away instead.
+   *
+   * Scroll offsets are saved with the overflow: an element reset to `visible`
+   * loses its scroll position, which would jump a half-scrolled sidebar to the
+   * top behind the panel.
+   */
+  function liftClipsForPanel() {
+    dropClipsForPanel();
+    liftedClips = clippingAncestorsOfPanel().map((el) => ({
+      el,
+      overflow: el.style.overflow,
+      scrollTop: el.scrollTop,
+      scrollLeft: el.scrollLeft,
+    }));
+    for (const s of liftedClips) s.el.style.overflow = "visible";
+  }
+
+  /** Put back exactly what liftClipsForPanel found, inline style and all. */
+  function dropClipsForPanel() {
+    if (!liftedClips) return;
+    for (const s of liftedClips) {
+      // Restoring the empty string removes the inline style, which is right:
+      // the value was coming from the page's own stylesheet.
+      s.el.style.overflow = s.overflow;
+      s.el.scrollTop = s.scrollTop;
+      s.el.scrollLeft = s.scrollLeft;
+    }
+    liftedClips = null;
+  }
+
   function focusablePanelItems() {
     return settingsPanel
       ? Array.from(
@@ -1770,6 +1848,9 @@ function navio(selection, _h) {
     // inside the viewport - placing first meant the clamp did nothing on open
     // and then yanked the panel ~190px the first time anything repositioned it.
     if (!node.open) node.show();
+    // Before placing, so the placement measures the layout the panel will
+    // actually be laid out in.
+    liftClipsForPanel();
     placeSettingsPanel();
     settingsButton.attr("aria-expanded", "true");
 
@@ -5285,6 +5366,9 @@ function navio(selection, _h) {
     tooltip = null;
 
     if (settingsPanel) {
+      // Never leave the host page's overflow lifted behind a panel that no
+      // longer exists.
+      dropClipsForPanel();
       // The light-dismiss listener lives on `document`, so removing the panel
       // is not enough to detach it.
       if (typeof document !== "undefined")
