@@ -219,11 +219,45 @@ Randall Munroe's XKCD colour survey (~3.4M responses) and derived a *name
 difference* metric — the difference between two colours' name-association
 distributions — plus a *name uniqueness*/saliency measure of how specifically a
 colour is named.
-[Stanford Vis Group](http://vis.stanford.edu/papers/color-naming-models) (the
-page's TLS certificate is misconfigured; I read the paper's contribution through
-Colorgorical's and Petroff's descriptions of it, not the original, so treat my
-summary of its method as second-hand) ·
+[Stanford Vis Group](http://vis.stanford.edu/papers/color-naming-models) ·
 Heer, J. & Stone, M. (2012). *Proc. ACM CHI*, 1007–1016.
+
+**Read directly (2026-08-14).** This section was originally written from
+Colorgorical's and Petroff's descriptions of the paper; the paper itself is now
+in hand and the second-hand summary above holds. Four things it adds that the
+descriptions did not, and one of them changes a decision:
+
+1. **They use CIEDE2000 as their primary colour distance metric**, and say why:
+   Euclidean CIELAB "measurements made within a local patch of L\*a\*b\* space
+   tend to correlate well with human judgments; however, global measurements
+   across the color space can exhibit significant discrepancies." A palette's
+   minimum pairwise distance IS a global measurement, so this is a direct
+   argument that ΔE00 is the right metric for scoring a palette and ΔE\*ab is
+   not. Note the size models (Stone et al. 2014; Szafir 2018) still report
+   ΔE\*ab, so the two literatures genuinely differ - but for *palette scoring*
+   specifically, the field's own answer is ΔE00.
+2. **Name distance is the cosine** between the two colours' `p(W|c)` name
+   distributions; Hellinger distance gives "qualitatively similar results".
+3. **Saliency below 0.2 marks a colour with high naming confusion** - a usable
+   threshold, not just a relative ranking.
+4. **Tableau-10 scores best** of the qualitative palettes they characterise
+   ("best color salience and minimal name overlap"); ColorBrewer also limits
+   overlap; Excel and The Economist show "high naming overlap and lower salience
+   colors."
+
+Their design rule for categorical palettes is explicit: *"minimize name overlap
+(to avoid ambiguity) and maximize salience (to avoid confusion and aid memory)"*
+- and they flag automating exactly that as future work, which is what
+`examples/palettes/build-palettes.mjs` could do.
+
+The model and a JavaScript implementation are open source at
+<http://vis.stanford.edu/color-names>.
+
+**Caveat worth carrying:** the XKCD respondents were 74.6% native English
+speakers and about 68% male (103,430 male / 41,464 female sessions). Colour
+naming is language- and culture-specific, so a naming model built on this data
+describes English naming. For a widget whose users are international, treat name
+metrics as a tiebreaker rather than a primary objective.
 
 Why this matters: **two colours can be well separated in ΔE and still share a
 name**, which breaks verbal reference ("the blue one" when three are blue).
@@ -579,9 +613,11 @@ and make exhaustion visible.**
   analysis.** Re-expressing our palette's minimum pairwise distance in ΔE\*ab
   would say directly whether it clears Szafir's 2px line threshold — a
   ten-line computation that would settle the central question.
-- **Heer & Stone 2012** — `vis.stanford.edu` serves a certificate for
-  `graphics.stanford.edu`, so I could not read the paper. My description of its
-  method comes from Colorgorical's and Petroff's accounts of it.
+- ~~**Heer & Stone 2012** — could not read the paper.~~ **Resolved
+  2026-08-14**: read directly from a local copy. The second-hand summary held;
+  see the additions in §3, including that they use CIEDE2000 as their primary
+  distance metric and warn that Euclidean CIELAB is unreliable for global
+  comparisons across the space.
 - **Boynton 1989** — existence confirmed, contents not read.
 - **Munzner's "around a dozen"** — verified only from her 2009 lecture slides,
   not from *Visualization Analysis and Design*.
@@ -627,7 +663,7 @@ and make exhaustion visible.**
   <https://www.csc2.ncsu.edu/faculty/healey/download/viz.96.pdf>
 - Heer, J. & Stone, M. (2012). Color naming models for color selection, image
   editing and palette design. *Proc. ACM CHI*, 1007–1016.
-  <https://dl.acm.org/doi/10.1145/2207676.2208547> *(paper not read; see §8)*
+  <https://dl.acm.org/doi/10.1145/2207676.2208547> *(read in full)*
 - Jacomy, M. (2013). i want hue. <https://medialab.github.io/iwanthue/>
 - Lee, S., Sips, M. & Seidel, H.-P. (2013). Perceptually driven visibility
   optimization for categorical data visualization. *IEEE TVCG* 19(10),
