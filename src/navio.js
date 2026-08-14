@@ -4530,8 +4530,27 @@ function navio(selection, _h) {
     if (nv.DEBUG) console.log("Delete unnecessary scales");
     yScales.splice(lastLevel + 1, yScales.length);
 
-    // Before the scales are built: the band decides where the record axis
-    // starts, so it has to be resolved first.
+    // ORDER MATTERS HERE, in both directions.
+    //
+    // The attribute scale first: a rotated header's reach includes half a
+    // column, so measureHeaderBand reads xScale.bandwidth(). Measuring before
+    // this left the reserve a full redraw behind - widening the columns to 60px
+    // kept the band sized for the old ones, and a widget that is not redrawn
+    // again keeps it, with the headers over the data.
+    //
+    // Domain and range must be sized from the SAME set. They were not: the
+    // domain came from attribsOrdered while the range was sized by dAttribs,
+    // which is why splicing an attribute out left a dead column's width behind
+    // (#89). Both now come from the visible set.
+    const laidOut = visibleAttribs();
+    xScale
+      .domain(laidOut.map((d) => getAttribName(d)))
+      .range([0, nv.attribWidth * laidOut.length])
+      .paddingInner(0.1)
+      .paddingOuter(0);
+
+    // Then the band, which decides where the record axis starts - so it has to
+    // be resolved before the record scales below read nv.y0.
     applyHeaderBand();
 
     for (let levelToUp of levelsToUpdate) {
@@ -4556,16 +4575,6 @@ function navio(selection, _h) {
       );
     }
 
-    // Domain and range must be sized from the SAME set. They were not: the
-    // domain came from attribsOrdered while the range was sized by dAttribs,
-    // which is why splicing an attribute out left a dead column's width behind
-    // (#89). Both now come from the visible set.
-    const laidOut = visibleAttribs();
-    xScale
-      .domain(laidOut.map((d) => getAttribName(d)))
-      .range([0, nv.attribWidth * laidOut.length])
-      .paddingInner(0.1)
-      .paddingOuter(0);
     levelScale
       .domain(
         dataIs.map(function (d, i) {

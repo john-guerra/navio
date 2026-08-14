@@ -225,3 +225,30 @@ test("an explicit y0 still wins", async ({ page }) => {
   // Still the record extent, so the manual band does not eat the data either.
   expect(m.dataExtent).toBe(180);
 });
+
+// The band is measured from the rotated label's reach, which includes half a
+// column's bandwidth - so it depends on xScale. applyHeaderBand was running
+// BEFORE xScale was rebuilt, measuring against the previous layout, and the
+// reserve was a full redraw behind: widening the columns to 60px kept the old
+// 40px band, and only the NEXT update caught up at 55. A widget that is not
+// redrawn again keeps the wrong band, and the headers sit over the data.
+test("the band is measured against the layout it is for", async ({ page }) => {
+  await page.goto(`${F}?names=short&derived=0`);
+  await expect(page.locator("#nv canvas")).toHaveCount(1);
+
+  const y0 = () => page.evaluate(() => window.nv.y0);
+  const before = await y0();
+
+  await page.evaluate(() => {
+    window.nv.attribWidth = 60;
+    window.nv.hardUpdate();
+  });
+  const afterWiden = await y0();
+
+  // Wider columns reach further, so the band must grow - on THIS redraw.
+  expect(afterWiden).toBeGreaterThan(before);
+
+  // And it is already settled: a second redraw changes nothing.
+  await page.evaluate(() => window.nv.hardUpdate());
+  expect(await y0()).toBe(afterWiden);
+});
