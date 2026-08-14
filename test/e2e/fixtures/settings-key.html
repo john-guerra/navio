@@ -1,0 +1,81 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>Two Navios whose containers have no id</title>
+
+<!-- No `id` on either container: that is what makes settingsSlot() fall back,
+     and it is the ordinary case for a widget built into a container the host
+     framework created. Told apart by a data- attribute rather than a class,
+     because init() does `.attr("class", "navio")` on the container and so
+     replaces whatever the page had put there. -->
+<div data-host="a"></div>
+<div data-host="b"></div>
+
+<script src="/node_modules/d3/dist/d3.js"></script>
+<script src="/node_modules/popper.js/dist/umd/popper.js"></script>
+<script src="/dist/navio.js"></script>
+<script>
+  /* global d3, navio */
+
+  // Disjoint attribute names, so restoring one widget's settings into the other
+  // is loud rather than subtle.
+  const dataA = d3.range(40).map((i) => ({
+    alpha: i % 7,
+    beta: "b" + (i % 3),
+    gamma: (i * 13) % 50,
+  }));
+  const dataB = d3.range(40).map((i) => ({
+    uno: i % 5,
+    dos: "d" + (i % 4),
+    tres: (i * 7) % 30,
+  }));
+
+  const params = new URLSearchParams(location.search);
+
+  // ?reset=1 starts from a clean slate. Only Navio's own keys go, so a test can
+  // seed a settingsKey bucket of its own and still reset. This has to happen
+  // here rather than in the test runner: clearing on every navigation would
+  // also wipe what the PREVIOUS load persisted, which is the one thing the
+  // reload tests exist to observe.
+  if (params.get("reset") === "1") {
+    Object.keys(localStorage)
+      .filter((k) => k.indexOf("navio.settings.") === 0)
+      .forEach((k) => localStorage.removeItem(k));
+  }
+
+  // Anything console.warn says while a widget is being built. setAttribType
+  // warns once per name it does not recognise, which is how a cross-restore
+  // announces itself.
+  window.warnings = [];
+  const realWarn = console.warn.bind(console);
+  console.warn = function (...args) {
+    window.warnings.push(args.join(" "));
+    realWarn(...args);
+  };
+
+  function build(host, data) {
+    const options = { height: 200 };
+    // ?key=... exercises settingsKey passed through the options object, which
+    // has to be in effect BEFORE the stored settings are read.
+    const key = params.get("key");
+    if (key !== null) options.settingsKey = key === "null" ? null : key;
+
+    const nv = new navio(d3.select(host), options);
+    nv.data(data);
+    nv.addAllAttribs();
+    return nv;
+  }
+
+  const a = document.querySelector("[data-host='a']");
+  const b = document.querySelector("[data-host='b']");
+
+  // ?order=BA constructs the SECOND widget first. Nothing about either widget
+  // changes - only the order they are built in on this page load, which is
+  // exactly what a lazily-built or rebuilt widget does in the wild.
+  if (params.get("order") === "BA") {
+    window.nvB = build(b, dataB);
+    window.nvA = build(a, dataA);
+  } else {
+    window.nvA = build(a, dataA);
+    window.nvB = build(b, dataB);
+  }
+</script>

@@ -202,6 +202,15 @@ function navio(selection, _h) {
   // Swap the settings panel's attribute picker. See defaultAttribPicker for
   // the contract; examples/settings plugs in @john-guerra/search-checkbox.
   nv.attribPicker = null;
+  // Where panel settings are remembered - see settingsStorageKey. Declared
+  // here, with the other options, for one reason: OPTION_NAMES below is a
+  // SNAPSHOT of nv's own keys, and applyOptions rejects anything not in it.
+  // Undeclared, `navio(sel, {settingsKey: "..."})` was warned about as an
+  // unknown option and dropped, so the documented escape hatch never worked
+  // through the options object at all - only as a post-construction
+  // assignment, and by then the stored settings had already been read.
+  // `undefined` is the sentinel for "not set"; null turns persistence off.
+  nv.settingsKey = undefined;
   nv.filterFontSize = 8; // Font size of the filters explanations on the bottom
 
   nv.tooltipFontSize = 12; // Font size for the tooltip
@@ -1353,23 +1362,37 @@ function navio(selection, _h) {
    * that filtering the page, or following a link with #anchor, does not look
    * like a different widget.
    *
-   * Within a page, instances are told apart by the container's own id when it
-   * has one - stable across reloads however the page is built - falling back to
-   * construction order.
+   * Within a page, instances are told apart by the container's own id - the one
+   * thing about a widget that is stable across reloads however the page is
+   * built. There is deliberately NO fallback for a container without one.
+   *
+   * It used to fall back to the construction counter, and that is #99: the
+   * counter describes the order widgets were built in on THIS page load, not
+   * which widget is which. Build them in another order next time - a widget
+   * inside a collapsed <details>, a widget rebuilt when its data changes - and
+   * they swap keys, so each one restores the other's hiddenAttribs, attribOrder
+   * and attribTypes. It announces itself as a burst of
+   * `setAttribType: "x" is not one of the attributes`, one per attribute of the
+   * OTHER widget. Persisting nothing is strictly better than restoring
+   * something that belongs to a different widget half the time.
    */
   function settingsSlot() {
     const host = selection && selection.node && selection.node();
     const domId = host && host.id;
-    return domId ? `#${domId}` : `${instanceId}`;
+    return domId ? `#${domId}` : null;
   }
 
   function settingsStorageKey() {
     if (nv.settingsKey !== undefined) return nv.settingsKey;
+    const slot = settingsSlot();
+    // No id and no settingsKey: nothing stable to file settings under, so this
+    // widget does not persist. Give the container an id, or set settingsKey.
+    if (!slot) return null;
     const page =
       typeof location !== "undefined"
         ? `${location.origin}${location.pathname}`
         : "";
-    return `navio.settings.${page}.${settingsSlot()}`;
+    return `navio.settings.${page}.${slot}`;
   }
 
   function persistSettings() {
