@@ -2876,10 +2876,9 @@ function navio(selection, _h) {
       context.lineTo(p1.x, p1.y);
       context.lineWidth = deviceWidth / pixelRatio;
 
-      context.strokeStyle =
-        val === undefined || val === null || val === "" || val === "none"
-          ? nv.nullColor
-          : colScales.get(attrib)(val);
+      context.strokeStyle = isMissing(val)
+        ? nv.nullColor
+        : colScales.get(attrib)(val);
 
       context.stroke();
 
@@ -4420,6 +4419,18 @@ function navio(selection, _h) {
    * two-value column over the same rows. The scan itself is unavoidable - every
    * row has to be read - but what it accumulates does not have to be. See #61.
    */
+  /**
+   * A gap, not a value. These four are drawn in nullColor instead of going
+   * through the colour scale, so they must not enter a categorical domain
+   * either: each one there consumed a palette colour that could never be shown,
+   * pushed every category after it along, and counted towards the recycling
+   * warning. Shared with the drawing code deliberately - two lists of what
+   * counts as missing would drift.
+   */
+  function isMissing(v) {
+    return v === undefined || v === null || v === "" || v === "none";
+  }
+
   function distinctAt(attrib, reduce) {
     const seen = new Set();
     for (let j = 0; j < dataIs[0].length; j++) {
@@ -4463,7 +4474,7 @@ function navio(selection, _h) {
         // drawn in. First-appearance order, which is what scaleOrdinal kept
         // anyway, so no colour moves by this alone.
         const name = getAttribName(attrib);
-        const values = distinctAt(attrib);
+        const values = distinctAt(attrib).filter((v) => !isMissing(v));
 
         if (scale.__navioOwned) {
           // Navio built this scale, so the palette is Navio's to re-resolve -

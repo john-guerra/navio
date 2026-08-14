@@ -12,9 +12,15 @@
   // past ten, the old default drew the eleventh in the colour of the first.
   const params = new URLSearchParams(location.search);
   const CATS = +(params.get("cats") || 25);
+  // ?nulls=1 puts the four values Navio treats as missing into the column,
+  // interleaved so they are not all at one end.
+  const MISSING = [null, undefined, "", "none"];
   const rows = d3.range(CATS * 8).map((i) => ({
     id: i,
-    cat: "c" + (i % CATS),
+    cat:
+      params.get("nulls") === "1" && i % 9 === 0
+        ? MISSING[(i / 9) % 4]
+        : "c" + (i % CATS),
   }));
 
   window.nv = new navio(d3.select("#nv"), {

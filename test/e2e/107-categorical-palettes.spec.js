@@ -190,3 +190,43 @@ test("a caller's own scale keeps its colours and its domain order", async ({
   await page.evaluate(() => window.setPalette("turbo"));
   expect(await assigned(page)).toEqual(["#ff0000", "#00ff00", "#0000ff"]);
 });
+
+// Four values are drawn in nullColor rather than a category colour: undefined,
+// null, "" and "none". They were still going into the scale's domain, so each
+// one present consumed a palette colour that could never appear, and pushed
+// every category after it along. With all four present a 12-category column
+// asked for a 16-colour palette and used 12 of them.
+test("missing values are not categories", async ({ page }) => {
+  await load(page, "?cats=12&nulls=1");
+
+  const domain = await page.evaluate(() =>
+    window.nv.getColorScale("cat").domain()
+  );
+  expect(domain).not.toContain(null);
+  expect(domain).not.toContain("");
+  expect(domain).not.toContain("none");
+  expect(domain).toHaveLength(12);
+
+  // And the colours are the first twelve, not the first sixteen minus gaps.
+  const head = await page.evaluate(() =>
+    window.navio.palettes.nameable.slice(0, 12).map((c) => c.toLowerCase())
+  );
+  expect((await assigned(page)).map((c) => c.toLowerCase())).toEqual(head);
+});
+
+test("gaps do not push a full column into a false recycling warning", async ({
+  page,
+}) => {
+  const warnings = [];
+  page.on("console", (m) => {
+    if (m.type() === "warning") warnings.push(m.text());
+  });
+
+  // Fifty categories and a fifty-colour palette: an exact fit. Counting the
+  // four kinds of gap as categories made it 54 and warned about a repeat that
+  // does not happen - the gaps are drawn in nullColor.
+  await load(page, "?cats=50&nulls=1");
+
+  expect(warnings.filter((w) => w.includes("colours repeat"))).toEqual([]);
+  expect(new Set(await assigned(page)).size).toBe(50);
+});
