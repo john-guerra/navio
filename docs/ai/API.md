@@ -70,7 +70,7 @@ Pass any of these in the options object, or set them on the instance. A few are 
 
 | Option | Type | Default | What it does |
 | --- | --- | --- | --- |
-| `tooltipBgColor` | colour | `"#b2ddf1"` | Background of the hover tooltip. |
+| `tooltipBgColor` | colour | null | `null` | Background of the hover tooltip. null follows the theme; a colour you set is used in both. |
 | `tooltipFontSize` | number | `12` | Font size inside the hover tooltip. Read once, when the tooltip is built. |
 | `tooltipMargin` | number | `50` | How far the tooltip sits from the pointer. |
 | `tooltipArrowSize` | number | `10` | Size of the tooltip's arrow, in pixels. |

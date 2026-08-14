@@ -277,7 +277,10 @@ function navio(selection, _h) {
   nv.filterFontSize = 8; // Font size of the filters explanations on the bottom
 
   nv.tooltipFontSize = 12; // Font size for the tooltip
-  nv.tooltipBgColor = "#b2ddf1"; // Font color for tooltip background
+  // Background of the hover tooltip. `null` follows the theme, for the same
+  // reason as divisionsColor and nullColor: a pale blue panel with dark text is
+  // wrong on a dark page. A colour set here is used in both themes.
+  nv.tooltipBgColor = null;
   nv.tooltipMargin = 50; // How much to separate the tooltip from the cursor
   nv.tooltipArrowSize = 10; // How big is the arrow on the tooltip
 
@@ -514,7 +517,7 @@ function navio(selection, _h) {
       .style("font-family", "sans-serif")
       .style("font-size", nv.tooltipFontSize)
       .style("text-align", "center")
-      .style("background", nv.tooltipBgColor)
+      .style("background", tooltipBackground())
       .style("position", "absolute")
       .style("color", theme().tooltipInk)
       // High, because the tooltip is a <body> child now: at z-index 4 it painted
@@ -535,7 +538,7 @@ function navio(selection, _h) {
           border-style: solid;
           position: absolute;
           margin: ${nv.tooltipArrowSize}px;
-          border-color: ${nv.tooltipBgColor}
+          border-color: ${tooltipBackground()}
         }
 
         ._nv_popover[x-placement="left"] {
@@ -1748,6 +1751,11 @@ function navio(selection, _h) {
       ? theme().divisions
       : nv.divisionsColor;
   }
+  function tooltipBackground() {
+    return nv.tooltipBgColor === null || nv.tooltipBgColor === undefined
+      ? theme().tooltipBg
+      : nv.tooltipBgColor;
+  }
   function nullColour() {
     return nv.nullColor === null || nv.nullColor === undefined
       ? theme().nulls
@@ -1776,7 +1784,8 @@ function navio(selection, _h) {
         .style("border", `1px solid ${t.hairline}`);
     if (tooltipElement)
       tooltipElement
-        .style("background", t.tooltipBg)
+        // The OPTION wins if it was set; only the default follows the theme.
+        .style("background", tooltipBackground())
         .style("color", t.tooltipInk);
   }
 

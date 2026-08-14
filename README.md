@@ -54,6 +54,8 @@ Other demos:
 * [MoMa Collection](https://john-guerra.github.io/momaExplorer/) ([Code](https://github.com/john-guerra/momaExplorer))
 * [Navio-only Vast 2017 MiniChallenge1 ](http://john-guerra.github.io/navio/examples/vast-challenge-2017/index.html) ([Code](https://github.com/john-guerra/navio/tree/master/examples/vast-challenge-2017))
 * [Co-voting patterns of the Colombian senate](http://johnguerra.co/viz/senadoColombia)
+* [Categorical palettes](https://john-guerra.github.io/navio/examples/palettes/) ([Code](https://github.com/john-guerra/navio/tree/master/examples/palettes)) — 25 categories, and how to change `nv.defaultColorCategorical`
+* [Dark mode](https://john-guerra.github.io/navio/examples/theme/) ([Code](https://github.com/john-guerra/navio/tree/master/examples/theme)) — `nv.theme` following the page
 * [Simplest example with Networks on SVG](https://john-guerra.github.io/navio/examples/basic/) ([Code](https://github.com/john-guerra/navio/tree/master/examples/basic))
 * [Simple example with Networks on Canvas](https://john-guerra.github.io/navio/examples/senate/) ([Code](https://github.com/john-guerra/navio/tree/master/examples/senate))
 * [IEEEVIS Publications Data](https://john-guerra.github.io/navio/examples/vispubdata/) ([Code](https://github.com/john-guerra/navio/blob/master/examples/vispubdata/index.html)) ([Observable Notebook](https://observablehq.com/@john-guerra/navio))

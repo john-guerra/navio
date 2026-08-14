@@ -284,11 +284,11 @@ export const PARAMS = [
   // --------------------------------------------------------------- tooltip
   {
     key: "tooltipBgColor",
-    type: "colour",
-    default: "#b2ddf1",
+    type: "colour | null",
+    default: null,
     section: "Tooltip",
     label: "Tooltip background",
-    hint: "Background of the hover tooltip.",
+    hint: "Background of the hover tooltip. null follows the theme; a colour you set is used in both.",
     control: "color",
     needsData: true,
   },
