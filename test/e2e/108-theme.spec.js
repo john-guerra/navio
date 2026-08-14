@@ -81,39 +81,40 @@ test("theme: dark wins over a light page, and the reverse", async ({
 
 // "auto" has to mean auto, not "auto once at construction".
 //
-// The live half - a prefers-color-scheme listener - cannot be driven from here.
-// Playwright's emulateMedia updates the MediaQueryList's `matches` (verified:
-// false then true on the very object Navio holds) but does not dispatch
-// `change` to a listener registered while the document was loading, which is
-// when a widget registers. A listener added afterwards from the test DOES fire,
-// so this is the harness and not the code.
-//
-// What is testable, and what actually matters, is that the theme is resolved
-// FRESH rather than captured once: change the system setting and the next
-// redraw is in the new theme. The listener exists so that redraw happens by
-// itself; it is asserted below only by the fact that destroy() detaches it.
-test("the theme is re-read, not captured at construction", async ({ page }) => {
+// This test was originally written as "the theme is re-read on the next
+// redraw", with a comment blaming Playwright's emulateMedia for not dispatching
+// `change` to a listener registered during page load. That was wrong. The
+// listener was being registered in init() and then REMOVED again a few lines
+// later by initTooltipPopper - a stray copy of the teardown block, which
+// nv.data() then re-ran on every call. emulateMedia dispatches the event
+// perfectly well; there was simply nothing listening. A code review caught it.
+test("it follows the system changing under it", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "light" });
   await load(page);
-  const before = lightness(await page.evaluate(() => window.headerFill()));
-  expect(before).toBeLessThan(90);
-
-  await page.emulateMedia({ colorScheme: "dark" });
-  expect(await page.evaluate(() => window.resolved())).toBe("dark");
-
-  await page.evaluate(() => window.nv.hardUpdate());
   expect(
-    lightness(await page.evaluate(() => window.headerFill())),
-    "the next redraw is dark"
-  ).toBeGreaterThan(140);
+    lightness(await page.evaluate(() => window.headerFill()))
+  ).toBeLessThan(90);
+
+  // No reload, no interaction: the reader changed their OS setting.
+  await page.emulateMedia({ colorScheme: "dark" });
+  await expect
+    .poll(async () => lightness(await page.evaluate(() => window.headerFill())))
+    .toBeGreaterThan(140);
 });
 
-// NOT COVERED: that destroy() detaches the prefers-color-scheme listener.
-// Two attempts to count listeners by patching MediaQueryList.prototype and then
-// EventTarget.prototype both intercepted nothing, and a test that cannot fail
-// is worse than an admitted gap. The removal is five lines in destroy(),
-// symmetrical with the keydown/keyup and pointerdown listeners it already
-// takes off, but nothing here proves it runs.
+test("it keeps following after data() is called again", async ({ page }) => {
+  // The teardown that broke this lived in initTooltipPopper, which data() calls
+  // - so a widget that was re-fed data lost the listener even once init() was
+  // fixed. Re-feeding data is routine: addAllAttribs ends with nv.data(data).
+  await page.emulateMedia({ colorScheme: "light" });
+  await load(page);
+  await page.evaluate(() => window.nv.data(window.nv.data()));
+
+  await page.emulateMedia({ colorScheme: "dark" });
+  await expect
+    .poll(async () => lightness(await page.evaluate(() => window.headerFill())))
+    .toBeGreaterThan(140);
+});
 
 test("the widget never paints its own background", async ({ page }) => {
   for (const scheme of ["light", "dark"]) {

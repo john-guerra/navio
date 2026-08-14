@@ -476,14 +476,6 @@ function navio(selection, _h) {
   function initTooltipPopper() {
     if (nv.DEBUG)
       console.log("initTooltipPopper, selection", selection, selection.node());
-    if (schemeQuery && onSchemeChange) {
-      if (schemeQuery.removeEventListener)
-        schemeQuery.removeEventListener("change", onSchemeChange);
-      else if (schemeQuery.removeListener)
-        schemeQuery.removeListener(onSchemeChange);
-      schemeQuery = onSchemeChange = null;
-    }
-
     if (tooltip && typeof tooltip.destroy === "function") tooltip.destroy();
     if (tooltipElement) tooltipElement.remove();
 
