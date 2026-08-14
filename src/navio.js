@@ -1280,6 +1280,11 @@ function navio(selection, _h) {
       set: (v) => {
         nv.autoHeaderSpace = false;
         nv.y0 = v;
+        // A setter opts OUT of the handler's redraw, so it owes one. Without
+        // this the option appeared dead in a different way: the value changed,
+        // the number beside the slider changed, and nothing moved until some
+        // unrelated interaction happened to repaint.
+        nv.hardUpdate();
       },
     },
   };
@@ -1294,6 +1299,17 @@ function navio(selection, _h) {
   const LIVE_OPTIONS = fromParams("range");
 
   const LIVE_COLOURS = fromParams("color");
+
+  /**
+   * What an option is actually drawing right now. For the options whose default
+   * is the follow-the-theme sentinel, that is the theme's colour rather than
+   * `null`; for everything else it is just the value.
+   */
+  function effectiveColour(key) {
+    if (key === "divisionsColor") return divisionsColour();
+    if (key === "tooltipBgColor") return tooltipBackground();
+    return nv[key];
+  }
 
   /** <input type="color"> only accepts #rrggbb, so normalise whatever is set. */
   function toHex(colour) {
@@ -1700,7 +1716,6 @@ function navio(selection, _h) {
       surface: "#ffffff", // panel and button backgrounds
       hairline: "#bbbbbb", // panel and button borders
       divisions: "white", // lines between rows
-      nulls: "#ffedfd", // missing values
       tooltipBg: "#b2ddf1",
       tooltipInk: "#000000",
     },
@@ -2423,7 +2438,11 @@ function navio(selection, _h) {
         .append("input")
         .attr("type", "color")
         .attr("aria-label", c.label)
-        .property("value", toHex(nv[c.key]))
+        // The colour in USE, not the option's raw value. Two of these default
+        // to null - the sentinel for "follow the theme" - and <input
+        // type="color"> only speaks #rrggbb, so the swatch reported black for
+        // options that were drawing white and pale blue.
+        .property("value", toHex(effectiveColour(c.key)))
         .style("width", "40px")
         .on("input", function () {
           nv[c.key] = this.value;

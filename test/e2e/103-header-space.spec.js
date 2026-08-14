@@ -303,3 +303,38 @@ test("the filter chips sit where they would with no spill", async ({
   expect(flat.lift, "and here it was not").toBeFalsy();
   expect(spilling.offset).toBe(flat.offset);
 });
+
+// The panel's setters are responsible for leaving the widget redrawn - the
+// input handler skips its own hardUpdate for any option that has one, on the
+// grounds that "opt.set does its own redraw". Top offset's did not: it turned
+// the measurement off and assigned nv.y0, and nothing repainted. The value
+// changed, the number beside the slider changed, and the drawing did not move
+// until some unrelated interaction happened to redraw it.
+test("moving the Top offset slider moves the drawing", async ({ page }) => {
+  await page.goto(`${F}?names=long&height=180`);
+  await ready(page);
+
+  // Where the records start on screen: the brush covers the record axis, so
+  // its top edge is y0 under the top of the canvas.
+  const recordsStart = () =>
+    page.evaluate(() => {
+      const c = document.querySelector("#nv canvas").getBoundingClientRect();
+      const o = document
+        .querySelector("#nv .brush .overlay")
+        .getBoundingClientRect();
+      return Math.round(o.top - c.top);
+    });
+
+  const before = await recordsStart();
+
+  await page.locator("#nv ._nv_gear").click();
+  const slider = page
+    .locator("#nv ._nv_settings label")
+    .filter({ hasText: "Top offset" })
+    .locator('input[type="range"]');
+  await slider.fill("60");
+  await slider.dispatchEvent("input");
+
+  expect(await page.evaluate(() => window.nv.y0)).toBe(60);
+  expect(await recordsStart(), "the records moved with it").not.toBe(before);
+});

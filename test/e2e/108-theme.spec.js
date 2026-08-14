@@ -245,3 +245,42 @@ test("the data colours are the same in both themes", async ({ page }) => {
   // one thing.
   expect(await scaleFor("dark")).toEqual(await scaleFor("light"));
 });
+
+// divisionsColor and tooltipBgColor default to null, the sentinel for "follow
+// the theme". The panel fed that straight to an <input type="color">, which
+// only speaks #rrggbb, so d3.color(null) came back null and the swatch fell
+// back to #000000 - reporting black for two options that were drawing white
+// and pale blue. Picking any colour then set an explicit one, so the only way
+// to read the control was to break the thing it was reporting on.
+test("the panel's colour swatches show the colours in use", async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await load(page);
+  await page.locator("#nv ._nv_gear").click();
+
+  const swatch = (label) =>
+    page
+      .locator("#nv ._nv_settings label")
+      .filter({ hasText: label })
+      .locator('input[type="color"]')
+      .inputValue();
+
+  expect(await swatch("Row dividers")).toBe("#ffffff");
+  expect(await swatch("Tooltip background")).toBe("#b2ddf1");
+});
+
+test("and they follow the theme, because the colours do", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await load(page, "?page=dark");
+  await page.locator("#nv ._nv_gear").click();
+
+  // White lines on a dark ground are stripes, so the dark theme draws them in
+  // its own surface colour - and the swatch has to say so.
+  await expect(
+    page
+      .locator("#nv ._nv_settings label")
+      .filter({ hasText: "Row dividers" })
+      .locator('input[type="color"]')
+  ).toHaveValue("#1b1e24");
+});
