@@ -244,13 +244,48 @@ file already staged as deleted. That silently left `package.json` unstaged here
 while CI kept failing on a fix believed to be pushed. Verify with
 `git diff --cached --stat` before committing.
 
-Releases: bump `package.json`, run the full gate, commit, tag `vX.Y.Z`, push both,
-create the GitHub release. **Do not run `npm publish`** — that is the
-maintainer's, and npm credentials are not available to agents. `prepublishOnly`
-runs the gate, since `dist/` is gitignored and nothing else guarantees the
-published bundle matches its source.
-
 Under 0.x, breaking changes go in the **minor** slot.
+
+## Releases
+
+Two commands, in this order, and **the second one is the maintainer's** — npm
+credentials are not available to agents, so an agent prepares a release and
+stops:
+
+```bash
+npm version patch     # or minor. Bumps, gates, commits, tags LOCALLY.
+npm publish           # gates again, publishes, then pushes and releases.
+```
+
+An agent's part is: land the work on `main`, add the version's section to
+`CHANGELOG.md`, and say it is ready. Nothing else.
+
+**The order is enforced, not remembered, and that is deliberate.** This section
+used to read "bump, gate, commit, tag, push both, create the GitHub release" and
+0.3.0 still went to npm with no tag in the repo at all — the step that gets
+skipped is the one a human has to remember after the interesting part is over.
+So each step now lives in the npm lifecycle hook that can only run at the right
+moment:
+
+| hook | script | what it is for |
+| --- | --- | --- |
+| `preversion` | `build/before-version.mjs` | Refuses to start on a dirty tree, off `main`, or behind `origin`. |
+| `version` | `docs:api` + `check` + `git add -A` | A release cannot carry a stale `docs/ai/API.md` or a red gate. |
+| `prepublishOnly` | `check` | `dist/` is gitignored; nothing else guarantees the published bundle matches its source. |
+| `postpublish` | `build/after-publish.mjs` | Pushes `main --follow-tags` and creates the GitHub release **only after npm accepted the package**. |
+
+The tag therefore exists locally before publishing and is pushed only if the
+publish succeeded. That is the whole point: a tag pushed before a failed publish
+points at a commit that may need to change, a published tag must never be moved,
+and the version is then burnt. A local tag costs nothing to delete and retry.
+
+`build/after-publish.mjs` never exits non-zero — the package is already
+published by the time it runs, so failing would only make a finished release
+look broken. It prints the command to run by hand instead.
+
+The GitHub release body is the `## <version>` section of `CHANGELOG.md`, so
+`npm run check` fails if the version being released has no section — headings
+inside one must be `###`, since `##` starts the next version.
 
 ## Guardrails
 

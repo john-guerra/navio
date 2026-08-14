@@ -51,8 +51,11 @@
     "check": "npm run format:check && npm run lint && npm run test && npm run build",
     "postbuild": "node build/verify-bundle.js",
     "prepublishOnly": "npm run check",
+    "postpublish": "node build/after-publish.mjs",
     "docs:api": "node build/write-api-docs.js",
-    "palettes": "node build/gen-palettes.mjs"
+    "palettes": "node build/gen-palettes.mjs",
+    "preversion": "node build/before-version.mjs",
+    "version": "npm run docs:api && npm run check && git add -A"
   },
   "repository": {
     "type": "git",
@@ -63,7 +66,7 @@
     "Data exploration"
   ],
   "author": {
-    "name": "John Alexis Guerra Gómez",
+    "name": "John Alexis Guerra G\u00f3mez",
     "url": "https://johnguerra.co"
   },
   "license": "MIT",
