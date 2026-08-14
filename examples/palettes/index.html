@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Navio categorical palettes</title>
+    <style>
+      /* The subject is colour, so the page stays chromatically quiet: anything
+         saturated beside a swatch changes how it reads. */
+      body {
+        font:
+          15px/1.6 -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        max-width: 1100px;
+        margin: 0 auto 120px;
+        padding: 0 16px;
+        color: #1b1e23;
+      }
+      h1 {
+        line-height: 1.2;
+      }
+      h2 {
+        margin: 36px 0 6px;
+        font-size: 20px;
+      }
+      .note {
+        background: #f4f6f8;
+        border-left: 3px solid #b2ddf1;
+        padding: 12px 16px;
+        margin: 20px 0;
+        font-size: 14px;
+      }
+      .muted {
+        color: #5c626d;
+      }
+      code {
+        font:
+          13px ui-monospace,
+          Menlo,
+          monospace;
+        background: #f0f2f5;
+        padding: 1px 5px;
+        border-radius: 3px;
+      }
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px 28px;
+        align-items: flex-end;
+        margin: 18px 0;
+      }
+      .group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .group > span {
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #5c626d;
+      }
+      .seg {
+        display: flex;
+        border: 1px solid #d6dae0;
+        border-radius: 6px;
+        overflow: hidden;
+      }
+      .seg button {
+        font: inherit;
+        font-size: 13px;
+        padding: 6px 12px;
+        background: #fff;
+        border: 0;
+        border-right: 1px solid #d6dae0;
+        cursor: pointer;
+        color: inherit;
+      }
+      .seg button:last-child {
+        border-right: 0;
+      }
+      .seg button[aria-pressed="true"] {
+        background: #1b1e23;
+        color: #fff;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 13.5px;
+      }
+      th,
+      td {
+        text-align: right;
+        padding: 6px 9px;
+        border-bottom: 1px solid #e6e9ed;
+        font-variant-numeric: tabular-nums;
+      }
+      th:first-child,
+      td:first-child {
+        text-align: left;
+      }
+      th {
+        font-size: 11px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #5c626d;
+      }
+      tr.pick td {
+        background: #f4f8fc;
+      }
+      .swatch {
+        display: flex;
+        height: 22px;
+        width: 260px;
+        border-radius: 3px;
+        overflow: hidden;
+      }
+      .swatch i {
+        flex: 1 1 0;
+      }
+      .broken {
+        color: #9aa0aa;
+      }
+      #nv {
+        margin-top: 6px;
+      }
+      .scroller {
+        overflow-x: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Categorical colour when there are more categories than colours</h1>
+
+    <p class="muted">
+      Navio colours a categorical column with
+      <code>d3.scaleOrdinal(d3.schemeCategory10)</code>. That scheme holds ten
+      colours and <code>scaleOrdinal</code> recycles them, so the eleventh
+      category is drawn in exactly the colour of the first &mdash; silently.
+      This page draws <code>nutrients.csv</code>, whose
+      <code>group</code> column has 25 categories, once per candidate palette.
+    </p>
+
+    <div class="note">
+      <strong>Click any column header to sort by it.</strong> Sort by a palette
+      column and every group becomes one contiguous band. Sort by
+      <code>calories</code> or <code>water</code> and the groups shatter into
+      single-pixel rows in all of them at once. That is the point: for a widget
+      drawing one pixel row per record, <strong>run length decides legibility
+      more than the palette does</strong>. See
+      <code>docs/ai/COLOR-CATEGORICAL.md</code> for the evidence.
+    </div>
+
+    <div class="controls">
+      <div class="group">
+        <span>Simulate vision</span>
+        <div class="seg" id="visionSeg"></div>
+      </div>
+      <div class="group">
+        <span>Widget height</span>
+        <div class="seg" id="heightSeg"></div>
+      </div>
+    </div>
+
+    <div class="scroller"><div id="nv"></div></div>
+    <p class="muted" id="status" style="font-size: 13px"></p>
+
+    <h2>How far apart the colours actually are</h2>
+    <p class="muted">
+      Minimum pairwise distance &mdash; the closest pair anywhere in the
+      palette, which is the pair a reader confuses. Under
+      <strong>2.3</strong> is below the just-noticeable difference. Two metrics,
+      because they disagree: <strong>&#916;E00</strong> is the modern standard,
+      <strong>&#916;E*ab</strong> is what the visualisation size literature
+      reports, and &#916;E00 down-weights differences between saturated colours.
+    </p>
+
+    <div class="controls">
+      <div class="group">
+        <span>Categories</span>
+        <div class="seg" id="nSeg"></div>
+      </div>
+      <div class="group">
+        <span>Metric</span>
+        <div class="seg" id="metricSeg"></div>
+      </div>
+      <div class="group">
+        <span>Sort by</span>
+        <div class="seg" id="sortSeg"></div>
+      </div>
+    </div>
+
+    <div class="scroller">
+      <table>
+        <thead>
+          <tr>
+            <th>Palette</th>
+            <th>Normal</th>
+            <th>Protan</th>
+            <th>Deutan</th>
+            <th>Tritan</th>
+            <th>Worst</th>
+            <th>Colours</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+
+    <div class="note">
+      <strong>Today&rsquo;s palette already collides at ten categories.</strong>
+      <code>schemeCategory10</code> scores 16.2 &#916;E00 for normal vision but
+      1.6 under protanopia &mdash; below the just-noticeable difference, with no
+      recycling involved. Switch &ldquo;Simulate vision&rdquo; to Protanopia and
+      look at its column in the widget above.
+    </div>
+
+    <p class="muted" style="font-size: 13px">
+      Palettes and scores are generated by
+      <code>node examples/palettes/build-palettes.mjs</code>, which validates its
+      CIEDE2000 implementation against the Sharma, Wu &amp; Dalal (2005)
+      reference pairs before computing anything. Colour-vision simulation is
+      Vi&eacute;not, Brettel &amp; Mollon (1999) on linear-light sRGB.
+    </p>
+
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <script src="https://unpkg.com/popper.js@1.14/dist/umd/popper.min.js"></script>
+    <script src="../../dist/navio.js"></script>
+    <script>
+      /* global d3, navio */
+
+      // Short enough to fit a rotated column header.
+      const SHORT = {
+        "max-min, CVD-aware": "max-min CVD",
+        "Mokole 50": "Mokole",
+        "max-min, normal vision only": "max-min normal",
+        "Rainbow at i/n": "Rainbow i/n",
+        "Sinebow at i/n": "Sinebow i/n",
+        "quantize(Rainbow)": "qRainbow",
+        "quantize(Turbo)": "qTurbo",
+        "Cat10+Obs10+Accent+Pastel1": "Cat10+Obs10+",
+        "schemeCategory10 (Navio today)": "Category10 today",
+      };
+      const VISION = [
+        ["normal", "Normal"],
+        ["protan", "Protanopia"],
+        ["deutan", "Deuteranopia"],
+        ["tritan", "Tritanopia"],
+      ];
+      const NUMERIC = ["calories", "protein", "fat", "sugars", "water"];
+
+      // The same Vienot 1999 transform build-palettes.mjs scores with, so the
+      // widget and the table agree about what a deficient viewer sees.
+      const toLin = (c) =>
+        c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+      const toSrgb = (c) =>
+        c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
+      const cl = (x) => Math.max(0, Math.min(1, x));
+      function simulate(colour, type) {
+        if (type === "normal") return colour;
+        const c = d3.rgb(colour);
+        const R = toLin(c.r / 255),
+          G = toLin(c.g / 255),
+          B = toLin(c.b / 255);
+        const L = 0.31399022 * R + 0.63951294 * G + 0.04649755 * B;
+        const M = 0.15537241 * R + 0.75789446 * G + 0.08670142 * B;
+        const S = 0.01775239 * R + 0.10944209 * G + 0.87256922 * B;
+        let l = L,
+          m = M,
+          s = S;
+        if (type === "protan") l = 1.05118294 * M - 0.05116099 * S;
+        if (type === "deutan") m = 0.9513092 * L + 0.04866992 * S;
+        if (type === "tritan") s = -0.86744736 * L + 1.86727089 * M;
+        const R2 = 5.47221206 * l - 4.6419601 * m + 0.16963708 * s;
+        const G2 = -1.1252419 * l + 2.29317094 * m - 0.1678952 * s;
+        const B2 = 0.02980165 * l - 0.19318073 * m + 1.16364789 * s;
+        return d3
+          .rgb(
+            255 * cl(toSrgb(cl(R2))),
+            255 * cl(toSrgb(cl(G2))),
+            255 * cl(toSrgb(cl(B2)))
+          )
+          .formatHex();
+      }
+
+      const seg = (el, items, get, set) => {
+        el.innerHTML = "";
+        for (const [value, label] of items) {
+          const b = document.createElement("button");
+          b.type = "button";
+          b.textContent = label;
+          b.setAttribute("aria-pressed", String(get() === value));
+          b.addEventListener("click", () => set(value));
+          el.append(b);
+        }
+      };
+
+      // Looked up explicitly rather than relying on id-as-global: `status` is
+      // a built-in window property (a string), so `status.textContent = ...`
+      // writes to a string and silently does nothing.
+      const el = {
+        status: document.getElementById("status"),
+        rows: document.getElementById("rows"),
+        nSeg: document.getElementById("nSeg"),
+        metricSeg: document.getElementById("metricSeg"),
+        sortSeg: document.getElementById("sortSeg"),
+        visionSeg: document.getElementById("visionSeg"),
+        heightSeg: document.getElementById("heightSeg"),
+      };
+
+      let PAL = null,
+        ROWS = null,
+        GROUPS = null,
+        nvInstance = null;
+      let vision = "normal",
+        height = "700",
+        n = "25",
+        metric = "de00",
+        sortKey = "worst";
+
+      function drawTable() {
+        seg(el.nSeg, [["10", "10"], ["12", "12"], ["25", "25"], ["50", "50"]],
+          () => n, (v) => { n = v; drawTable(); });
+        seg(el.metricSeg, [["de00", "ΔE00"], ["de76", "ΔE*ab"]],
+          () => metric, (v) => { metric = v; drawTable(); });
+        seg(el.sortSeg,
+          [["worst", "Worst"], ["normal", "Normal"], ["protan", "Protan"],
+           ["deutan", "Deutan"], ["tritan", "Tritan"]],
+          () => sortKey, (v) => { sortKey = v; drawTable(); });
+
+        const worstKey = metric === "de00" ? "worst00" : "worst76";
+        const list = PAL.sets[n].slice().sort((a, b) =>
+          sortKey === "worst"
+            ? b[worstKey] - a[worstKey]
+            : b[metric][sortKey] - a[metric][sortKey]
+        );
+
+        el.rows.innerHTML = "";
+        for (const p of list) {
+          const tr = document.createElement("tr");
+          if (p.name.startsWith("max-min, CVD")) tr.className = "pick";
+          const cells = [p.name].concat(
+            VISION.map(([t]) => p[metric][t].toFixed(1)),
+            [p[worstKey].toFixed(1)]
+          );
+          cells.forEach((text, i) => {
+            const td = document.createElement("td");
+            td.textContent = text;
+            if (i > 0 && parseFloat(text) < 2.3) td.className = "broken";
+            if (i === 0) {
+              const em = document.createElement("div");
+              em.className = "muted";
+              em.style.fontSize = "12px";
+              em.textContent = p.note;
+              td.append(em);
+            }
+            tr.append(td);
+          });
+          const td = document.createElement("td");
+          const sw = document.createElement("div");
+          sw.className = "swatch";
+          for (const c of p.colours) {
+            const i = document.createElement("i");
+            i.style.background = simulate(c, vision);
+            sw.append(i);
+          }
+          td.append(sw);
+          tr.append(td);
+          el.rows.append(tr);
+        }
+      }
+
+      function drawWidget() {
+        seg(el.visionSeg, VISION, () => vision, (v) => {
+          vision = v;
+          drawWidget();
+          drawTable();
+        });
+        seg(el.heightSeg, [["420", "Short"], ["700", "Tall"]],
+          () => height, (v) => { height = v; drawWidget(); });
+
+        if (nvInstance) nvInstance.destroy();
+        document.getElementById("nv").innerHTML = "";
+
+        const nv = navio(d3.select("#nv"), {
+          height: +height,
+          settings: false,
+          showSelectedAttrib: false,
+          showSequenceIDAttrib: false,
+          attribWidth: 20,
+          attribFontSize: 11,
+          y0: 132,
+          autoHeaderSpace: false,
+        });
+        nv.id("id");
+        nv.data(ROWS);
+
+        // One field, nine columns. Navio takes a FUNCTION as an attribute and
+        // names the column after it, which is what lets the same attribute be
+        // drawn once per palette in a single widget.
+        for (const p of PAL.sets["25"]) {
+          const accessor = (d) => d.group;
+          Object.defineProperty(accessor, "name", {
+            value: SHORT[p.name] || p.name,
+          });
+          nv.addCategoricalAttrib(
+            accessor,
+            d3
+              .scaleOrdinal(p.colours.map((c) => simulate(c, vision)))
+              .domain(GROUPS)
+          );
+        }
+        for (const k of NUMERIC) nv.addSequentialAttrib(k);
+
+        // Re-setting the data rebuilds the scales and draws. It is the last
+        // thing addAllAttribs does, and adding attributes by hand skips it.
+        nv.data(ROWS);
+        nvInstance = nv;
+        window.nv = nv;
+
+        el.status.textContent =
+          PAL.sets["25"].length +
+          " palettes and " +
+          NUMERIC.length +
+          " real columns, " +
+          ROWS.length.toLocaleString() +
+          " rows, " +
+          GROUPS.length +
+          " groups, navio " +
+          navio.version;
+      }
+
+      Promise.all([
+        d3.json("palettes.json"),
+        d3.csv("nutrients.csv", (d, i) => ({
+          id: i,
+          group: d.group,
+          calories: +d.calories,
+          protein: +d["protein (g)"],
+          fat: +d["fat (g)"],
+          sugars: +d["sugars (g)"],
+          water: +d["water (g)"],
+        })),
+      ]).then(([palettes, rows]) => {
+        PAL = palettes;
+        ROWS = rows;
+        GROUPS = Array.from(new Set(rows.map((d) => d.group)));
+        drawWidget();
+        drawTable();
+      });
+    </script>
+  </body>
+</html>
