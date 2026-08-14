@@ -24,7 +24,7 @@
     "@eslint/js": "^10.0.1",
     "@observablehq/runtime": "^5.9.9",
     "@playwright/test": "^1.62.1",
-    "@rollup/plugin-node-resolve": "^15.0.2",
+    "@rollup/plugin-node-resolve": "^16.0.3",
     "@rollup/plugin-terser": "^1.0.0",
     "@rollup/pluginutils": "^5.4.0",
     "@vitest/eslint-plugin": "^1.6.24",
