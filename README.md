@@ -19,7 +19,7 @@ Use it to <strong>summarize</strong>, <strong>explore</strong> and <strong>navig
 
 ## Upgrading to 0.3.0
 
-Three changes need a look before you upgrade.
+Two changes need a look before you upgrade.
 
 **`height` is now the RECORD extent, not the widget's total size.** The column
 headers are drawn in a band that is *added* on top of it rather than carved out
@@ -40,6 +40,8 @@ two Navios in a different order on the next load and each restored the other's
 hidden columns and attribute types. Give the container a stable `id`, or set
 `settingsKey` yourself, and persistence works as before. `settingsKey` passed in
 the options object also works now — it was being rejected as an unknown option.
+
+### Also in 0.3.1
 
 **Categorical columns are a different colour, and there are more of them.**
 `defaultColorCategorical` was `d3.schemeCategory10`; it is now a generated
