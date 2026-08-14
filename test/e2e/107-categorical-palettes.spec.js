@@ -30,6 +30,28 @@ test("25 categories get 25 different colours", async ({ page }) => {
   expect(new Set(colours).size, "distinct colours").toBe(25);
 });
 
+// The same palette at every count, deliberately. Using schemeCategory10 below
+// eleven and switching after was considered and measured: at ten categories the
+// first ten of `nameable` beat it on normal vision (16.6 against 16.2), on
+// nameability (0.51 against 0.49, and none confused against one), and on the
+// worst vision type by 14.0 against 1.6 - below the just-noticeable difference.
+// There was no trade to make, and a switch would also mean a ten-category
+// column and an eleven-category column on one page came from visibly different
+// palettes.
+test("a small column uses the same palette as a large one", async ({
+  page,
+}) => {
+  await load(page, "?cats=8");
+  const colours = await assigned(page);
+
+  expect(new Set(colours).size).toBe(8);
+
+  const head = await page.evaluate(() =>
+    window.navio.palettes.nameable.slice(0, 8).map((c) => c.toLowerCase())
+  );
+  expect(colours.map((c) => c.toLowerCase())).toEqual(head);
+});
+
 test("50 categories still get 50 different colours", async ({ page }) => {
   await load(page, "?cats=50");
   const colours = await assigned(page);
