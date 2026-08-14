@@ -1329,8 +1329,33 @@ function navio(selection, _h) {
   }
 
   /** Everything the panel can change, as a plain JSON-safe object. */
+  /**
+   * Stamped into every stored settings object so a later Navio can tell what
+   * wrote it. Settings from before this existed carry no version at all, which
+   * is the signal setSettings acts on - see LEGACY_COLOUR_DEFAULTS.
+   */
+  const SETTINGS_VERSION = 1;
+
+  /**
+   * Colours that were HARD defaults before 0.3.0, when there was no theme.
+   *
+   * A store written then spells them out, and setSettings assigning them is
+   * indistinguishable from a user choosing them - which deliberately wins over
+   * the theme. So anyone who had ever opened the settings panel got white row
+   * dividers on a black ground, permanently, with no way to reach the dark
+   * theme. A store that predates a feature is not a decision about it.
+   */
+  const LEGACY_COLOUR_DEFAULTS = {
+    divisionsColor: "white",
+    tooltipBgColor: "#b2ddf1",
+  };
+
   nv.getSettings = function () {
-    const out = { orientation: nv.orientation, height: height };
+    const out = {
+      version: SETTINGS_VERSION,
+      orientation: nv.orientation,
+      height: height,
+    };
     for (const o of LIVE_OPTIONS)
       if (o.key !== "height") out[o.key] = nv[o.key];
     for (const c of LIVE_COLOURS) out[c.key] = nv[c.key];
@@ -1362,6 +1387,18 @@ function navio(selection, _h) {
    */
   nv.setSettings = function (cfg = {}) {
     if (!cfg || typeof cfg !== "object") return nv;
+
+    // No version means it was written before the theme existed, so the two
+    // colours below are the old defaults rather than anything anyone picked.
+    // Back to the sentinel, and the theme decides. A colour someone genuinely
+    // chose that happens to equal the old default is lost here - the two are
+    // not distinguishable, and following the page is the better guess.
+    if (!cfg.version) {
+      cfg = { ...cfg };
+      for (const [key, was] of Object.entries(LEGACY_COLOUR_DEFAULTS))
+        if (cfg[key] === was) cfg[key] = null;
+    }
+
     for (const k of Object.keys(cfg)) {
       if (
         k === "hiddenAttribs" ||

@@ -284,3 +284,46 @@ test("and they follow the theme, because the colours do", async ({ page }) => {
       .locator('input[type="color"]')
   ).toHaveValue("#1b1e24");
 });
+
+// Settings stored by 0.2.x carry the colours that were HARD defaults then -
+// "white" row dividers and a pale blue tooltip. Restoring them assigns an
+// explicit colour, and an explicit colour deliberately wins over the theme, so
+// a user who had ever opened the settings panel got white lines on a black
+// ground and no way to reach the dark theme at all. Their store is not opting
+// out of a feature that did not exist when it was written.
+test("settings stored before the theme existed do not pin the old colours", async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await load(page, "?page=dark");
+
+  await page.evaluate(() =>
+    // Exactly what 0.2.x wrote: no version, and the two colours spelled out.
+    window.nv.setSettings({
+      divisionsColor: "white",
+      tooltipBgColor: "#b2ddf1",
+      showAttribTitles: true,
+    })
+  );
+
+  expect(await page.evaluate(() => window.nv.divisionsColor)).toBe(null);
+  await expect(page.locator("#nv ._nv_settings label").first()).toHaveCount(0);
+  expect(await page.evaluate(() => window.resolved())).toBe("dark");
+});
+
+test("but a colour chosen since is still honoured", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await load(page, "?page=dark");
+
+  // A store this version wrote says so, and everything in it is a real choice.
+  const round = await page.evaluate(() => {
+    window.nv.divisionsColor = "white";
+    const cfg = window.nv.getSettings();
+    window.nv.divisionsColor = null;
+    window.nv.setSettings(cfg);
+    return { version: cfg.version, divisions: window.nv.divisionsColor };
+  });
+
+  expect(round.version).toBeGreaterThan(0);
+  expect(round.divisions).toBe("white");
+});
