@@ -84,9 +84,9 @@ function navio(selection, _h) {
     filtersByLevel = [], // The filters applied to each level
     yScales = [],
     xScale,
-    // Built once in init() (see the geom = createGeometry(...) call below);
-    // not read anywhere yet. Later tasks in this plan convert renderers to
-    // call it, at which point this disable comes back out.
+    // Built once in init() (see the geom = createGeometry(...) call below).
+    // Every renderer and pointer/drag handler in this file reads geometry
+    // through it now - see src/geometry.js.
     geom,
     height = _options
       ? _options.height !== undefined
@@ -102,7 +102,7 @@ function navio(selection, _h) {
     context,
     // The canvas is sized in device pixels and the context scaled by this, so
     // drawing happens in CSS units. Kept because snapping a stroke to the pixel
-    // grid has to be done in DEVICE pixels - see snapToDevice.
+    // grid has to be done in DEVICE pixels - see snapToDevice in src/geometry.js.
     pixelRatio = 1,
     tooltip,
     tooltipElement,
@@ -958,9 +958,9 @@ function navio(selection, _h) {
     // below is expressed in (attribute, record) and mapped through toXY, so the
     // two orientations share one implementation rather than mirroring code.
     //
-    // x(val, level) and yScales[level] keep their names: they are the
-    // attribute-axis and record-axis scales respectively, whichever screen
-    // direction those happen to be.
+    // geom.cellA(name, level) and yScales[level] (read through geom.cellR)
+    // give the attribute-axis and record-axis positions respectively,
+    // whichever screen direction those happen to be.
 
     canvas = selection.select("canvas").node();
 
@@ -1271,14 +1271,6 @@ function navio(selection, _h) {
   /** True when attributes run down the screen and records run across (#22). */
   function isVertical() {
     return nv.orientation === "vertical";
-  }
-
-  /**
-   * Map a logical (attribute-axis, record-axis) point to screen coordinates.
-   * This single function is what makes the two orientations one implementation.
-   */
-  function toXY(a, r) {
-    return isVertical() ? { x: r, y: a } : { x: a, y: r };
   }
 
   /** Screen width and height for a box that is `a` along A and `r` along R. */
@@ -1829,8 +1821,7 @@ function navio(selection, _h) {
       const before = performance.now();
       const itemId = geom.rowAtR(onR, level);
       const after = performance.now();
-      if (nv.DEBUG)
-        console.log("invertOrdinalScale " + (after - before) + "ms");
+      if (nv.DEBUG) console.log("rowAtR " + (after - before) + "ms");
 
       let itemAttr = geom.attribAtA(onA, level);
       if (itemAttr === undefined) {
@@ -2660,14 +2651,14 @@ function navio(selection, _h) {
   } // drawBrushes
 
   /** The drag coordinate along the ATTRIBUTE axis - x horizontally, y not (#22). */
-  function dragAlongA(event) {
-    return isVertical() ? event.y : event.x;
+  function dragAlongA(geom, event) {
+    return geom.isVertical() ? event.y : event.x;
   }
 
   /** Where the dragged header should sit while it follows the pointer. */
   function draggedHeaderTransform(geom, event, _d) {
     const p = geom.toXY(
-      dragAlongA(event) + nv.attribFontSize / 2,
+      dragAlongA(geom, event) + nv.attribFontSize / 2,
       geom.recordAxisStart()
     );
     return `translate(${p.x}, ${p.y})`;
@@ -2683,7 +2674,7 @@ function navio(selection, _h) {
   /** The attribute the pointer is currently over, during a header drag. */
   function dropTargetFor(geom, event, d) {
     const name = geom.attribAtA(
-      dragAlongA(event) + nv.attribFontSize / 2,
+      dragAlongA(geom, event) + nv.attribFontSize / 2,
       d.level
     );
     return dAttribs.get(name);
@@ -2790,7 +2781,7 @@ function navio(selection, _h) {
     }
   }
 
-  function drawCloseButton() {
+  function drawCloseButton(geom) {
     let maxLevel = dataIs.length - 1;
     svg
       .select("#closeButton")
@@ -2800,14 +2791,18 @@ function navio(selection, _h) {
         // Vertical: the same spot transposes to *under* the widget, which
         // reads badly - put it past the end of the records instead, so it
         // still sits at the trailing corner of its level.
-        const alongA =
-          levelScale(maxLevel) +
-          levelScale.bandwidth() -
-          nv.levelsSeparation +
-          15;
-        const p = isVertical()
-          ? toXY(alongA - 15, yScales[maxLevel].range()[1] + 12)
-          : toXY(alongA, yScales[maxLevel].range()[0]);
+        //
+        // levelScale is a zero-padding scaleBand, so levelScale.bandwidth()
+        // === xScale.range()[1] + nv.levelsSeparation === geom.levelExtentA()
+        // + nv.levelsSeparation for every level - the same identity drawCounts
+        // and drawFilterExplanationsHTML already rely on.
+        const alongA = geom.levelStartA(maxLevel) + geom.levelExtentA() + 15;
+        const p = geom.isVertical()
+          ? geom.toXY(
+              alongA - 15,
+              geom.recordAxisStart() + geom.recordExtent() + 12
+            )
+          : geom.toXY(alongA, geom.recordAxisStart());
         return `translate(${p.x}, ${p.y})`;
       });
   }
@@ -3530,7 +3525,7 @@ function navio(selection, _h) {
 
     let before = performance.now();
 
-    let w = levelScale.range()[1] + nv.margin + nv.x0;
+    let w = geom.extentA();
 
     // If updating all levels erase everything
     // if (levelsToUpdate===undefined) {
@@ -3559,7 +3554,7 @@ function navio(selection, _h) {
 
     if (shouldDrawBrushes) {
       drawBrushes(recomputeBrushes);
-      drawCloseButton();
+      drawCloseButton(geom);
     }
 
     let after = performance.now();

@@ -110,7 +110,7 @@ test("destroy() releases the reference to the dataset", async ({ page }) => {
 /**
  * The settings panel's light-dismiss handler is registered on `document` in the
  * CAPTURE phase, so removeEventListener only detaches it when handed the same
- * function reference. When the panel moved into src/settings-panel.js for #67,
+ * function reference. When the panel moved into src/chrome/settings-panel.js for #67,
  * registration and removal had to move together; had they ended up holding
  * different closures, every destroyed instance would leave a live
  * document-level handler behind and nothing here would have noticed - no other

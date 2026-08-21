@@ -35,7 +35,7 @@ npm run build > /tmp/build.log 2>&1; echo "EXIT: $?"
 ## Layout
 
 ```
-src/navio.js        ~4550 lines, ONE closure. Most things still live here.
+src/navio.js        ~4190 lines, ONE closure. Most things still live here.
 src/chrome/settings-panel.js   the gear, the panel, and everything drawn in it.
                     Composition root: it builds theme.js and
                     settings-storage.js, so navio.js constructs ONE thing.
@@ -231,14 +231,15 @@ regressed, it was reverted; `test/e2e/61-link-endpoints.spec.js` pins it. The
 measured saving was ~4ms out of a ~33ms update where *drawing* the links is the
 real cost.
 
-**All geometry goes through `toXY()`.** Navio has two logical axes: the
-ATTRIBUTE axis (columns) and the RECORD axis (one line per row). `x(val, level)`
-and `yScales[level]` are the attribute-axis and record-axis scales — those names
-are historical, they are not screen x and y. `nv.orientation = "vertical"`
-transposes them. Any new geometry must be expressed in (attribute, record) and
-mapped through `toXY`/`toWH`, and any code reading a pointer must swap axes the
-way `showTooptip` does. A site that hardcodes screen x/y works in horizontal and
-silently misplaces itself in vertical.
+**All geometry goes through `geom` (`src/geometry.js`).** Navio has two
+logical axes: the ATTRIBUTE axis (columns) and the RECORD axis (one line per
+row). `geom.cellA(name, level)` and `geom.cellR(rowId, level)` give the
+attribute-axis and record-axis positions respectively — those names are not
+screen x and y. `nv.orientation = "vertical"` transposes them via
+`geom.toXY`/`geom.toWH`. Any new geometry must be expressed in (attribute,
+record) and mapped through `geom.toXY`/`geom.toWH`, and any code reading a
+pointer must swap axes the way `showTooltip` does. A site that hardcodes
+screen x/y works in horizontal and silently misplaces itself in vertical.
 
 **Playwright's `reuseExistingServer` will attach to another project's server.**
 It only checks that *something* answers on the port, not that it is serving this
