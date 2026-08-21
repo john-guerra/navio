@@ -106,3 +106,79 @@ test("destroy() releases the reference to the dataset", async ({ page }) => {
   });
   expect(rowsAfter).toBe(0);
 });
+
+/**
+ * The settings panel's light-dismiss handler is registered on `document` in the
+ * CAPTURE phase, so removeEventListener only detaches it when handed the same
+ * function reference. When the panel moved into src/settings-panel.js for #67,
+ * registration and removal had to move together; had they ended up holding
+ * different closures, every destroyed instance would leave a live
+ * document-level handler behind and nothing here would have noticed - no other
+ * test in this file opens the panel at all.
+ *
+ * The counting wrapper is installed with addInitScript so it is in place before
+ * the fixture's own script constructs Navio.
+ */
+test("destroy() detaches the panel's capturing document listener", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    window.__capturing = 0;
+    const add = document.addEventListener.bind(document);
+    const remove = document.removeEventListener.bind(document);
+    const isCapture = (opts) =>
+      opts === true || (opts && typeof opts === "object" && opts.capture);
+    document.addEventListener = (type, fn, opts) => {
+      if (type === "pointerdown" && isCapture(opts)) window.__capturing += 1;
+      return add(type, fn, opts);
+    };
+    document.removeEventListener = (type, fn, opts) => {
+      if (type === "pointerdown" && isCapture(opts)) window.__capturing -= 1;
+      return remove(type, fn, opts);
+    };
+  });
+
+  await page.goto("/test/e2e/fixtures/single.html");
+  await expect(page.locator("#nv canvas")).toHaveCount(1);
+
+  await page.locator("#nv ._nv_gear").click();
+  await expect(page.locator("#nv ._nv_settings")).toBeVisible();
+  expect(
+    await page.evaluate(() => window.__capturing),
+    "opening the panel registers the light-dismiss listener"
+  ).toBe(1);
+
+  await page.evaluate(() => window.nv.destroy());
+
+  expect(
+    await page.evaluate(() => window.__capturing),
+    "destroy() left a capturing pointerdown listener on document"
+  ).toBe(0);
+});
+
+/**
+ * Opening the panel lifts the `overflow` of any clipping ancestor so the panel
+ * is not cut off (#100). destroy() has to put those back, or the host page is
+ * left permanently scrollable where it was not before.
+ */
+test("destroy() puts back the host overflow the panel lifted", async ({
+  page,
+}) => {
+  await page.goto("/test/e2e/fixtures/clipped.html");
+  await expect(page.locator("#nv canvas")).toHaveCount(1);
+
+  const hostOverflow = () =>
+    page.evaluate(() => {
+      const el = document.querySelector("#nv").parentElement;
+      return getComputedStyle(el).overflowY;
+    });
+
+  const before = await hostOverflow();
+  await page.locator("#nv ._nv_gear").click();
+  await expect(page.locator("#nv ._nv_settings")).toBeVisible();
+
+  await page.evaluate(() => window.nv.destroy());
+  expect(await hostOverflow(), "destroy() left the host overflow lifted").toBe(
+    before
+  );
+});

@@ -35,7 +35,13 @@ npm run build > /tmp/build.log 2>&1; echo "EXIT: $?"
 ## Layout
 
 ```
-src/navio.js        ~2800 lines, ONE closure. Almost everything lives here.
+src/navio.js        ~4550 lines, ONE closure. Most things still live here.
+src/settings-panel.js   the gear, the panel, and everything drawn in it.
+                    Composition root: it builds theme.js and
+                    settings-storage.js, so navio.js constructs ONE thing.
+src/settings-storage.js the settings object and localStorage. Reaches the
+                    panel only through injected hooks - see Landmines.
+src/theme.js        THEMES and which one applies. A leaf: imports only d3.
 src/filters.js      the five filter factories + filterFromValue (serialisation)
 src/scales.js       scaleText, scaleOrdered, null-safe comparators
 src/NavioWidget.js  reactivewidgets.org wrapper: .value, input events
@@ -155,6 +161,38 @@ any z-index down to 1. It also pins the diagnosis: if that test ever fails, the
 problem really has become one of stacking. Note too that observablehq.com renders
 the whole notebook body inside one sandboxed cross-origin iframe, so nothing
 Navio draws can escape a cell by z-index anyway.
+
+**A module gets GETTERS, not values.** `src/navio.js` hands each extracted
+module a context object, and every non-`const` closure binding in it must cross
+as `get x() { return x }`. This is not style. `init()` rebinds `selection` from
+the caller's argument to a d3 selection, and `canvas` is assigned there too -
+both long after the module factories are constructed. A plain property captures
+the value at construction and goes stale, and for `selection` that means the
+module holds the caller's *string* and throws on `.append()`.
+
+The rule is about WHAT the binding is, not which name it has: a `const`
+(`instanceId`), a hoisted `function` declaration (`announce`, `visibleAttribs`,
+`getAttribName`, `moveAttrToPos`) and `nv` - never rebound - are safe as plain
+properties. **Every `let` in the chain at line 71 crosses as a getter**, and one
+the module writes back to needs a setter as well (`height`, `hiddenAttribs`).
+`test/e2e/67-extraction.spec.js` pins this; 20 of the 25 e2e fixtures pass
+`d3.select("#nv")` and none passed a string before that spec, so the string
+path is easy to leave untested.
+
+**The settings modules must not import each other.** `settings-panel.js`
+imports `settings-storage.js` and `theme.js`; neither imports back. Storage
+reaches the panel through `hooks` (`redraw`, `isOpen`, `getCollapsed`,
+`setCollapsed`) and `applyTheme` lives in the panel rather than beside the
+theme table, because it restyles the panel's own elements. Function-declaration
+cycles survive ES modules; **factories returning objects do not** - with a cycle
+neither can be constructed first.
+
+**Construct the panel where the slice was, never at the top of the closure.**
+It registers seven public methods on `nv`, and `OPTION_NAMES` snapshots
+`Object.keys(nv)` at ~336. Built any earlier, those methods become "options":
+`getOptions()` reports them, `applyOptions` accepts them, and
+`test/e2e/104-describe.spec.js` fails. `npm run check` does not run e2e, so that
+one lands green on the gate.
 
 **Element ids are not unique across instances.** `#level0`, `#closeButton` and
 friends are emitted per instance. `d3.select("#level0")` returns the *first*
