@@ -427,6 +427,27 @@ Expected: PASS, 7 tests.
 
 - [ ] **Step 5: Construct `geom` in `init()`, unused**
 
+**`geom` must be declared in the top-level `let` chain, not with `const`
+inside `init()`.** `init()` spans `src/navio.js:677-976` and is one function
+among many top-level siblings in `navio()`'s closure — `drawLevelBorder`
+(`1442`), `updateLevel` (`3322`), `showTooltip`, and every other function this
+plan threads `geom` through are declared *outside* `init()`, at the same
+nesting level as `init()` itself, not inside it. A `const` declared inside
+`init()`'s body is scoped to `init()` alone; every one of those sibling
+functions — and every place that needs to *pass* `geom` into them — would hit
+`ReferenceError: geom is not defined`. This is exactly the same category of
+mistake the "getters not values" landmine warns about, one level removed: not
+a stale binding, but a binding that was never reachable in the first place.
+
+The fix matches how `xScale`, `levelScale` and `canvas` already work: declared
+bare in the chain at the top of `navio()` (`src/navio.js:71-165`, e.g. `xScale,`
+with no initializer at line 87), then *assigned* — not re-declared — inside
+`init()`. `geom` is assigned exactly once, the same category as `xScale`
+itself, so this is safe.
+
+In the `let` chain (`src/navio.js:71-165`), add `geom,` as a new bare entry,
+anywhere in the list (e.g. beside `xScale,`).
+
 In `src/navio.js`, add the import beside the others:
 
 ```js
@@ -437,7 +458,7 @@ After line 935 (`x = function (val, level) { return levelScale(level) + xScale(v
 add:
 
 ```js
-    const geom = createGeometry({
+    geom = createGeometry({
       nv,
       xScale,
       levelScale,
@@ -452,6 +473,8 @@ add:
       },
     });
 ```
+
+(Assignment, `geom = createGeometry(...)` — no `const`, no `let`.)
 
 Do not remove `x`, `invertScaleCache`, or `invalidateInvertCache` yet — every
 current caller still uses them. This step only proves `geom` builds without
@@ -547,10 +570,11 @@ function converted in Task 4). For this task, change only the call to pass
   }
 ```
 
-`geom` is visible here because it is declared with `const` inside `navio()`'s
-enclosing closure (via `init()`), and `updateLevel` is a sibling function in
-the same closure — no parameter threading needed for `updateLevel` to see
-`geom` at all; only `drawLevelBorder`'s own signature changes in this task.
+`geom` is now a bare top-level binding in `navio()`'s closure (Task 1 Step 5 —
+declared in the chain, assigned once in `init()`), so `updateLevel` reads it
+via ordinary closure, exactly as it already reads `xScale`/`yScales` today.
+Only `drawLevelBorder`'s own signature changes in this task — `updateLevel`'s
+body is touched (one call site), but its own signature is not, until Task 4.
 
 - [ ] **Step 3: Full gate**
 
@@ -581,10 +605,33 @@ update.
 - Modify: `src/navio.js`
 
 **Interfaces:**
-- Consumes: `geom` (Task 1), the `drawLevelBorder(geom, i)` pattern (Task 2).
+- Consumes: `geom` (Task 1, now a bare top-level binding — see Task 1 Step 5's
+  correction), the `drawLevelBorder(geom, i)` pattern (Task 2).
 - Produces: `columnAtPointer(geom, event, level)`, `dropTargetFor(geom, event, d)`,
   `showDropIndicator(geom, event, d)`, `showTooltip(geom, xOnWidget, yOnWidget, clientX, clientY, level)`,
-  `restoreBrushes(geom)`, `updateBrushes(geom, d, i)`.
+  `restoreBrushes(geom)`, `updateBrushes(geom, d, i)`, `onMouseOver(geom, event, overData)`,
+  `draggedHeaderTransform(geom, event, d)`, `attribDragstarted(geom, event, d)`,
+  `attribDragged(geom, event, d)`, `attribDragended(geom, event, d)`.
+  `nv.setFilters`'s own signature is unchanged (public API); only its body's
+  call to `restoreBrushes` gains the `geom` argument.
+
+Every function this task converts has **more than one caller** in at least
+one case (`showTooltip`, `restoreBrushes`, `dropTargetFor`) — the steps below
+were built by counting every real call site with `node`, not by inspecting
+each function's own definition in isolation. Confirm the counts have not
+drifted since this plan was written (`ca40f41`) before trusting them:
+
+```bash
+git diff --stat ca40f41 HEAD -- src/navio.js   # empty = safe to trust line numbers
+node -e '
+const fs = require("fs");
+const s = fs.readFileSync("src/navio.js", "utf8");
+for (const n of ["columnAtPointer","dropTargetFor","showDropIndicator","showTooltip","restoreBrushes","updateBrushes","onMouseOver","attribDragstarted","attribDragged","attribDragended","draggedHeaderTransform"]) {
+  const m = s.match(new RegExp("(^|[^.\\w$])" + n + "\\s*\\(", "g")) || [];
+  console.log(n.padEnd(20) + m.length + " sites (incl. its own def line)");
+}
+'
+```
 
 - [ ] **Step 1: `columnAtPointer`, `dropTargetFor`**
 
@@ -933,14 +980,208 @@ After:
         ...
 ```
 
-This callback is registered during `init()`, before `geom` is constructed a
-few lines later at Task 1's insertion point — that ordering does not matter.
-The callback is only *invoked* on a real user click, long after `init()` has
-returned in full, by which point `geom` is fully assigned. Only the
-*construction* of `geom` has an ordering requirement (after line 935); mere
-*references* to it from a closure defined earlier in the same function do not.
+This callback is defined textually *before* the line that assigns `geom`
+(Task 1 Step 5, after line 935) — that does not matter. `geom` is a top-level
+binding in the same closure (like `xScale`), so any reference to it, from any
+function in the file, resolves to whatever `geom` currently holds at the
+moment that code actually *runs*. This callback only runs on a real user
+click, long after `init()` has returned and `geom` is fully assigned. Only the
+*assignment itself* has an ordering requirement (it must happen after line
+935, since `xScale`/`levelScale` must already hold their final values) —
+*reading* `geom` from elsewhere never does.
 
-- [ ] **Step 8: Full gate**
+- [ ] **Step 8: `onMouseOver` — the second caller of `showTooltip`**
+
+`showTooltip` has two callers, not one: `brushed` (Step 5, nested inside
+`updateBrushes`) and `onMouseOver` — a **top-level** function (same nesting
+level as `drawLevelBorder`, not nested inside anything), registered as
+`.on("mousemove", onMouseOver)` inside `updateBrushes`'s `brushG` setup
+(`src/navio.js:1697`). Missing this caller would leave `showTooltip`'s
+signature changed (Step 3) while one of its two call sites still passed the
+old argument list.
+
+Before:
+
+```js
+  function onMouseOver(event, overData) {
+    const xOnWidget = d3.pointer(event)[0],
+      yOnWidget = d3.pointer(event)[1],
+      clientX = event.clientX,
+      clientY = event.clientY;
+    ...
+    if (!overData.data || overData.data.length === 0) {
+      ...
+      return;
+    }
+    showTooltip(xOnWidget, yOnWidget, clientX, clientY, overData.level);
+  }
+```
+
+After:
+
+```js
+  function onMouseOver(geom, event, overData) {
+    const xOnWidget = d3.pointer(event)[0],
+      yOnWidget = d3.pointer(event)[1],
+      clientX = event.clientX,
+      clientY = event.clientY;
+    ...
+    if (!overData.data || overData.data.length === 0) {
+      ...
+      return;
+    }
+    showTooltip(geom, xOnWidget, yOnWidget, clientX, clientY, overData.level);
+  }
+```
+
+`onMouseOver` does not read `this`, so its registration site (inside
+`updateBrushes`, Step 5/6's `brushG` chain) needs no `.call(this, ...)`
+preservation — a plain arrow function suffices:
+
+```js
+    brushG
+      .call(dBrushes[level])
+      .on("mousemove", (event, d) => onMouseOver(geom, event, d))
+      .on("click", onSelectByValue)
+      .on("mouseout", onMouseOut);
+```
+
+(`onSelectByValue` and `onMouseOut` are unaffected — the former is nested
+inside `updateBrushes` and already has `geom` via closure per Step 5, the
+latter touches no geometry.)
+
+- [ ] **Step 9: `restoreBrushes`'s second caller, in the public `nv.setFilters`**
+
+`restoreBrushes` has two callers: `nv.hardUpdate` (Step 4) and `nv.setFilters`
+(`src/navio.js`, near line 3753 — the reactive-widget `setFilters` from #60).
+`nv.setFilters(value)` is **public API and its own signature must not
+change** (Global Constraints), but its body is a top-level function in the
+same closure as `geom` and can read it directly:
+
+```js
+    // The brush is how a range filter is expressed on screen; put it back so a
+    // synced widget can be dragged, not just read.
+    restoreBrushes(geom);
+```
+
+- [ ] **Step 10: the header-drag-to-reorder family**
+
+`dropTargetFor` (Step 1) has a **second** caller besides `showDropIndicator`
+(Step 2): `attribDragended`. That function, `attribDragstarted`,
+`attribDragged` and `draggedHeaderTransform` are four more top-level
+functions with geometry, all reached only through one `d3.drag()` registered
+inside `drawAttribHeaders` (a Task 6 target) at `src/navio.js:2387-2389`.
+They are converted here, in Task 3, because they are pointer-driven handlers
+like everything else in this task — but the one-line change to their
+*registration* site necessarily touches `drawAttribHeaders`, ahead of Task 6.
+**Task 6 must not re-touch the three `.on(...)` lines below** — only the rest
+of `drawAttribHeaders`'s geometry (its label-positioning math) remains for
+that task.
+
+`draggedHeaderTransform`:
+
+```js
+  // before
+  function draggedHeaderTransform(event, d) {
+    const p = toXY(
+      dragAlongA(event) + nv.attribFontSize / 2,
+      yScales[d.level].range()[0]
+    );
+    return `translate(${p.x}, ${p.y})`;
+  }
+
+  // after
+  function draggedHeaderTransform(geom, event, d) {
+    const p = geom.toXY(
+      dragAlongA(event) + nv.attribFontSize / 2,
+      geom.recordAxisStart()
+    );
+    return `translate(${p.x}, ${p.y})`;
+  }
+```
+
+`attribDragstarted`, `attribDragged`:
+
+```js
+  // before
+  function attribDragstarted(event, d) {
+    ...
+    d3.select(this.parentNode).attr("transform", (dd) =>
+      draggedHeaderTransform(event, dd)
+    );
+  }
+  function attribDragged(event, d) {
+    d3.select(this.parentNode).attr("transform", (dd) =>
+      draggedHeaderTransform(event, dd)
+    );
+    showDropIndicator(event, d);
+  }
+
+  // after
+  function attribDragstarted(geom, event, d) {
+    ...
+    d3.select(this.parentNode).attr("transform", (dd) =>
+      draggedHeaderTransform(geom, event, dd)
+    );
+  }
+  function attribDragged(geom, event, d) {
+    d3.select(this.parentNode).attr("transform", (dd) =>
+      draggedHeaderTransform(geom, event, dd)
+    );
+    showDropIndicator(geom, event, d);
+  }
+```
+
+`attribDragended` (its geometry-touching lines only):
+
+```js
+  // before
+    const attrDraggedInto = dropTargetFor(event, d);
+    if (attrDraggedInto === undefined || attrDraggedInto === d.attrib) return;
+
+    let pos;
+    d3.select(this.parentNode).attr("transform", function (dd) {
+      const p = toXY(x(dd.name, dd.level), yScales[dd.level].range()[0]);
+      return `translate(${p.x}, ${p.y})`;
+    });
+
+  // after
+  function attribDragended(geom, event, d) {
+    ...
+    const attrDraggedInto = dropTargetFor(geom, event, d);
+    if (attrDraggedInto === undefined || attrDraggedInto === d.attrib) return;
+
+    let pos;
+    d3.select(this.parentNode).attr("transform", function (dd) {
+      const p = geom.toXY(geom.cellA(dd.name, dd.level), geom.recordAxisStart());
+      return `translate(${p.x}, ${p.y})`;
+    });
+```
+
+The registration, inside `drawAttribHeaders` (`src/navio.js:2387-2389`) — all
+three preserve `this` the same way the `updateBrushes`/`.each()` wrapper does
+(Step 6), since `attribDragstarted`/`attribDragged`/`attribDragended` all use
+`d3.select(this.parentNode)`:
+
+```js
+  // before
+            .on("start", attribDragstarted)
+            .on("drag", attribDragged)
+            .on("end", attribDragended)
+
+  // after
+            .on("start", function (event, d) {
+              attribDragstarted.call(this, geom, event, d);
+            })
+            .on("drag", function (event, d) {
+              attribDragged.call(this, geom, event, d);
+            })
+            .on("end", function (event, d) {
+              attribDragended.call(this, geom, event, d);
+            })
+```
+
+- [ ] **Step 11: Full gate**
 
 ```bash
 npm run check > /tmp/check3.log 2>&1; echo "EXIT: $?"
@@ -950,13 +1191,15 @@ NAVIO_TEST_PORT=4190 npx playwright test > /tmp/e2e3.log 2>&1; echo "EXIT: $?"
 Expected: both `EXIT: 0`. Pay particular attention to specs exercising sort
 (`105-sort-by-name.spec.js`), brushing, drag-to-reorder, and tooltips —
 `tooltip-placement.spec.js`, `89-settings-panel.spec.js`'s drag tests,
-`sort-preserves-selection.spec.js`.
+`sort-preserves-selection.spec.js`. Drag-to-reorder specifically exercises
+Step 10's `attribDragstarted`/`attribDragged`/`attribDragended` family and the
+`this`-preservation in their wrapper.
 
-- [ ] **Step 9: Commit**
+- [ ] **Step 12: Commit**
 
 ```bash
 git add src/navio.js
-git commit -m "Convert the pointer and brush handlers to take geom"
+git commit -m "Convert the pointer, brush and drag-to-reorder handlers to take geom"
 ```
 
 ---
@@ -1362,14 +1605,21 @@ links benchmark: before <N> ms, after <M> ms / 100 hardUpdate() at 5000 links"
 - Consumes: `geom`.
 - Produces: `drawAttribHeaders(geom, attribOverlay, attribOverlayEnter, headerHit)`,
   `drawAttributesHolders(geom, levelOverlay, levelOverlayEnter)`,
-  `measureHeaderBand(geom)`, `growHeaderLabel(geom, hitNode, d, grown, event)`.
+  `measureHeaderBand(geom)`.
 
-`grownFontSize`, `applyHeaderBand` are **not** converted — the first is pure
-typography math with no geometry-object dependency beyond `bandwidthA()`
-(passed as a plain number, not `geom`, since it is called with a precomputed
-value in some paths); the second computes `headerSpill`/`nv.y0` and is a
+`grownFontSize`, `growHeaderLabel`, `applyHeaderBand` are **not** converted.
+`growHeaderLabel` was in the design's original sketch of this task but has no
+geometry at all — its body (`src/navio.js:2261-2278`) does a `d3.select`/
+`svg.selectAll` lookup and calls `grownFontSize`, `nv.attribFontSize`,
+`nv.attribWidth`; none of that touches `xScale`/`yScales`/`levelScale`.
+`grownFontSize` is pure typography math with no geometry-object dependency
+beyond `bandwidthA()` (passed as a plain number in some call paths, not
+`geom` itself); `applyHeaderBand` computes `headerSpill`/`nv.y0` and is a
 derive-phase function, explicitly out of scope per this plan's Global
-Constraints correction.
+Constraints correction. **`drawAttribHeaders`'s `.on("start"/"drag"/"end",
+...)` registration was already converted in Task 3 Step 10 — do not re-touch
+those three lines here.** Only the label-positioning geometry below is this
+task's to convert.
 
 - [ ] **Step 1: `drawAttribHeaders`**
 
@@ -1422,13 +1672,19 @@ Update its caller in `drawBrushes` (Task 3):
 `drawAttributesHolders(levelOverlay, levelOverlayEnter);` →
 `drawAttributesHolders(geom, levelOverlay, levelOverlayEnter);`.
 
-- [ ] **Step 3: `measureHeaderBand`, `growHeaderLabel`**
+- [ ] **Step 3: `measureHeaderBand`**
 
-Both read `xScale.bandwidth()` (lines `2242`, `2323`) for sizing math — replace
+Reads `xScale.bandwidth()` at `src/navio.js:2323` for sizing math — replace
 with `geom.bandwidthA()`, add `geom` as a parameter, update the one call site
 in `applyHeaderBand` (which itself stays unconverted, per this task's own
 first paragraph, but still must pass `geom` through since it calls
 `measureHeaderBand`):
+
+`grownFontSize` also reads `xScale.bandwidth()`, at line `2242` — but directly
+via closure, the same way it already reads `isVertical()`, `nv.y0` and
+`headerSpill`. It needs **no change at all**: `xScale` stays a closure binding
+after this plan (Task 7's correction), so `grownFontSize` keeps working
+exactly as it does today, unconverted. Do not add `geom` to it.
 
 ```js
   function applyHeaderBand() {
