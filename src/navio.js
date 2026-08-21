@@ -90,7 +90,6 @@ function navio(selection, _h) {
     // Built once in init() (see the geom = createGeometry(...) call below);
     // not read anywhere yet. Later tasks in this plan convert renderers to
     // call it, at which point this disable comes back out.
-    // eslint-disable-next-line no-unused-vars
     geom,
     height = _options
       ? _options.height !== undefined
@@ -1460,14 +1459,11 @@ function navio(selection, _h) {
     context.restore();
   } // drawItem
 
-  function drawLevelBorder(i) {
+  function drawLevelBorder(geom, i) {
     context.save();
     context.beginPath();
-    const origin = toXY(levelScale(i), yScales[i].range()[0] - 1),
-      size = toWH(
-        xScale.range()[1] + 1,
-        yScales[i].range()[1] + 2 - yScales[i].range()[0]
-      );
+    const origin = geom.toXY(geom.levelStartA(i), geom.recordAxisStart() - 1),
+      size = geom.toWH(geom.levelExtentA() + 1, geom.recordExtent() + 2);
     context.rect(origin.x, origin.y, size.width, size.height);
     context.strokeStyle = theme().border;
     context.lineWidth = 1;
@@ -3341,7 +3337,7 @@ function navio(selection, _h) {
   }
 
   function updateLevel(levelData, i) {
-    drawLevelBorder(i);
+    drawLevelBorder(geom, i);
     for (let rep of levelData.representatives) {
       drawItem(rep, i);
     }
