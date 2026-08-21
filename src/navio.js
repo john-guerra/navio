@@ -32,6 +32,7 @@ import {
   getAttribsFromObjectRecursive,
   getAttribsFromObjectAsFn,
 } from "./utils.js";
+import { createTheme } from "./theme.js";
 
 let navioInstanceCount = 0;
 
@@ -1246,6 +1247,21 @@ function navio(selection, _h) {
       : attribsOrdered;
   }
 
+  // The theme module is a leaf: it resolves which theme applies and what its
+  // colours are, and knows nothing about the panel. `selection` crosses as a
+  // GETTER because init() rebinds it at ~710 - see the module's own comment
+  // and docs/ai/2026-08-20-navio-decomposition-design.md.
+  const _theme = createTheme({
+    nv,
+    get selection() {
+      return selection;
+    },
+  });
+  const { theme, divisionsColour, tooltipBackground } = _theme;
+  // Stays a public method, and theme() reads it back off nv so that replacing
+  // it still works.
+  nv.resolvedTheme = _theme.resolvedTheme;
+
   // ---------------------------------------------------------------------
   // Settings panel (#89)
   //
@@ -1788,122 +1804,6 @@ function navio(selection, _h) {
           first.focus();
         }
       });
-  }
-
-  /**
-   * The colours of Navio's own furniture, per theme.
-   *
-   * Navio ships no stylesheet - every colour is an inline style or a canvas
-   * stroke - so a dark page got black labels on a black ground and there was no
-   * CSS hook to fix it from outside. These are the values that answer to
-   * nv.theme; the DATA scales deliberately do not appear here.
-   *
-   * The light column is what Navio drew before 0.3.0, so nothing moves on a
-   * light page.
-   */
-  const THEMES = {
-    light: {
-      ink: "#000000", // labels, counts, the close button glyph
-      muted: "#666666", // secondary text in the panel
-      faint: "#777777", // tooltip footnote
-      border: "#000000", // the box around a level
-      surface: "#ffffff", // panel and button backgrounds
-      hairline: "#bbbbbb", // panel and button borders
-      divisions: "white", // lines between rows
-      tooltipBg: "#b2ddf1",
-      tooltipInk: "#000000",
-    },
-    dark: {
-      ink: "#e9eaee",
-      muted: "#9aa0aa",
-      faint: "#8b919b",
-      border: "#8a919c",
-      surface: "#1b1e24",
-      hairline: "#3a3f48",
-      divisions: "#1b1e24",
-      tooltipBg: "#204a5e",
-      tooltipInk: "#eef4f8",
-    },
-  };
-
-  /**
-   * Whether a dark page is being asked for. Read fresh rather than cached: with
-   * theme "auto" the answer changes when the reader changes their system
-   * setting, and a widget that only looked once would be wrong for the rest of
-   * the session.
-   */
-  /**
-   * The colour actually painted behind the widget, or null if nothing paints
-   * one all the way up.
-   *
-   * Backgrounds are transparent by default, so the nearest ancestor that
-   * actually sets one is what a reader sees behind the labels - a dark panel on
-   * a light page included.
-   */
-  function backgroundBehind() {
-    if (typeof window === "undefined" || !selection || !selection.node())
-      return null;
-    let el = selection.node();
-    while (el) {
-      const c = d3.color(getComputedStyle(el).backgroundColor);
-      if (c && c.opacity > 0) return c;
-      el = el.parentElement;
-    }
-    return null;
-  }
-
-  /**
-   * Which way to colour the chrome.
-   *
-   * "auto" means MATCH WHAT IS BEHIND ME, not "match the reader's operating
-   * system". Following prefers-color-scheme alone put a dark-themed widget on
-   * every page that had never opted into dark mode: the reader's system says
-   * dark, the page is still white, and the labels came out pale grey on white.
-   * Ten of the twelve examples in this repo are such pages, and so is most of
-   * the web.
-   *
-   * So the background decides. Only when NOTHING paints one - the browser's own
-   * canvas is showing - does the reader's preference get a say, and then only
-   * if the page declared `color-scheme`, which is precisely the page saying "I
-   * follow the reader".
-   */
-  nv.resolvedTheme = function () {
-    if (nv.theme === "dark" || nv.theme === "light") return nv.theme;
-    if (typeof window === "undefined") return "light";
-
-    const bg = backgroundBehind();
-    // L* is perceptual lightness: 50 is the middle of the range, and a ground
-    // below it needs light ink on top.
-    if (bg) return d3.lab(bg).l < 50 ? "dark" : "light";
-
-    const declared =
-      getComputedStyle(document.documentElement).colorScheme || "";
-    const prefersDark =
-      window.matchMedia &&
-      window.matchMedia("(prefers-color-scheme: dark)").matches;
-    return declared.indexOf("dark") !== -1 && prefersDark ? "dark" : "light";
-  };
-
-  /** The current chrome colours. */
-  function theme() {
-    return THEMES[nv.resolvedTheme()] || THEMES.light;
-  }
-
-  /**
-   * divisionsColor and nullColor are public options whose default is now `null`
-   * - the sentinel for "follow the theme". Anything a caller sets is theirs and
-   * is used in both themes, because a colour someone chose deliberately is not
-   * ours to override.
-   */
-  function divisionsColour() {
-    return nv.divisionsColor === null || nv.divisionsColor === undefined
-      ? theme().divisions
-      : nv.divisionsColor;
-  }
-  function tooltipBackground() {
-    return nv.tooltipBgColor === null || nv.tooltipBgColor === undefined
-      ? theme().tooltipBg
-      : nv.tooltipBgColor;
   }
 
   /**
