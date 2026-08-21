@@ -1397,7 +1397,7 @@ after:  <M> ms / 100 hardUpdate() calls at n=100000, h=600"
 **Interfaces:**
 - Consumes: `geom`.
 - Produces: `drawLinks(geom)`, `drawLink(geom, link)`, `drawLevelConnections(geom, level)`,
-  `drawCounts(geom, levelOverlay, levelOverlayEnter)`.
+  `drawCounts(geom, levelOverlay, levelOverlayEnter)`, `drawFilterExplanationsHTML(geom)`.
   `drawLine` is unchanged — it takes already-resolved screen points and has no
   geometry of its own.
 
@@ -1519,26 +1519,128 @@ of `drawLevelConnections(i)`.
 
 - [ ] **Step 3: `drawCounts`**
 
-Before (geometry-touching lines):
+**Correction, found during Task 5's dispatch, not in the original draft of
+this step:** the before/after code below this line previously showed
+`drawFilterExplanationsHTML`'s `levelRight` snippet under the `drawCounts`
+heading — a copy-paste error at plan-writing time. Task 1's own interface
+table (§4) had the correct attribution all along
+(`` `levelStartA(level)` ... `drawFilterExplanationsHTML`'s `levelRight`
+(`2090`), `drawCounts` (`2050`) ``); this step's code did not match it. The
+real `drawCounts` (`src/navio.js:2033-2057`) is shown correctly below.
+`drawFilterExplanationsHTML` was never assigned to any task in this plan as a
+result of the same error — Step 3a below covers it.
+
+Before:
 
 ```js
-    const levelRight = (level) => levelScale(level) + xScale.range()[1] + 4;
-    ...
-        : Math.max(220, xScale.range()[1]);
+  function drawCounts(levelOverlay, levelOverlayEnter) {
+    const vertical = isVertical();
+    // Along A: the level's own leading edge, or just past its columns.
+    const alongA = (i) =>
+      vertical ? levelScale(i) + xScale.range()[1] + 15 : levelScale(i);
+    // Along R: just past the records, or at the point where they start.
+    const alongR = (i) =>
+      vertical ? yScales[i].range()[0] : yScales[i].range()[1] + 15;
+
+    levelOverlayEnter
+      .append("text")
+      .merge(levelOverlay.select("text.numNodesLabel"))
+      .attr("class", "numNodesLabel")
+      .style("font-family", "sans-serif")
+      .style("fill", theme().ink)
+      .style("pointer-events", "none")
+      .attr("x", function (_, i) {
+        return toXY(alongA(i), alongR(i)).x;
+      })
+      .attr("y", function (_, i) {
+        return toXY(alongA(i), alongR(i)).y;
+      })
+      .text(function (d) {
+        return nv.fmtCounts(d.length);
+      });
+  }
 ```
 
 After:
 
 ```js
   function drawCounts(geom, levelOverlay, levelOverlayEnter) {
-    const levelRight = (level) => geom.levelStartA(level) + geom.levelExtentA() + 4;
-    ...
-        : Math.max(220, geom.levelExtentA());
+    const vertical = geom.isVertical();
+    const alongA = (i) =>
+      vertical
+        ? geom.levelStartA(i) + geom.levelExtentA() + 15
+        : geom.levelStartA(i);
+    const alongR = (i) =>
+      vertical
+        ? geom.recordAxisStart()
+        : geom.recordAxisStart() + geom.recordExtent() + 15;
+
+    levelOverlayEnter
+      .append("text")
+      .merge(levelOverlay.select("text.numNodesLabel"))
+      .attr("class", "numNodesLabel")
+      .style("font-family", "sans-serif")
+      .style("fill", theme().ink)
+      .style("pointer-events", "none")
+      .attr("x", function (_, i) {
+        return geom.toXY(alongA(i), alongR(i)).x;
+      })
+      .attr("y", function (_, i) {
+        return geom.toXY(alongA(i), alongR(i)).y;
+      })
+      .text(function (d) {
+        return nv.fmtCounts(d.length);
+      });
+  }
 ```
+
+(`yScales[i].range()[0]` is `geom.recordAxisStart()`; `yScales[i].range()[1]`
+is `geom.recordAxisStart() + geom.recordExtent()` — every level shares the
+same y-range, established in Task 2's review.)
 
 Update `drawCounts`'s caller in `drawBrushes` (Task 3):
 `drawCounts(levelOverlay, levelOverlayEnter);` →
 `drawCounts(geom, levelOverlay, levelOverlayEnter);`.
+
+- [ ] **Step 3a: `drawFilterExplanationsHTML`**
+
+Not in the original draft of this task — added for the reason in Step 3's
+correction note. Single caller (`drawBrushes`, `src/navio.js:2680`), geom
+visible via closure exactly as for `drawCounts`.
+
+Before (geometry-touching lines, `src/navio.js:2084-2208`):
+
+```js
+    const levelRight = (level) => levelScale(level) + xScale.range()[1] + 4;
+    const explanationWidth = (level) =>
+      level < dataIs.length - 1
+        ? Math.max(70, levelRight(level + 1) - levelRight(level) - 8)
+        : Math.max(220, xScale.range()[1]);
+    ...
+        const p = toXY(levelRight(i), yScales[i].range()[1] + 16);
+        return `translate(${p.x}px, ${p.y}px)`;
+```
+
+After:
+
+```js
+  function drawFilterExplanationsHTML(geom) {
+    const levelRight = (level) =>
+      geom.levelStartA(level) + geom.levelExtentA() + 4;
+    const explanationWidth = (level) =>
+      level < dataIs.length - 1
+        ? Math.max(70, levelRight(level + 1) - levelRight(level) - 8)
+        : Math.max(220, geom.levelExtentA());
+    ...
+        const p = geom.toXY(
+          levelRight(i),
+          geom.recordAxisStart() + geom.recordExtent() + 16
+        );
+        return `translate(${p.x}px, ${p.y}px)`;
+```
+
+Update its one caller in `drawBrushes`:
+`drawFilterExplanationsHTML();` → `drawFilterExplanationsHTML(geom);`.
 
 - [ ] **Step 4: Benchmark the links path (spec §6's flagged-unmeasured case)**
 
