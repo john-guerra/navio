@@ -44,3 +44,6 @@ docs/ai/*.pdf
 # Secrets. Nothing in this repo reads one today - this is here so that the day
 # something does, the file is already ignored rather than ignored after the fact.
 .env
+
+# Subagent-driven-development scratch (ledgers, briefs, review packages).
+.superpowers/
