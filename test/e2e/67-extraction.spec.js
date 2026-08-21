@@ -18,7 +18,13 @@ import { test, expect } from "@playwright/test";
 //     get selection() { return selection; }
 // to
 //     selection,
-// and this file fails while the rest of the suite still passes.
+// and all three of these fail.
+//
+// They are not the ONLY tests that fail under that change - the three
+// senate-example tests fail too, because examples/senate/assets/js/main.js:105
+// is the one other place in the repo that constructs from a string. That
+// coverage is incidental: it reports "the senate example throws" rather than
+// which binding went stale, and it vanishes the day that example is rewritten.
 
 const FIXTURE = "/test/e2e/fixtures/string-selector.html";
 

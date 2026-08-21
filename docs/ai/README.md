@@ -15,6 +15,14 @@ in one person's chat history or local notes.
   full whole-repository review (AI-coding readiness, GitHub issue triage, two
   root-caused bugs, reactive-widget/Inputs.bind compliance gap, vertical
   layout feasibility, performance review) and the resulting project roadmap.
+- [`2026-08-20-navio-decomposition-design.md`](./2026-08-20-navio-decomposition-design.md) —
+  design for the first slice of #67, extracting the settings panel, its storage
+  and the theme out of `src/navio.js`. Its section 11 records the ten defects an
+  independent review found in the first draft, because the cause — measuring
+  references with greps that count comments, strings and arrow parameters —
+  will recur in the remaining extractions.
+- [`2026-08-20-navio-decomposition-plan.md`](./2026-08-20-navio-decomposition-plan.md) —
+  the five gated tasks that implemented that design.
 
 ## Conventions
 

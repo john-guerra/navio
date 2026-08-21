@@ -1369,7 +1369,6 @@ export function createSettingsPanel(ctx) {
       settingsButton.remove();
       settingsButton = null;
     }
-    liftedClips = null;
   }
 
   return {

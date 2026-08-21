@@ -165,14 +165,19 @@ Navio draws can escape a cell by z-index anyway.
 **A module gets GETTERS, not values.** `src/navio.js` hands each extracted
 module a context object, and every non-`const` closure binding in it must cross
 as `get x() { return x }`. This is not style. `init()` rebinds `selection` from
-the caller's argument to a d3 selection, and `data`, `canvas` and `context` are
-reassigned wholesale on later calls - all of them long after the module
-factories are constructed. A plain property captures the value at construction
-and goes stale, and for `selection` that means the module holds the caller's
-*string* and throws on `.append()`. Only `nv` and `instanceId` are safe as plain
-properties, because they are never rebound. `test/e2e/67-extraction.spec.js`
-pins this; nineteen of the twenty fixtures pass `d3.select("#nv")`, so the
-string path is easy to leave untested.
+the caller's argument to a d3 selection, and `canvas` is assigned there too -
+both long after the module factories are constructed. A plain property captures
+the value at construction and goes stale, and for `selection` that means the
+module holds the caller's *string* and throws on `.append()`.
+
+The rule is about WHAT the binding is, not which name it has: a `const`
+(`instanceId`), a hoisted `function` declaration (`announce`, `visibleAttribs`,
+`getAttribName`, `moveAttrToPos`) and `nv` - never rebound - are safe as plain
+properties. **Every `let` in the chain at line 71 crosses as a getter**, and one
+the module writes back to needs a setter as well (`height`, `hiddenAttribs`).
+`test/e2e/67-extraction.spec.js` pins this; 20 of the 25 e2e fixtures pass
+`d3.select("#nv")` and none passed a string before that spec, so the string
+path is easy to leave untested.
 
 **The settings modules must not import each other.** `settings-panel.js`
 imports `settings-storage.js` and `theme.js`; neither imports back. Storage
