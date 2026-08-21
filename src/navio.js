@@ -820,15 +820,15 @@ function navio(selection, _h) {
       .on("click", function (event) {
         if (!dataIs.length || !yScales.length) return;
         const p = d3.pointer(event, svg.node());
-        const alongA = isVertical() ? p[1] : p[0],
-          alongR = isVertical() ? p[0] : p[1];
+        const alongA = geom.isVertical() ? p[1] : p[0],
+          alongR = geom.isVertical() ? p[0] : p[1];
 
-        const level = invertOrdinalScale(levelScale, alongA);
+        const level = geom.levelAtA(alongA);
         if (level === undefined || !yScales[level]) return;
         // The header band only; the data area belongs to the brush.
-        if (alongR >= yScales[level].range()[0]) return;
+        if (alongR >= geom.recordAxisStart()) return;
 
-        const attrib = columnAtPointer(event, level);
+        const attrib = columnAtPointer(geom, event, level);
         if (attrib === undefined) return;
 
         const el = this;
@@ -1011,12 +1011,13 @@ function navio(selection, _h) {
    *
    * Taken from https://bl.ocks.org/shimizu/808e0f5cadb6a63f28bb00082dc8fe3f
    *
-   * Called from showTooltip and onSelectByRange, so it runs on every mousemove
-   * during a hover or a brush drag. It used to build a fresh d3.scaleQuantize
-   * each time - and worse, `scale.domain()` on a band scale returns a COPY, so
-   * a 24k-row level allocated a 24k-element array per pointer event. Cached per
-   * scale instead. See #62.
+   * Used to be called from showTooltip and onSelectByRange; both now go
+   * through geom's own attribAtA/rowAtR instead (geometry injection, task 3),
+   * which leaves this with no callers. Left in place - deleting it along with
+   * invertScaleCache/invalidateInvertCache is a later task in that same plan,
+   * once every remaining caller of the old cache has moved to geom's.
    */
+  // eslint-disable-next-line no-unused-vars
   function invertOrdinalScale(scale, x) {
     let qScale = invertScaleCache.get(scale);
     if (!qScale) {
@@ -1657,7 +1658,7 @@ function navio(selection, _h) {
     notifyChange({ silent });
   }
 
-  function updateBrushes(d, level) {
+  function updateBrushes(geom, d, level) {
     // The brush selects a RANGE OF RECORDS, so it runs along R: brushY when
     // records go down the screen, brushX when they go across (#22).
     //
@@ -1668,16 +1669,20 @@ function navio(selection, _h) {
     // rejects each one - "<rect> attribute y: Expected length, NaN", several
     // per redraw. An empty widget has nothing to brush, so collapse the
     // attribute extent to zero rather than letting it go non-finite.
-    const domain = xScale.domain(),
-      aLo = domain.length ? x(domain[0], level) : 0,
-      aHi = domain.length
-        ? x(domain[domain.length - 1], level) + xScale.bandwidth() * 1.1
+    //
+    // Domain emptiness (#hiding-every-column) is attribute-list state, not
+    // geometry - read it from visibleAttribs(), not the raw scale.
+    const visible = visibleAttribs(),
+      aLo = visible.length ? geom.cellA(getAttribName(visible[0]), level) : 0,
+      aHi = visible.length
+        ? geom.cellA(getAttribName(visible[visible.length - 1]), level) +
+          geom.bandwidthA() * 1.1
         : 0,
-      rLo = yScales[level].range()[0],
-      rHi = yScales[level].range()[1],
-      c0 = toXY(aLo, rLo),
-      c1 = toXY(aHi, rHi);
-    dBrushes[level] = (isVertical() ? d3.brushX() : d3.brushY())
+      rLo = geom.recordAxisStart(),
+      rHi = geom.recordAxisStart() + geom.recordExtent(),
+      c0 = geom.toXY(aLo, rLo),
+      c1 = geom.toXY(aHi, rHi);
+    dBrushes[level] = (geom.isVertical() ? d3.brushX() : d3.brushY())
       .extent([
         [c0.x, c0.y],
         [c1.x, c1.y],
@@ -1711,13 +1716,13 @@ function navio(selection, _h) {
 
     brushG
       .call(dBrushes[level]) // brush event must be before click (?) https://observablehq.com/@d3/click-vs-drag?collection=@d3/d3-drag
-      .on("mousemove", onMouseOver)
+      .on("mousemove", (event, d) => onMouseOver(geom, event, d))
       .on("click", onSelectByValue)
       .on("mouseout", onMouseOut);
 
     // Re-applied every pass: aHi comes from the current scales, so a
     // column-width change has to resize these.
-    brushG.selectAll("rect").attr(isVertical() ? "height" : "width", aHi);
+    brushG.selectAll("rect").attr(geom.isVertical() ? "height" : "width", aHi);
 
     _brush.exit().remove();
 
@@ -1745,7 +1750,7 @@ function navio(selection, _h) {
         xOnWidget = event.sourceEvent.offsetX,
         yOnWidget = event.sourceEvent.offsetY;
 
-      showTooltip(xOnWidget, yOnWidget, clientX, clientY, level);
+      showTooltip(geom, xOnWidget, yOnWidget, clientX, clientY, level);
     }
 
     function onSelectByRange(event) {
@@ -1786,9 +1791,9 @@ function navio(selection, _h) {
       let brushed = event.selection;
 
       let // first = dData.get(invertOrdinalScale(yScales[level], brushed[0] -yScales[level].bandwidth())),
-        firstIndex = dData.get(invertOrdinalScale(yScales[level], brushed[0])),
+        firstIndex = dData.get(geom.rowAtR(brushed[0], level)),
         // last = dData.get(invertOrdinalScale(yScales[level], brushed[1] -yScales[level].bandwidth()))
-        lastIndex = dData.get(invertOrdinalScale(yScales[level], brushed[1]));
+        lastIndex = dData.get(geom.rowAtR(brushed[1], level));
 
       let newFilter;
       if (event.sourceEvent.altKey) {
@@ -1870,16 +1875,16 @@ function navio(selection, _h) {
       removeAllBrushesBut(-1); // Remove all brushes
 
       // Same axis swap as showTooltip: these are screen coords (#22).
-      const onA = isVertical() ? clientY : clientX,
-        onR = isVertical() ? clientX : clientY;
+      const onA = geom.isVertical() ? clientY : clientX,
+        onR = geom.isVertical() ? clientX : clientY;
 
       const before = performance.now();
-      const itemId = invertOrdinalScale(yScales[level], onR);
+      const itemId = geom.rowAtR(onR, level);
       const after = performance.now();
       if (nv.DEBUG)
         console.log("invertOrdinalScale " + (after - before) + "ms");
 
-      let itemAttr = invertOrdinalScale(xScale, onA - levelScale(level));
+      let itemAttr = geom.attribAtA(onA, level);
       if (itemAttr === undefined) {
         if (nv.DEBUG)
           console.log(
@@ -1932,21 +1937,21 @@ function navio(selection, _h) {
     }
   } // updateBrushes
 
-  function showTooltip(xOnWidget, yOnWidget, clientX, clientY, level) {
+  function showTooltip(geom, xOnWidget, yOnWidget, clientX, clientY, level) {
     // Pointer coords are screen-space; the scales are axis-space. Vertical
     // swaps which is which (#22).
-    const onA = isVertical() ? yOnWidget : xOnWidget,
-      onR = isVertical() ? xOnWidget : yOnWidget;
+    const onA = geom.isVertical() ? yOnWidget : xOnWidget,
+      onR = geom.isVertical() ? xOnWidget : yOnWidget;
 
     let itemId;
     try {
-      itemId = invertOrdinalScale(yScales[level], onR);
+      itemId = geom.rowAtR(onR, level);
     } catch (e) {
       nv.DEBUG && console.log("Navio.showTooltip Error inverting scale", e);
       return;
     }
 
-    let itemAttr = invertOrdinalScale(xScale, onA - levelScale(level));
+    let itemAttr = geom.attribAtA(onA, level);
     const rowIdx = dData.get(itemId);
     const d = data[rowIdx];
 
@@ -1985,7 +1990,7 @@ function navio(selection, _h) {
     // if ( nv.DEBUG ) console.log("Mouse over", d);
   }
 
-  function onMouseOver(event, overData) {
+  function onMouseOver(geom, event, overData) {
     const xOnWidget = d3.pointer(event)[0],
       yOnWidget = d3.pointer(event)[1],
       clientX = event.clientX,
@@ -2015,7 +2020,7 @@ function navio(selection, _h) {
     }
 
     // if (nv.DEBUG) console.log("onMouseOver", xOnWidget, yOnWidget, clientY, event.pageY, event.offsetY, event);
-    showTooltip(xOnWidget, yOnWidget, clientX, clientY, overData.level);
+    showTooltip(geom, xOnWidget, yOnWidget, clientX, clientY, overData.level);
   }
 
   function onMouseOut() {
@@ -2401,9 +2406,15 @@ function navio(selection, _h) {
               (event) => event.shiftKey && !event.ctrlKey && !event.button
             )
             .container(attribOverlayEnter.merge(attribOverlay).node())
-            .on("start", attribDragstarted)
-            .on("drag", attribDragged)
-            .on("end", attribDragended)
+            .on("start", function (event, d) {
+              attribDragstarted.call(this, geom, event, d);
+            })
+            .on("drag", function (event, d) {
+              attribDragged.call(this, geom, event, d);
+            })
+            .on("end", function (event, d) {
+              attribDragended.call(this, geom, event, d);
+            })
         );
 
     headerHit
@@ -2669,9 +2680,13 @@ function navio(selection, _h) {
 
     // Bugfix: when adding all attribs we need to update the brush
     if (recomputeBrushes) {
-      levelOverlayEnter.merge(levelOverlay).each(updateBrushes);
+      levelOverlayEnter.merge(levelOverlay).each(function (d, i) {
+        updateBrushes.call(this, geom, d, i);
+      });
     } else {
-      levelOverlayEnter.each(updateBrushes);
+      levelOverlayEnter.each(function (d, i) {
+        updateBrushes.call(this, geom, d, i);
+      });
     }
 
     drawAttributesHolders(levelOverlay, levelOverlayEnter);
@@ -2687,26 +2702,26 @@ function navio(selection, _h) {
   }
 
   /** Where the dragged header should sit while it follows the pointer. */
-  function draggedHeaderTransform(event, d) {
-    const p = toXY(
+  function draggedHeaderTransform(geom, event, _d) {
+    const p = geom.toXY(
       dragAlongA(event) + nv.attribFontSize / 2,
-      yScales[d.level].range()[0]
+      geom.recordAxisStart()
     );
     return `translate(${p.x}, ${p.y})`;
   }
 
   /** Which column the pointer is over, in svg coordinates. */
-  function columnAtPointer(event, level) {
+  function columnAtPointer(geom, event, level) {
     const p = d3.pointer(event, svg.node());
-    const alongA = isVertical() ? p[1] : p[0];
-    return dAttribs.get(invertOrdinalScale(xScale, alongA - levelScale(level)));
+    const alongA = geom.isVertical() ? p[1] : p[0];
+    return dAttribs.get(geom.attribAtA(alongA, level));
   }
 
   /** The attribute the pointer is currently over, during a header drag. */
-  function dropTargetFor(event, d) {
-    const name = invertOrdinalScale(
-      xScale,
-      dragAlongA(event) + nv.attribFontSize / 2 - levelScale(d.level)
+  function dropTargetFor(geom, event, d) {
+    const name = geom.attribAtA(
+      dragAlongA(event) + nv.attribFontSize / 2,
+      d.level
     );
     return dAttribs.get(name);
   }
@@ -2717,8 +2732,8 @@ function navio(selection, _h) {
    * header label following the pointer, which says what you are dragging but
    * not where it is going.
    */
-  function showDropIndicator(event, d) {
-    const target = dropTargetFor(event, d);
+  function showDropIndicator(geom, event, d) {
+    const target = dropTargetFor(geom, event, d);
     const line = svg.select("._nv_drop_indicator");
     if (target === undefined || target === d.attrib) {
       line.style("display", "none");
@@ -2729,9 +2744,10 @@ function navio(selection, _h) {
     // Insert after the target when moving right, before it when moving left,
     // so the line sits on the side the column is actually coming from.
     const a =
-      x(getAttribName(target), d.level) + (to > from ? xScale.bandwidth() : 0);
-    const p0 = toXY(a, yScales[d.level].range()[0]),
-      p1 = toXY(a, yScales[d.level].range()[1]);
+      geom.cellA(getAttribName(target), d.level) +
+      (to > from ? geom.bandwidthA() : 0);
+    const p0 = geom.toXY(a, geom.recordAxisStart()),
+      p1 = geom.toXY(a, geom.recordAxisStart() + geom.recordExtent());
     line
       .style("display", null)
       .attr("x1", p0.x)
@@ -2744,7 +2760,7 @@ function navio(selection, _h) {
     svg.select("._nv_drop_indicator").style("display", "none");
   }
 
-  function attribDragstarted(event, d) {
+  function attribDragstarted(geom, event, d) {
     if (nv.DEBUG) console.log("attrib drag start", d);
 
     // Dim the LABEL being moved, so it reads as "in flight".
@@ -2753,18 +2769,18 @@ function navio(selection, _h) {
       .select("text")
       .style("opacity", 0.45);
     d3.select(this.parentNode).attr("transform", (dd) =>
-      draggedHeaderTransform(event, dd)
+      draggedHeaderTransform(geom, event, dd)
     );
   }
 
-  function attribDragged(event, d) {
+  function attribDragged(geom, event, d) {
     d3.select(this.parentNode).attr("transform", (dd) =>
-      draggedHeaderTransform(event, dd)
+      draggedHeaderTransform(geom, event, dd)
     );
-    showDropIndicator(event, d);
+    showDropIndicator(geom, event, d);
   }
 
-  function attribDragended(event, d) {
+  function attribDragended(geom, event, d) {
     if (nv.DEBUG) console.log("attrib drag end", d);
 
     hideDropIndicator();
@@ -2788,12 +2804,15 @@ function navio(selection, _h) {
     // the plain click, handled in bindHeader. Keeping the two gestures on
     // different modifiers is what makes each one reliable: they no longer have
     // to be told apart after the fact.
-    const attrDraggedInto = dropTargetFor(event, d);
+    const attrDraggedInto = dropTargetFor(geom, event, d);
     if (attrDraggedInto === undefined || attrDraggedInto === d.attrib) return;
 
     let pos;
     d3.select(this.parentNode).attr("transform", function (dd) {
-      const p = toXY(x(dd.name, dd.level), yScales[dd.level].range()[0]);
+      const p = geom.toXY(
+        geom.cellA(dd.name, dd.level),
+        geom.recordAxisStart()
+      );
       return `translate(${p.x}, ${p.y})`;
     });
 
@@ -3212,6 +3231,11 @@ function navio(selection, _h) {
 
     // Every scale above has just had its domain or range rewritten.
     invalidateInvertCache();
+    // geom keeps its own, separate inversion cache (geometry.js) for the
+    // handlers converted to read xScale/levelScale through it (#67 geometry
+    // injection, task 3) - it goes stale on exactly the same trigger, so it
+    // needs the same invalidation here until a later task unifies the two.
+    geom.invalidateInvertCache();
 
     // Update color scales domains
     if (shouldUpdateColorDomains) {
@@ -3767,7 +3791,7 @@ function navio(selection, _h) {
 
     // The brush is how a range filter is expressed on screen; put it back so a
     // synced widget can be dragged, not just read.
-    restoreBrushes();
+    restoreBrushes(geom);
 
     notifyChange({ silent: false });
     return nv;
@@ -3781,7 +3805,7 @@ function navio(selection, _h) {
    * with nothing to grab. Mapping the filter's boundary rows back through the
    * level's y scale puts the handles back where the user could drag them.
    */
-  function restoreBrushes() {
+  function restoreBrushes(geom) {
     filtersByLevel.forEach((levelFilters, level) => {
       if (!levelFilters || !dBrushes[level] || !yScales[level]) return;
 
@@ -3795,11 +3819,11 @@ function navio(selection, _h) {
       }
 
       const { firstIndex, lastIndex } = ranged.bounds();
-      const y0 = yScales[level](idOf(firstIndex));
-      const y1 = yScales[level](idOf(lastIndex));
+      const y0 = geom.cellR(idOf(firstIndex), level);
+      const y1 = geom.cellR(idOf(lastIndex), level);
       if (y0 === undefined || y1 === undefined) return;
 
-      const band = yScales[level].bandwidth();
+      const band = geom.bandwidthR(level);
       g.call(dBrushes[level].move, [Math.min(y0, y1), Math.max(y0, y1) + band]);
     });
   }
@@ -4066,7 +4090,7 @@ function navio(selection, _h) {
     // on the wrong AXIS entirely, which makes it unusable. restoreBrushes
     // re-derives it from the filter's stored row bounds through the current
     // scales, so it lands correctly in either orientation.
-    if (shouldDrawBrushes) restoreBrushes();
+    if (shouldDrawBrushes) restoreBrushes(geom);
 
     // The canvas may have changed size under an open panel.
     if (settingsIsOpen()) placeSettingsPanel();
