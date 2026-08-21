@@ -4,6 +4,7 @@ import * as d3 from "d3";
 
 import { PARAMS, METHODS } from "./params.js";
 import { palettes, nameable } from "./palettes.js";
+import { createGeometry } from "./geometry.js";
 
 // import {
 //   interpolateBlues,
@@ -86,6 +87,11 @@ function navio(selection, _h) {
     invertScaleCache = new WeakMap(),
     xScale,
     x,
+    // Built once in init() (see the geom = createGeometry(...) call below);
+    // not read anywhere yet. Later tasks in this plan convert renderers to
+    // call it, at which point this disable comes back out.
+    // eslint-disable-next-line no-unused-vars
+    geom,
     height = _options
       ? _options.height !== undefined
         ? _options.height
@@ -935,6 +941,21 @@ function navio(selection, _h) {
     x = function (val, level) {
       return levelScale(level) + xScale(val);
     };
+
+    geom = createGeometry({
+      nv,
+      xScale,
+      levelScale,
+      get yScales() {
+        return yScales;
+      },
+      get height() {
+        return height;
+      },
+      get pixelRatio() {
+        return pixelRatio;
+      },
+    });
 
     // Orientation (#22).
     //
