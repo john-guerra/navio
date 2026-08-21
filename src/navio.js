@@ -83,10 +83,7 @@ function navio(selection, _h) {
     dBrushes = [],
     filtersByLevel = [], // The filters applied to each level
     yScales = [],
-    // scale object -> its inverted quantize scale. See invertOrdinalScale (#62).
-    invertScaleCache = new WeakMap(),
     xScale,
-    _x,
     // Built once in init() (see the geom = createGeometry(...) call below);
     // not read anywhere yet. Later tasks in this plan convert renderers to
     // call it, at which point this disable comes back out.
@@ -937,10 +934,6 @@ function navio(selection, _h) {
     levelScale = d3.scaleBand().round(true);
     colScales = new Map();
 
-    _x = function (val, level) {
-      return levelScale(level) + xScale(val);
-    };
-
     geom = createGeometry({
       nv,
       xScale,
@@ -1004,37 +997,6 @@ function navio(selection, _h) {
     // d3.select("._nv_loading").remove();
     d3.select(ele).style("cursor", null);
     svg.style("cursor", null);
-  }
-
-  /**
-   * Inverts a band scale: given a pixel offset, which domain entry is there.
-   *
-   * Taken from https://bl.ocks.org/shimizu/808e0f5cadb6a63f28bb00082dc8fe3f
-   *
-   * Used to be called from showTooltip and onSelectByRange; both now go
-   * through geom's own attribAtA/rowAtR instead (geometry injection, task 3),
-   * which leaves this with no callers. Left in place - deleting it along with
-   * invertScaleCache/invalidateInvertCache is a later task in that same plan,
-   * once every remaining caller of the old cache has moved to geom's.
-   */
-  // eslint-disable-next-line no-unused-vars
-  function invertOrdinalScale(scale, x) {
-    let qScale = invertScaleCache.get(scale);
-    if (!qScale) {
-      qScale = d3.scaleQuantize().domain(scale.range()).range(scale.domain());
-      invertScaleCache.set(scale, qScale);
-    }
-    return qScale(x);
-  }
-
-  /**
-   * yScales[level] is replaced wholesale on every update, so keying the cache
-   * on the scale object already invalidates those. xScale and levelScale are
-   * mutated in place, though, so their entries have to be dropped explicitly -
-   * a stale one would report the wrong column under the cursor.
-   */
-  function invalidateInvertCache() {
-    invertScaleCache = new WeakMap();
   }
 
   function updateSorting(levelToUpdate, _dataIs) {
@@ -3232,12 +3194,9 @@ function navio(selection, _h) {
       .paddingInner(0)
       .paddingOuter(0);
 
-    // Every scale above has just had its domain or range rewritten.
-    invalidateInvertCache();
-    // geom keeps its own, separate inversion cache (geometry.js) for the
-    // handlers converted to read xScale/levelScale through it (#67 geometry
-    // injection, task 3) - it goes stale on exactly the same trigger, so it
-    // needs the same invalidation here until a later task unifies the two.
+    // Every scale above has just had its domain or range rewritten. geom
+    // keeps its own inversion cache (geometry.js) for attribAtA/rowAtR/
+    // levelAtA; it goes stale on exactly the same trigger.
     geom.invalidateInvertCache();
 
     // Update color scales domains
