@@ -40,3 +40,7 @@ examples/*.tgz
 
 # Papers kept locally for reference; copyrighted and large, not ours to redistribute.
 docs/ai/*.pdf
+
+# Secrets. Nothing in this repo reads one today - this is here so that the day
+# something does, the file is already ignored rather than ignored after the fact.
+.env
