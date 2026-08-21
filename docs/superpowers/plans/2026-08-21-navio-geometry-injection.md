@@ -2087,6 +2087,25 @@ src/chrome/settings-panel.js   the gear, the panel, and everything drawn in it.
 coordinate system - forward and inverse mapping between (attribute, record)
 and screen. A leaf: imports only d3."*
 
+- [ ] **Step 3a: Mark the design doc implemented**
+
+`docs/ai/2026-08-21-navio-geometry-injection-design.md` line 9 currently
+reads:
+
+```
+**Status:** design only. Nothing here is implemented.
+```
+
+Replace with:
+
+```
+**Status:** implemented. See
+`docs/superpowers/plans/2026-08-21-navio-geometry-injection.md` (Tasks 1-8)
+for what actually landed and where it diverged from this design (the plan's
+"Corrections found while writing this plan" section, and each task's own
+notes).
+```
+
 - [ ] **Step 4: Full gate**
 
 ```bash
