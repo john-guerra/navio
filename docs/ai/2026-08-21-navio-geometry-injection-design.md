@@ -18,6 +18,15 @@ it, because the *reason* the draft was wrong generalises: it reasoned from an
 analogy to Observable Plot instead of from navio's own lifetimes. This revision
 keeps Plot's discipline and drops Plot's mechanism.
 
+**Second revision note.** A second independent review, run against the rewrite
+above, found the `geom` mechanism itself sound but its **interface** incomplete:
+it covered only the forward mapping (attribute/record → screen) while its own
+named first conversion targets need the inverse (screen → attribute/record). It
+also found `Object.freeze` proposed as typo protection that does not work, no
+stated contract for how `geom` must capture reassignable bindings, and one
+excluded field (`explanationsPad`) with an unexcluded twin (`headerSpill`). §12
+records these. §3 and §8 below are the corrected versions.
+
 ---
 
 ## 0. Summary
@@ -39,14 +48,39 @@ design: `drawBrushes` binds `updateBrushes` on **enter only** unless
 `recomputeBrushes` (`src/navio.js:2653-2657`), and `nv.update` defaults
 `recomputeBrushes` to **false** (`3523`). So `brushed` and `onSelectByRange`
 (defined inside `updateBrushes` at `1707`/`1734`) are created once per level and
-survive arbitrarily many updates. A per-update object captured there goes stale,
-and two of its fields are load-bearing: a captured `isVertical` boolean puts a
-brush on the wrong axis after an orientation flip, and a captured `pixelRatio`
+survive arbitrarily many updates. A per-update object captured there goes stale, and a captured `pixelRatio`
 re-opens #105 (striped, diluted columns) silently.
 
-A long-lived object with **methods** has no such failure mode. It behaves exactly
-as the closure does today — reads resolve when used — while making every reader's
-dependency explicit in its signature.
+**Correction from review.** An earlier version of this argument also claimed a
+captured `isVertical` boolean would put a brush on the wrong *axis* after an
+orientation flip. That overstates it: the axis a brush drags along is fixed by
+which behaviour object was constructed — `d3.brushX()` vs `d3.brushY()`
+(`src/navio.js:1663`) — and only rebuilding the brush, which happens when
+`updateBrushes` re-runs, changes that. `nv.hardUpdate()` already defaults
+`recomputeBrushes: true` for every level specifically because attribWidth,
+margin and orientation changes need brushes rebuilt (`4024-4034`,
+`restoreBrushes`'s own comment at `3760-3766`). That safety net exists today and
+this design does not touch it.
+
+`geom`'s real, more modest benefit is different and does not depend on a brush
+being rebuilt: **pointer-driven code that runs *between* updates and reads
+geometry it never had a chance to refresh**. `showTooltip`, `columnAtPointer`
+and `dropTargetFor` (§3) are not bound once at level-creation like a brush
+handler — they run fresh on every `mousemove`, but today they close over the
+*same* `xScale`/`yScales`/`levelScale` bindings that any other closure code
+does, which happens to work only because nothing in `navio.js` currently needs
+to hand that reading capability to code outside the closure. The moment any of
+this logic is extracted into `records/` or `levels/`, it stops being a closure
+read and becomes an argument — and if that argument were captured once (a
+frame, or a plain value), it would go stale in exactly the way a moved
+`selection` did in the settings extraction. `geom`'s methods re-reading current
+state at call time is what makes that extraction safe later, not what fixes an
+orientation bug today.
+
+A long-lived object with **methods** has no per-update staleness. It behaves
+exactly as the closure does today — reads resolve when used — while making every
+reader's dependency explicit in its signature, once that signature is complete
+(§3 below fixes the gap review found in the first cut of it).
 
 ### The honest justification
 
@@ -135,7 +169,7 @@ pair becomes a position on screen. Built once, injected, methods read live state
 The first draft claimed one test and silently used two. Both are needed:
 
 1. **Does it help answer "given an attribute and a record, where on screen is
-   that, and how big?"** If no, it is not geometry.
+   that, and how big?" — in EITHER direction?** If no, it is not geometry.
 2. **Is it navio's to compute, or the caller's to set?** A public option
    (`nv.attribWidth`, `nv.margin`, `nv.x0`, `nv.levelsSeparation`) is an *input*
    to geometry; `geom` reads it through `nv` rather than owning a copy.
@@ -149,22 +183,55 @@ fail criterion 2. That is why a renderer given `geom` still legitimately sees
 resolved band offset; `nv.y0` remains the *requested* value, which
 `autoHeaderSpace` may override. Nothing else reads `nv.y0` for layout.
 
+**Correction from review: "either direction" is not decoration, it is a fix.**
+An earlier version of this interface covered only the forward mapping —
+attribute/record to screen — and criterion 1 was written without the qualifier
+above. That is insufficient for the design's own §8 step 3, whose named targets
+are `columnAtPointer`, `showTooltip`, `dropTargetFor` and `restoreBrushes`,
+**all four of which invert a screen coordinate back to an attribute or a
+record**:
+
+```
+src/navio.js:2685   dAttribs.get(invertOrdinalScale(xScale, alongA - levelScale(level)))
+src/navio.js:1926   invertOrdinalScale(yScales[level], onR)
+src/navio.js:1932   invertOrdinalScale(xScale, onA - levelScale(level))
+src/navio.js:2690   invertOrdinalScale(xScale, dragAlongA(event) + ... - levelScale(d.level))
+src/navio.js:3783   yScales[level](idOf(firstIndex))     // forward, but on the RECORD axis
+src/navio.js:3786   yScales[level].bandwidth()
+```
+
+A forward-only interface would have forced these five call sites to reach past
+`geom` for the raw `xScale`/`yScales`/`levelScale` objects — defeating the reason
+those objects are hidden in the first place (§3's own `extentA`/`recordExtent`
+naming rule exists to stop exactly this kind of raw-scale leak).
+
 ### The interface
 
 ```js
-const geom = createGeometry(ctx);   // built once, in init()
+const geom = createGeometry(ctx);   // built once, in init(), AFTER init()
+                                     // assigns xScale/levelScale/x (§3.1)
 
+// forward: (attribute, record) -> screen
 geom.isVertical()            // a FUNCTION, so a handler cannot capture a stale axis
 geom.toXY(a, r)              // (attribute, record) -> {x, y}
 geom.toWH(a, r)              // (attribute, record) -> {width, height}
 geom.cellA(attribName, level)// position along the attribute axis  (today: x())
+geom.cellR(rowId, level)     // position along the RECORD axis     (today: yScales[level]())
 geom.recordAxisStart()       // resolved y0, honouring autoHeaderSpace
 geom.extentA()               // extent ALONG THE ATTRIBUTE AXIS   (today: "width")
 geom.recordExtent()          // extent along the RECORD AXIS      (today: "height")
-geom.headerSpill()           // header overflow above the widget
+geom.bandwidthR(level)       // row height for one level          (today: yScales[level].bandwidth())
 geom.pixelRatio()            // device pixels per CSS pixel
 geom.snapToDevice(coord, w)  // pixel-grid snapping (#105)
+
+// inverse: screen -> (attribute, record) — the half the first cut omitted
+geom.attribAtA(pos, level)   // screen position along A -> the attribute name there
+geom.rowAtR(pos, level)      // screen position along R -> the row id there
 ```
+
+`attribAtA` and `rowAtR` both go through `invertOrdinalScale`'s memoised
+quantize scale (`1004-1011`) internally — the mechanism is unchanged, only its
+caller. `headerSpill` is **removed** from this list; see below.
 
 **`extentA` / `recordExtent`, never `width` / `height`.** CLAUDE.md's landmine:
 *"A site that hardcodes screen x/y works in horizontal and silently misplaces
@@ -173,12 +240,43 @@ itself in vertical."* `updateWidthAndHeight` computes `alongA` and only then cal
 Naming these `width`/`height` inside an object that also carries `toWH` invites
 exactly that bug.
 
+### `createGeometry`'s own construction contract
+
+The rule this repo already learned once (`CLAUDE.md`, "A module gets GETTERS,
+not values") applies to `geom` itself, and the design states it explicitly
+because the mechanism is new enough that a straightforward implementation could
+violate it silently.
+
+`xScale`, `levelScale` and `x` are assigned exactly once inside `init()`
+(`925`, `932`, `935`) and never reassigned after — so `createGeometry` **must be
+constructed after those three lines, within `init()`**, the same sequencing
+constraint the settings extraction stated for `selection`. Capturing them as
+plain values is safe only under that ordering; capturing them before it, or
+capturing them as re-assignable bindings without a getter, reproduces the exact
+bug class `CLAUDE.md` already catalogues.
+
+`yScales` is different, and stricter: `updateScales` replaces individual
+elements every update (`3162`), and **`nv.destroy` rebinds the whole array**,
+`yScales = []` (`4115`). A `geom` that captured `yScales` by value at
+construction would keep the entire pre-destroy array — every level's scale,
+every domain — reachable through `geom` after `destroy()`, which is a **memory
+leak specific to a correctly-functioning `geom`**, not a bug in destroy(). Every
+method that reads `yScales` must do so through a getter, re-read at call time,
+with no exception. The same applies to `pixelRatio` (reassigned at `962`,
+`3339`).
+
 ### What is deliberately NOT in it
 
-- **`explanationsPad`** — it has exactly one read (`3401`,
-  `full = ctxHeight + explanationsPad`), never enters a coordinate, and is
-  written *during render*. It is container sizing, not geometry. Excluding it
-  also removes the only mutate-during-render problem the first draft had.
+- **`headerSpill`** — moved out during review. All twelve reference sites are
+  typography room (`grownFontSize`'s `room` calculation, `2224`) or CSS
+  `margin-top`/`top` offsets on the canvas, the svg and the explanations div
+  (`3355-3356, 3362, 3419-3420`). None feeds `toXY`, `toWH`, `cellA` or `cellR`
+  for a data mark. It is container sizing — `explanationsPad`'s twin — not
+  geometry, and the first cut of this design excluded one and kept the other
+  with no test that told them apart. It stays in `navio.js`, read by the same
+  handful of layout call sites that read it today.
+- **`explanationsPad`** — one read (`3401`), never enters a coordinate, written
+  *during render*. Container sizing for the same reason as `headerSpill`.
 - **`posAt`** — returns an ordinal position **within a level** (`1307-1310`), not
   a screen coordinate, and is passed **by identity** into long-lived filter
   objects (`getPos: posAt` at `1780`, `1792`, `3725`). It belongs to
@@ -190,20 +288,25 @@ exactly that bug.
   These travel separately: something that only computes a position should not be
   handed a drawing surface.
 
-### Representatives are an open decision, not an omission
+### Representatives: flagged, not classified as a violation
 
 `computeRepresentatives` (`2932-2951`) decides which rows are drawn, is derived
 per update from `recordExtent` and `dataIs[level].length`, and is **stashed as
 properties on the caller-visible `dataIs` array** — `dataIs[l].representatives`,
 `dataIs[l].itemsPerpixel` (`2941`, `2947-2949`) — then read by `updateLevel`
 (`3324`). That is the clearest instance in the file of "derive stores, render
-reaches for it", and it also writes to an array the caller can see, which sits
-uneasily beside CLAUDE.md's "Navio never writes to the caller's rows".
+reaches for it", and it is worth resolving when `records/` is extracted.
 
-It is navio's equivalent of Plot's `index`. **This design does not move it**, and
-says so rather than leaving it implied. It should be resolved when `records/` is
-extracted, and it is a better candidate for derived-and-passed than anything the
-first draft proposed.
+**Correction from review: this is not the same landmine as #88.** An earlier
+version of this section compared it directly to "Navio never writes to the
+caller's rows." Checked: `nv.getRowsAtLevel` (`3803-3805`) returns
+`dataIs[level].map(i => data[i])`, a **fresh array** — the caller never sees
+`dataIs` or its extra properties. `dataIs` is navio's own internal index array,
+not caller data; #88 was about properties leaking onto the *caller's* row
+objects, shared across instances given the same array. The two are structurally
+different, and the earlier comparison overstated the tension. It remains true
+that this is navio's equivalent of Plot's `index`, and that this design does not
+move it.
 
 ---
 
@@ -220,9 +323,9 @@ draft was wrong.
 | `isVertical` | 22 | 23 | |
 | `toXY` | 21 | 22 | |
 | `levelScale` | 20 | 21 | |
-| `x` | **13** | 39 | property keys in `{x: r, y: a}` |
+| `x` | **12** | 39 | property keys in `{x: r, y: a}`; corrected from 13 by an independent `eslint-scope` recount, which excludes the `invertOrdinalScale` shadowing parameter (`1000`, `1006`) that the acorn script's own declared-vs-referenced split miscounted by one |
 | `height` | **12** | 21 | property keys in `toWH` |
-| `headerSpill` | **12** | 10 | regex *under*-counted |
+| `headerSpill` | **12** | 10 | regex *under*-counted; excluded from `geom` (§3) — container sizing, not geometry |
 | `toWH` | 7 | 8 | |
 | `pixelRatio` | 6 | 7 | |
 | `explanationsPad` | 3 | 4 | excluded from `geom` anyway |
@@ -336,20 +439,33 @@ Each step is a separate commit; each must pass `npm run check` **and**
 `NAVIO_TEST_PORT=4190 npx playwright test` before the next. `npm run check` does
 not run e2e.
 
-1. **Add `geom` and one regression test.** Build it in `init()`, use it nowhere.
-   The first draft proposed asserting `geom`'s fields equal the closure bindings
-   — unwritable (the closure is not observable, per CLAUDE.md) and vacuous where
-   writable (`geom.xScale === xScale` is `a === a`). Instead, following
-   `test/e2e/67-extraction.spec.js`, pin the **distinctive failure mode**: create
-   a level, change `nv.attribWidth` or flip orientation, then drag the brush on
-   the old level and assert the selected rows are the ones under the pointer. Add
-   the first **unit** test of navio geometry: construct `geom` with fake scales
-   and assert horizontal/vertical transposition.
-2. **Convert `drawLevelBorder`.** Geometry-only, no instance state.
-3. **Convert the handlers first, not last.** `updateBrushes`, `showTooltip`,
-   `columnAtPointer`, `showDropIndicator`, `restoreBrushes`. They are ~19% of
-   sites and the ones the first draft broke. Doing them early proves the
-   long-lived design where it matters.
+1. **Add `geom` and one regression test.** Build it in `init()`, **after** the
+   three scale assignments at `925`/`932`/`935` (§3's construction contract). Use
+   it nowhere yet. The first draft proposed asserting `geom`'s fields equal the
+   closure bindings — unwritable (the closure is not observable, per CLAUDE.md)
+   and vacuous where writable (`geom.xScale === xScale` is `a === a`). Instead,
+   following `test/e2e/67-extraction.spec.js`, pin the **distinctive failure
+   mode**: create a level, `nv.destroy()`, and assert that nothing reachable
+   through `geom` still references the pre-destroy `yScales` array (§3's
+   getter-vs-value contract, tested directly rather than trusted). Add the first
+   **unit** test of navio geometry: construct `geom` with fake scales and assert
+   horizontal/vertical transposition, and assert `attribAtA`/`rowAtR` invert what
+   `cellA`/`cellR` produced.
+2. **Convert `drawLevelBorder`.** Geometry-only, no instance state. Proves the
+   forward half of the interface.
+3. **Convert the handlers.** `columnAtPointer`, `dropTargetFor`,
+   `showDropIndicator` (all `attribAtA`), `showTooltip` (`attribAtA` and
+   `rowAtR`), `restoreBrushes` (`cellR`, `bandwidthR`). These are the sites §3's
+   inverse methods exist for — do them once that interface is in place, not
+   before. `updateBrushes` itself is bound to the DOM via
+   `levelOverlayEnter.each(updateBrushes)` (`2655`, `2657`), which relies on
+   d3's `.each()` supplying `this`; threading `geom` through requires
+   `.each(function (d, i) { updateBrushes.call(this, geom, d, i); })` or
+   equivalent, not a bare arrow function, or the `this`-bound `d3.select(this)`
+   inside `updateBrushes` (`1671-1672`) breaks. **`drawBrushes` is not itself a
+   conversion target but must change** — it is the caller that currently
+   invokes `updateBrushes` via `.each` and is where `geom` first gets threaded
+   downward.
 4. **Convert the record renderers** — `drawItem`, `updateLevel`. Destructure at
    entry (§6). Benchmark per §6 and report the numbers in the commit.
 5. **Convert the level renderers** — `drawLinks`, `drawLine`,
@@ -362,24 +478,49 @@ not run e2e.
    validates inline-backticked paths, and the Layout block is fenced, so the gate
    will not catch a stale one.
 
-**On step 7's safety.** `eslint.config.js` uses `js.configs.recommended`, which
-sets `no-undef: error`, so deleting `let yScales` with a bare reader left behind
-**fails `npm run check`**. That guarantee is real but narrow: it covers bare
-identifiers only. A typo in the *new* form — `geom.yScale` — yields `undefined`,
-then `NaN`, which d3 writes into an SVG attribute and the browser rejects
-silently: console errors per redraw, no exception, no failing test. That is
-CLAUDE.md's "hiding every column" failure mode. Mitigations, both required: do
-the conversion as a **whole-identifier codemod** rather than by hand, and
-**`Object.freeze` the `geom` object** so a typo throws in strict mode.
-Note also that `nv.destroy` **rebinds** `yScales = []` (`4115`); step 7 must
-settle teardown ownership, not just readers.
+**On step 7's safety, corrected.** `eslint.config.js` uses `js.configs.recommended`,
+which sets `no-undef: error`, so deleting `let yScales` with a bare reader left
+behind **fails `npm run check`**. That guarantee is real but narrow: it covers
+bare identifiers only. A typo in the *new* form — `geom.yScale` — yields
+`undefined`, then `NaN`, which d3 writes into an SVG attribute and the browser
+rejects silently: console errors per redraw, no exception, no failing test.
+That is CLAUDE.md's "hiding every column" failure mode.
 
-**Independence.** Steps 2–6 are individually revertible, with one qualification:
-`drawBrushes` (`2641-2665`) calls `drawAttributesHolders`, `drawCounts` and
-`drawFilterExplanationsHTML` from one place, so steps 5 and 6 cut through a
-single call site. Reverting one leaves `drawBrushes` passing `geom` to some
-children and not others — mechanically fine, but not the clean independence the
-first draft claimed.
+**`Object.freeze(geom)` was proposed as the second mitigation for that typo and
+is withdrawn — it does not do what was claimed.** Verified:
+
+```
+node -e '"use strict"; const g=Object.freeze({pixelRatio:()=>2});
+console.log(g.pixelRato, g.pixelRato+1);'
+// -> undefined NaN
+```
+
+`Object.freeze` blocks *writes* — reassignment, new properties, deletion. It
+does nothing to a *read* of a missing property, which is exactly the typo it was
+proposed to catch; frozen or not, `g.pixelRato` is `undefined`. The one thing
+freezing `geom` actually buys is throwing if a renderer *writes* to it (e.g.
+`geom.pixelRatio = 2`) — a real but different and unstated benefit, worth
+keeping for that reason alone but not as typo protection.
+
+The one mitigation that does work is the **whole-identifier codemod**: convert
+every genuine reference of a geometry identifier to `geom.<name>` mechanically,
+never by hand, so there is no typing step to typo. Verify the codemod's own
+correctness against the shadowing hazard noted in §4 (the `x` parameter in
+`invertOrdinalScale`, `1000`) before running it — a blind text substitution
+would corrupt that function.
+
+Note also that `nv.destroy` **rebinds** `yScales = []` (`4115`); step 7 must
+settle teardown ownership, not just readers, and step 1's regression test is
+what pins that this is actually safe under `geom`.
+
+**Independence.** Steps 2–6 are individually revertible, with two
+qualifications. First, `drawBrushes` (`2641-2665`) calls `drawAttributesHolders`,
+`drawCounts` and `drawFilterExplanationsHTML` from one place, so steps 5 and 6
+cut through a single call site; reverting one leaves `drawBrushes` passing
+`geom` to some children and not others — mechanically fine, not fully clean.
+Second, step 3 depends on step 1 having shipped the inverse methods
+(`attribAtA`, `rowAtR`, `bandwidthR`) correctly; it cannot be attempted against
+a `geom` that only has the forward half.
 
 ---
 
@@ -391,9 +532,11 @@ Domain vocabulary, per the maintainer's decision. **Size is not a criterion.**
 src/
   navio.js          the facade and instance-state kernel: the ~40 public nv.*
                     methods, the let chain, init(), and the update pipeline
-  geometry.js       createGeometry: toXY, toWH, isVertical, cellA, extentA,
-                    recordExtent, recordAxisStart, headerSpill, pixelRatio,
-                    snapToDevice
+  geometry.js       createGeometry: toXY, toWH, isVertical, cellA, cellR,
+                    extentA, recordExtent, recordAxisStart, bandwidthR,
+                    pixelRatio, snapToDevice, and the inverse pair attribAtA,
+                    rowAtR. headerSpill and explanationsPad stay in navio.js -
+                    container sizing, not geometry (§3).
   attributes/       definition and typing (attribs.js), ordering, visibility,
                     colour domains and scales
   records/          the record axis: rows, representatives, selection flags
@@ -450,7 +593,29 @@ taken to support it produced a confident, wrong number.
 
 ---
 
-## 12. Out of scope
+## 12. What the second draft got wrong
+
+A second independent review, run against §§1–11 as they stood after the first
+rewrite, found the interface itself incomplete rather than the reasoning around
+it. Kept for the same reason as §11.
+
+| # | Defect | Cause |
+| --- | --- | --- |
+| 1 | `geom`'s interface was entirely forward-mapping; its own named step-3 targets (`columnAtPointer`, `showTooltip`, `dropTargetFor`, `restoreBrushes`) all need the inverse | Verified the mechanism fixed the staleness problem the first review found, never checked whether the interface covered the call sites the mechanism was justified by |
+| 2 | `Object.freeze(geom)` proposed as protection against a read-typo | Freeze blocks writes, not reads of a missing property; `g.pixelRato` is `undefined` whether or not `g` is frozen — never tested the claim |
+| 3 | No stated contract for how `createGeometry` itself must capture `xScale`/`yScales`/`pixelRatio` | Asserted "methods read live state" without saying how, reproducing by omission the exact "module gets values, not getters" bug this repo already shipped once |
+| 4 | `headerSpill` kept in `geom` while `explanationsPad` was excluded by the same test | Applied the membership test to one candidate and not its structural twin |
+| 5 | Overclaimed that `geom`'s liveness fixes a stale `isVertical` after an orientation flip | The actual mechanism is `nv.hardUpdate()` defaulting `recomputeBrushes: true` and rebuilding the brush; `geom`'s real benefit is narrower and was understated as a result |
+| 6 | `x` reference count off by one (13 vs 12) | The acorn script's declared-vs-referenced split did not perfectly separate a shadowing parameter from its use |
+| 7 | `.each(updateBrushes)` → threading `geom` through described as a five-item list with no mention of the `this`-binding it depends on | Named the functions to convert, not the mechanics of the call site that invokes them |
+| 8 | `computeRepresentatives`/`dataIs[level].representatives` compared directly to the #88 landmine | Did not check that `nv.getRowsAtLevel` returns a fresh array — the caller never sees the stashed properties, so the comparison overstated the tension |
+
+Two things the second review confirmed hold up without qualification: the
+`invertScaleCache` correction in §2, and the sequencing discipline and
+`no-undef` safety net in §8 (narrowed, not invalidated, by the freeze
+correction above).
+
+## 13. Out of scope
 
 - Vertical layout (#22).
 - Any change to the filtering model or the public API.
