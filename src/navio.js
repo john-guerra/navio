@@ -2051,14 +2051,21 @@ function navio(selection, _h) {
    * the other axis. drawCloseButton makes the same kind of trade for the same
    * kind of reason.
    */
-  function drawCounts(levelOverlay, levelOverlayEnter) {
-    const vertical = isVertical();
+  function drawCounts(geom, levelOverlay, levelOverlayEnter) {
+    const vertical = geom.isVertical();
     // Along A: the level's own leading edge, or just past its columns.
     const alongA = (i) =>
-      vertical ? levelScale(i) + xScale.range()[1] + 15 : levelScale(i);
+      vertical
+        ? geom.levelStartA(i) + geom.levelExtentA() + 15
+        : geom.levelStartA(i);
     // Along R: just past the records, or at the point where they start.
-    const alongR = (i) =>
-      vertical ? yScales[i].range()[0] : yScales[i].range()[1] + 15;
+    // Every level shares the same y-range (updateScales sizes every
+    // yScales[level] to [nv.y0, nv.y0 + height]), so - unlike alongA - this
+    // no longer varies by level once expressed through geom.
+    const alongR = (_i) =>
+      vertical
+        ? geom.recordAxisStart()
+        : geom.recordAxisStart() + geom.recordExtent() + 15;
 
     levelOverlayEnter
       .append("text")
@@ -2068,10 +2075,10 @@ function navio(selection, _h) {
       .style("fill", theme().ink)
       .style("pointer-events", "none")
       .attr("x", function (_, i) {
-        return toXY(alongA(i), alongR(i)).x;
+        return geom.toXY(alongA(i), alongR(i)).x;
       })
       .attr("y", function (_, i) {
-        return toXY(alongA(i), alongR(i)).y;
+        return geom.toXY(alongA(i), alongR(i)).y;
       })
       .text(function (d) {
         return nv.fmtCounts(d.length);
@@ -2080,8 +2087,8 @@ function navio(selection, _h) {
 
   // Renders the filter chips as HTML under div.explanations. It reads
   // `selection`/`dataIs` from the closure rather than taking the level-overlay
-  // selections the other draw* helpers do, so it needs no arguments.
-  function drawFilterExplanationsHTML() {
+  // selections the other draw* helpers do, so geom is its only argument.
+  function drawFilterExplanationsHTML(geom) {
     // A chip starts in the gap AFTER its level.
     //
     // filtersByLevel[i] is the filter that produced level i+1 - applyFilters
@@ -2095,11 +2102,12 @@ function navio(selection, _h) {
     // other direction: chips did start at the level's right edge once, but
     // were given a 200px min-width against a 40px gap, so each one ran across
     // its neighbour.
-    const levelRight = (level) => levelScale(level) + xScale.range()[1] + 4;
+    const levelRight = (level) =>
+      geom.levelStartA(level) + geom.levelExtentA() + 4;
     const explanationWidth = (level) =>
       level < dataIs.length - 1
         ? Math.max(70, levelRight(level + 1) - levelRight(level) - 8)
-        : Math.max(220, xScale.range()[1]);
+        : Math.max(220, geom.levelExtentA());
 
     const filterExps = selection
       .select("div.explanations")
@@ -2130,7 +2138,10 @@ function navio(selection, _h) {
         // gear as well as the count label; now that a chip starts past its
         // level's last column it is nowhere near the gear in the corner, so it
         // only has to clear the count, and the widget keeps the difference.
-        const p = toXY(levelRight(i), yScales[i].range()[1] + 16);
+        const p = geom.toXY(
+          levelRight(i),
+          geom.recordAxisStart() + geom.recordExtent() + 16
+        );
         return `translate(${p.x}px, ${p.y}px)`;
       });
 
@@ -2676,8 +2687,8 @@ function navio(selection, _h) {
     }
 
     drawAttributesHolders(levelOverlay, levelOverlayEnter);
-    drawCounts(levelOverlay, levelOverlayEnter);
-    drawFilterExplanationsHTML();
+    drawCounts(geom, levelOverlay, levelOverlayEnter);
+    drawFilterExplanationsHTML(geom);
 
     levelOverlay.exit().remove();
   } // drawBrushes
