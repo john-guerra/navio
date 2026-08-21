@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { createTheme, THEMES } from "../../src/theme.js";
+import { createTheme, THEMES } from "../../src/chrome/theme.js";
 
 /**
  * A context whose `selection` is a GETTER, the way navio.js builds it.

@@ -1,5 +1,5 @@
 import * as d3 from "d3";
-import { PARAMS } from "./params.js";
+import { PARAMS } from "../params.js";
 import { createTheme } from "./theme.js";
 import { createSettingsStorage } from "./settings-storage.js";
 

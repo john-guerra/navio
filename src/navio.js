@@ -28,7 +28,7 @@ import {
   getAttribsFromObjectRecursive,
   getAttribsFromObjectAsFn,
 } from "./utils.js";
-import { createSettingsPanel } from "./settings-panel.js";
+import { createSettingsPanel } from "./chrome/settings-panel.js";
 import { createAttribs } from "./attribs.js";
 
 let navioInstanceCount = 0;

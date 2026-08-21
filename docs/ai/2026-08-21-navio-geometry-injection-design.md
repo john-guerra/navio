@@ -7,7 +7,11 @@ panel, storage, theme and attributes and established the module mechanism.
 
 **How to use this doc:** a snapshot. Re-check line references before acting.
 
-**Status:** design only. Nothing here is implemented.
+**Status:** implemented. See
+`docs/superpowers/plans/2026-08-21-navio-geometry-injection.md` (Tasks 1-8)
+for what actually landed and where it diverged from this design (the plan's
+"Corrections found while writing this plan" section, and each task's own
+notes).
 
 **Revision note.** The first draft of this document proposed a **per-update
 frame** object, built by the derive phase and passed to renderers. Two
