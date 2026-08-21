@@ -1,15 +1,22 @@
 import { test, expect } from "@playwright/test";
 
-// Pins geom's construction contract (see src/geometry.js and
-// docs/ai/2026-08-21-navio-geometry-injection-design.md section 3).
+// What this test actually proves: destroying a Navio instance and
+// rebuilding a fresh one on the same container works cleanly - no thrown
+// errors, no stale internal state that breaks construction. That is real,
+// useful coverage on its own.
 //
+// It does NOT prove the getter-vs-value-capture distinction for yScales.
 // yScales is REASSIGNED wholesale by nv.destroy() (`yScales = []`), not
-// mutated in place. A geom that had captured the array by VALUE at
+// mutated in place, so a geom that had captured the array by VALUE at
 // construction would keep the entire pre-destroy scale array - and every
-// scale object and domain in it - reachable through geom forever, which is a
-// memory leak specific to a correctly-functioning geom, not a bug in
-// destroy() itself. geom must read yScales through a getter so that after
-// destroy() it sees the same empty array navio.js itself sees.
+// scale object and domain in it - reachable through geom forever. That is a
+// memory leak, not a crash, and nothing re-exercises the destroyed
+// instance's own geom afterward - so reference-capture and getter-read are
+// indistinguishable through Playwright's page-error/canvas-state surface.
+// That contract is enforced by construction itself (geom's methods read
+// `ctx.yScales` as a getter - see src/geometry.js and the design spec,
+// docs/ai/2026-08-21-navio-geometry-injection-design.md section 3), not by
+// this automated test.
 test("geom sees the same yScales navio.js sees, including after destroy()", async ({
   page,
 }) => {
