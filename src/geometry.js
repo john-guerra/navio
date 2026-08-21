@@ -102,6 +102,24 @@ export function createGeometry(ctx) {
     return ctx.pixelRatio;
   }
 
+  /**
+   * Put a stroke of `deviceWidth` device pixels exactly on the pixel grid.
+   *
+   * A canvas stroke straddles its path, so a line one device pixel wide
+   * centred on an INTEGER device coordinate covers half of the pixel above and
+   * half of the one below - each at about 50% - instead of one pixel fully.
+   * Consecutive strokes then composite to roughly 75% of the intended colour,
+   * and the exact figure alternates with where each row falls. A run of
+   * identical values comes out striped and washed out (#105): measured at
+   * alphas of 239 and 247, and 87 distinct colours down a column whose data
+   * had one value.
+   *
+   * Odd widths want a half-pixel centre, even widths a whole one. This has to
+   * be reckoned in DEVICE pixels, not CSS ones: the context is scaled by
+   * pixelRatio, so at ratio 2 a 1-unit line is already 2 device pixels on an
+   * even boundary and is crisp - adding a flat 0.5 in CSS units would fix
+   * ratio 1 and break ratio 2, which is why the old code looked correct.
+   */
   function snapToDevice(coord, deviceWidth) {
     const dev = Math.round(coord * pixelRatio()) + (deviceWidth % 2 ? 0.5 : 0);
     return dev / pixelRatio();

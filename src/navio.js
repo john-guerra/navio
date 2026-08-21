@@ -1369,15 +1369,6 @@ function navio(selection, _h) {
     }
   }
 
-  // `snapToDevice`'s only caller was `drawItem`, converted below to use
-  // `geom.snapToDevice` (src/geometry.js) instead - same computation, reading
-  // `pixelRatio` through `geom`'s getter rather than this module's closure
-  // binding. This local copy is now unreachable and removed; its doc comment
-  // (the #105 half-pixel-stroke bug: a run of identical values striped and
-  // washed out - measured at alphas of 239 and 247, 87 distinct colours down
-  // a column whose data had one value) lives on in git history at this
-  // location for whoever next touches `geom.snapToDevice`.
-
   function drawItem(geom, rowIdx, level) {
     const {
       toXY,
