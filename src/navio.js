@@ -2836,15 +2836,17 @@ function navio(selection, _h) {
   }
 
   // Links between nodes
-  function drawLink(link) {
-    let lastAttrib = xScale.domain()[xScale.domain().length - 1],
-      rightBorder = x(lastAttrib, dataIs.length - 1) + xScale.bandwidth() + 2,
+  function drawLink(geom, link) {
+    const lastLevel = dataIs.length - 1;
+    const visible = visibleAttribs();
+    let lastAttrib = getAttribName(visible[visible.length - 1]),
+      rightBorder = geom.cellA(lastAttrib, lastLevel) + geom.bandwidthA() + 2,
       ys =
-        yScales[dataIs.length - 1](idOf(indexOfRow(link.source))) +
-        yScales[dataIs.length - 1].bandwidth() / 2,
+        geom.cellR(idOf(indexOfRow(link.source)), lastLevel) +
+        geom.bandwidthR(lastLevel) / 2,
       yt =
-        yScales[dataIs.length - 1](idOf(indexOfRow(link.target))) +
-        yScales[dataIs.length - 1].bandwidth() / 2,
+        geom.cellR(idOf(indexOfRow(link.target)), lastLevel) +
+        geom.bandwidthR(lastLevel) / 2,
       miny = Math.min(ys, yt),
       maxy = Math.max(ys, yt),
       midy = maxy - miny;
@@ -2857,7 +2859,7 @@ function navio(selection, _h) {
     );
   }
 
-  function drawLinks() {
+  function drawLinks(geom) {
     if (!links.length) return;
     if (nv.DEBUG)
       console.log("Draw links ", links[links.length - 1].length, links);
@@ -2872,7 +2874,7 @@ function navio(selection, _h) {
     ); // More links more transparency
     // context.lineWidth = 0.5;
     for (let link of visibleLinks) {
-      drawLink(link);
+      drawLink(geom, link);
     }
     // visibleLinks.forEach(drawLink);
     context.stroke();
@@ -2900,7 +2902,7 @@ function navio(selection, _h) {
     }
   }
 
-  function drawLevelConnections(level) {
+  function drawLevelConnections(geom, level) {
     if (level <= 0) {
       return;
     }
@@ -2914,12 +2916,12 @@ function navio(selection, _h) {
       // if (nv.DEBUG) console.log(data[level-1][iRep]);
       // if (nv.DEBUG) console.log(yScales[level-1](data[level-1][iRep][id]));
       let locPrevLevel = {
-        x: levelScale(level - 1) + xScale.range()[1],
-        y: yScales[level - 1](idOf(dataIs[level - 1][iRep])),
+        x: geom.levelStartA(level - 1) + geom.levelExtentA(),
+        y: geom.cellR(idOf(dataIs[level - 1][iRep]), level - 1),
       };
       let locLevel = {
-        x: levelScale(level),
-        y: yScales[level](idOf(item)),
+        x: geom.levelStartA(level),
+        y: geom.cellR(idOf(item), level),
       };
 
       let points = [
@@ -2927,25 +2929,25 @@ function navio(selection, _h) {
         { x: locPrevLevel.x + nv.levelsSeparation * 0.3, y: locPrevLevel.y },
         { x: locLevel.x - nv.levelsSeparation * 0.3, y: locLevel.y },
         locLevel,
-        { x: locLevel.x, y: locLevel.y + yScales[level].bandwidth() },
+        { x: locLevel.x, y: locLevel.y + geom.bandwidthR(level) },
         {
           x: locLevel.x - nv.levelsSeparation * 0.3,
-          y: locLevel.y + yScales[level].bandwidth(),
+          y: locLevel.y + geom.bandwidthR(level),
         },
         {
           x: locPrevLevel.x + nv.levelsSeparation * 0.3,
-          y: locPrevLevel.y + yScales[level - 1].bandwidth(),
+          y: locPrevLevel.y + geom.bandwidthR(level - 1),
         },
         {
           x: locPrevLevel.x,
-          y: locPrevLevel.y + yScales[level - 1].bandwidth(),
+          y: locPrevLevel.y + geom.bandwidthR(level - 1),
         },
         locPrevLevel,
       ];
       // `points` is built in (attribute-axis, record-axis) space above - the
       // .x fields come from levelScale/xScale and the .y fields from yScales -
       // so mapping the whole path through toXY transposes it for free (#22).
-      const path = points.map((pt) => toXY(pt.x, pt.y));
+      const path = points.map((pt) => geom.toXY(pt.x, pt.y));
       drawLine(path, 1, nv.levelConnectionsColor);
       drawLine(path, 1, nv.levelConnectionsColor, true);
     }
@@ -3352,7 +3354,7 @@ function navio(selection, _h) {
       drawItem(geom, rep, i);
     }
 
-    drawLevelConnections(i);
+    drawLevelConnections(geom, i);
   }
 
   function updateWidthAndHeight() {
@@ -3561,7 +3563,7 @@ function navio(selection, _h) {
     context.clearRect(0, 0, w + 1, height + 1);
     // }
 
-    drawLinks();
+    drawLinks(geom);
 
     // If we didn't get a specific level to update, do them all
     // if (levelsToUpdate===undefined) {
