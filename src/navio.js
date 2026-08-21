@@ -1369,30 +1369,25 @@ function navio(selection, _h) {
     }
   }
 
-  /**
-   * Put a stroke of `deviceWidth` device pixels exactly on the pixel grid.
-   *
-   * A canvas stroke straddles its path, so a line one device pixel wide
-   * centred on an INTEGER device coordinate covers half of the pixel above and
-   * half of the one below - each at about 50% - instead of one pixel fully.
-   * Consecutive strokes then composite to roughly 75% of the intended colour,
-   * and the exact figure alternates with where each row falls. A run of
-   * identical values comes out striped and washed out (#105): measured at
-   * alphas of 239 and 247, and 87 distinct colours down a column whose data
-   * had one value.
-   *
-   * Odd widths want a half-pixel centre, even widths a whole one. This has to
-   * be reckoned in DEVICE pixels, not CSS ones: the context is scaled by
-   * pixelRatio, so at ratio 2 a 1-unit line is already 2 device pixels on an
-   * even boundary and is crisp - adding a flat 0.5 in CSS units would fix
-   * ratio 1 and break ratio 2, which is why the old code looked correct.
-   */
-  function snapToDevice(coord, deviceWidth) {
-    const dev = Math.round(coord * pixelRatio) + (deviceWidth % 2 ? 0.5 : 0);
-    return dev / pixelRatio;
-  }
+  // `snapToDevice`'s only caller was `drawItem`, converted below to use
+  // `geom.snapToDevice` (src/geometry.js) instead - same computation, reading
+  // `pixelRatio` through `geom`'s getter rather than this module's closure
+  // binding. This local copy is now unreachable and removed; its doc comment
+  // (the #105 half-pixel-stroke bug: a run of identical values striped and
+  // washed out - measured at alphas of 239 and 247, 87 distinct colours down
+  // a column whose data had one value) lives on in git history at this
+  // location for whoever next touches `geom.snapToDevice`.
 
-  function drawItem(rowIdx, level) {
+  function drawItem(geom, rowIdx, level) {
+    const {
+      toXY,
+      cellA,
+      cellR,
+      bandwidthA,
+      bandwidthR,
+      snapToDevice,
+      pixelRatio,
+    } = geom;
     const item = data[rowIdx];
     let attrib, i, y;
 
@@ -1417,23 +1412,23 @@ function navio(selection, _h) {
       // between pixels.
       const deviceWidth = Math.max(
         1,
-        Math.round(Math.ceil(yScales[level].bandwidth()) * pixelRatio)
+        Math.round(Math.ceil(bandwidthR(level)) * pixelRatio())
       );
       y = snapToDevice(
-        yScales[level](idOf(rowIdx)) + yScales[level].bandwidth() / 2,
+        cellR(idOf(rowIdx), level) + bandwidthR(level) / 2,
         deviceWidth
       );
 
       // One stroke per (record, attribute) cell: it runs the width of the
       // attribute band along A, and is as thick as one record along R.
-      const aStart = Math.round(x(attribName, level)),
-        aEnd = Math.round(x(attribName, level) + xScale.bandwidth()),
+      const aStart = Math.round(cellA(attribName, level)),
+        aEnd = Math.round(cellA(attribName, level) + bandwidthA()),
         p0 = toXY(aStart, y),
         p1 = toXY(aEnd, y);
       context.beginPath();
       context.moveTo(p0.x, p0.y);
       context.lineTo(p1.x, p1.y);
-      context.lineWidth = deviceWidth / pixelRatio;
+      context.lineWidth = deviceWidth / pixelRatio();
 
       context.strokeStyle = isMissing(val)
         ? nv.nullColor
@@ -1443,11 +1438,11 @@ function navio(selection, _h) {
 
       // TODO get this out
       //If the range bands are tick enough draw divisions
-      if (yScales[level].bandwidth() > nv.divisionsThreshold * 2) {
-        let yLine = Math.round(yScales[level](idOf(rowIdx)));
+      if (bandwidthR(level) > nv.divisionsThreshold * 2) {
+        let yLine = Math.round(cellR(idOf(rowIdx), level));
         // y = yScales[level](item[id])+yScales[level].bandwidth()/2;
-        const d0 = toXY(x(attribName, level), yLine),
-          d1 = toXY(x(attribName, level) + xScale.bandwidth(), yLine);
+        const d0 = toXY(cellA(attribName, level), yLine),
+          d1 = toXY(cellA(attribName, level) + bandwidthA(), yLine);
         context.beginPath();
         context.moveTo(d0.x, d0.y);
         context.lineTo(d1.x, d1.y);
@@ -3360,10 +3355,10 @@ function navio(selection, _h) {
     }
   }
 
-  function updateLevel(levelData, i) {
+  function updateLevel(geom, levelData, i) {
     drawLevelBorder(geom, i);
     for (let rep of levelData.representatives) {
-      drawItem(rep, i);
+      drawItem(geom, rep, i);
     }
 
     drawLevelConnections(i);
@@ -3581,7 +3576,7 @@ function navio(selection, _h) {
     // if (levelsToUpdate===undefined) {
 
     for (let i = 0; i < dataIs.length; i++) {
-      updateLevel(dataIs[i], i);
+      updateLevel(geom, dataIs[i], i);
     }
     // } else {
 
