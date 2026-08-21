@@ -22,17 +22,13 @@ import {
   FilterByRangeNegative,
   filterFromValue,
 } from "./filters.js";
-import {
-  scaleText,
-  scaleOrdered,
-  d3AscendingNull,
-  d3DescendingNull,
-} from "./scales.js";
+import { d3AscendingNull, d3DescendingNull } from "./scales.js";
 import {
   getAttribsFromObjectRecursive,
   getAttribsFromObjectAsFn,
 } from "./utils.js";
 import { createSettingsPanel } from "./settings-panel.js";
+import { createAttribs } from "./attribs.js";
 
 let navioInstanceCount = 0;
 
@@ -3568,318 +3564,34 @@ function navio(selection, _h) {
     return nv;
   };
 
-  /**
-   * Is this attribute actually present in the data?
-   *
-   * Checks a sample rather than every row: a column can legitimately be null
-   * in the first few records without being absent. Returns true when there is
-   * no data yet - the caller is allowed to declare attributes first.
-   */
-  function attribExistsInData(attr) {
-    if (!data.length) return true;
-    const name = getAttribName(attr);
-    // Derived columns are not row properties. See #88.
-    if (name === "__seqId" || name === "selected") return true;
-    if (typeof attr === "function") return true; // an accessor computes its own
-    const sample = Math.min(data.length, nv.howManyItemsShouldSearchForNotNull);
-    for (let i = 0; i < sample; i++) {
-      if (data[i] != null && name in data[i]) return true;
-    }
-    return false;
-  }
-
-  nv.addAttrib = function (attr, scale) {
-    if (scale === undefined) {
-      scale = d3.scaleOrdinal(d3.schemeCategory10);
-    }
-    if (dAttribs.has(getAttribName(attr))) {
-      console.warn(`navio.addAttrib: attribute ${attr} already added`);
-      return;
-    }
-    // A misspelled column used to be added silently and drawn as a stripe of
-    // nulls, which looks like a data problem rather than a typo.
-    if (!attribExistsInData(attr)) {
-      const known = Object.keys(data[0] || {});
-      console.warn(
-        `navio.addAttrib: "${getAttribName(attr)}" is not in the data. ` +
-          `The column will be empty. Available: ${known.join(", ")}`
-      );
-    }
-    attribsOrdered.push(attr);
-    dAttribs.set(getAttribName(attr), attr);
-    colScales.set(attr, scale);
-    return nv;
-  };
-
-  nv.addSequentialAttrib = function (attr, _scale) {
-    const domain =
-      data !== undefined && data.length > 0
-        ? // By INDEX, not by row: "__seqId" is derived (#88), so reading it off
-          // the row gives undefined for every row and collapses the domain to
-          // [undefined, undefined] - a flat, unreadable column.
-          d3.extent(data, function (_d, i) {
-            return attribAt(i, attr);
-          })
-        : [0, 1]; //if we don"t have data, set the default domain
-    const scale =
-      _scale || d3.scaleSequential(nv.defaultColorInterpolator).domain(domain);
-    scale.__type = "seq";
-    nv.addAttrib(attr, scale);
-    return nv;
-  };
-
-  // Same as addSequentialAttrib but with a different color
-  nv.addDateAttrib = function (attr, _scale) {
-    const domain =
-      data !== undefined && data.length > 0
-        ? d3.extent(data, function (d) {
-            return getAttrib(d, attr);
-          })
-        : [0, 1];
-
-    const scale =
-      _scale ||
-      d3.scaleSequential(nv.defaultColorInterpolatorDate).domain(domain); //if we don"t have data, set the default domain
-    nv.addAttrib(attr, scale);
-
-    scale.__type = "date";
-    return nv;
-  };
-
-  // Adds a diverging scale
-  nv.addDivergingAttrib = function (attr, _scale) {
-    const domain =
-      data !== undefined && data.length > 0
-        ? d3.extent(data, function (d) {
-            return getAttrib(d, attr);
-          })
-        : [-1, 1];
-    const scale =
-      _scale ||
-      d3
-        .scaleSequential(nv.defaultColorInterpolatorDiverging)
-        .domain([domain[0], domain[1]]); //if we don"t have data, set the default domain
-    scale.__type = "div";
-    nv.addAttrib(attr, scale);
-    return nv;
-  };
-
-  /**
-   * A palette is either an array or a function of the category count. The count
-   * is not known when the column is added - scaleOrdinal builds its domain
-   * lazily - so a function palette is resolved later, in updateColorDomains,
-   * and remembered here until then.
-   */
-  function categoricalRange(n) {
-    const p = nv.defaultColorCategorical;
-    return typeof p === "function" ? p(n) : p;
-  }
-
-  nv.addCategoricalAttrib = function (attr, _scale) {
-    // 10 is a starting range only; updateColorDomains sets the real one once it
-    // knows how many categories there are.
-    const scale = _scale || d3.scaleOrdinal(categoricalRange(10));
-    // Who owns the colours. updateColorDomains re-resolves the palette for the
-    // scales Navio made and leaves a caller's scale alone.
-    scale.__navioOwned = !_scale;
-    scale.__type = "cat";
-    nv.addAttrib(attr, scale);
-
-    return nv;
-  };
-
-  nv.addTextAttrib = function (attr, _scale) {
-    const scale =
-      _scale ||
-      scaleText(
-        nv.nullColor,
-        nv.digitsForText,
-        nv.defaultColorInterpolatorText
-      );
-
-    nv.addAttrib(attr, scale);
-
-    return nv;
-  };
-
-  nv.addOrderedAttrib = function (attr, _scale) {
-    const scale =
-      _scale || scaleOrdered(nv.nullColor, nv.defaultColorInterpolatorOrdered);
-
-    nv.addAttrib(attr, scale);
-
-    return nv;
-  };
-
-  nv.addBooleanAttrib = function (attr, _scale) {
-    const scale =
-      _scale ||
-      d3
-        .scaleOrdinal()
-        .domain([true, false, null])
-        .range(nv.defaultColorRangeBoolean);
-
-    scale.__type = "bool";
-    nv.addAttrib(attr, scale);
-
-    return nv;
-  };
-
-  // Adds a more complex attribute with a wrapper to convert it into JSON
-  nv.addObjectAttrib = function (attr, _scale) {
-    const scale =
-      _scale ||
-      scaleText(
-        nv.nullColor,
-        nv.digitsForObjects, // nv.digitsForText,
-        nv.defaultColorInterpolatorObject
-      );
-
-    let stringifiedAttr;
-    if (typeof attr === "function") {
-      stringifiedAttr = (d) => JSON.stringify(attr(d));
-    } else {
-      stringifiedAttr = (d) => {
-        try {
-          return d[attr] ? JSON.stringify(d[attr]) : d[attr];
-        } catch (_e) {
-          return undefined;
-        }
-      };
-      // Navio derives a column's label from fn.name (see getAttribName), so
-      // set it directly rather than baking the attribute name into evaluated
-      // source the way convertAttribToFn still does - that pattern lets a
-      // crafted key in user-supplied data execute arbitrary code (see #71).
-      Object.defineProperty(stringifiedAttr, "name", { value: String(attr) });
-    }
-    nv.addAttrib(stringifiedAttr, scale);
-    return nv;
-  };
-
-  // Adds all the attributes on the data, or all the attributes provided on the list based on their types
-  nv.addAllAttribs = function (_attribs) {
-    if (!data || !data.length)
-      throw Error(
-        "addAllAttribs called without data to guess the attribs. Make sure to call it after setting the data"
-      );
-
-    let attribs =
-      _attribs !== undefined
-        ? _attribs
-        : getAttribsFromObjectAsFn(data[0], nv.addAllAttribsRecursionLevel);
-    // Attributes we skip are reported once at the end rather than one console
-    // line per column, so the message stays readable on wide datasets.
-    const skippedArrays = [],
-      skippedObjects = [];
-
-    for (let attr of attribs) {
-      if (attr === "__seqId" || attr === "__i" || attr === "selected") continue;
-
-      const attrName = typeof attr === "function" ? attr.name : attr;
-      const firstNotNull = findNotNull(data, attr);
-
-      if (
-        firstNotNull === null ||
-        firstNotNull === undefined ||
-        typeof firstNotNull === typeof ""
-      ) {
-        const numDistinctValues = new Set(
-          data
-            .slice(0, nv.howManyItemsShouldSearchForNotNull)
-            .map((d) => getAttrib(d, attr))
-        ).size;
-
-        // How many different elements are there
-        if (numDistinctValues < nv.maxNumDistinctForCategorical) {
-          nv.DEBUG &&
-            console.log(
-              `Navio: Adding attr ${attrName} as categorical with ${numDistinctValues} categories`
-            );
-          nv.addCategoricalAttrib(attr);
-        } else if (numDistinctValues < nv.maxNumDistinctForOrdered) {
-          nv.addOrderedAttrib(attr);
-          nv.DEBUG &&
-            console.log(
-              `Navio: Attr ${attrName} has more than ${nv.maxNumDistinctForCategorical} distinct values (${numDistinctValues}) using orderedAttrib`
-            );
-        } else {
-          nv.DEBUG &&
-            console.log(
-              `Navio: Attr ${attrName} has more than ${nv.maxNumDistinctForOrdered} distinct values (${numDistinctValues}) using textAttrib`
-            );
-          nv.addTextAttrib(attr);
-        }
-      } else if (typeof firstNotNull === typeof 0) {
-        // Numbers.
-        //
-        // Diverging only when the values actually STRADDLE the diverging point.
-        // updateColorDomains builds a diverging domain as [-absMax, absMax]
-        // around zero - "Assumes diverging point on 0" - so a column that never
-        // crosses zero gets a domain about twice its own magnitude with every
-        // value crammed into one end of the ramp. A negative minimum alone used
-        // to be enough, which is how citibike's start_lng (-74.02564 ..
-        // -73.886312) drew as one flat brown: its 0.139 of range sat inside a
-        // 148.05-wide domain, 0.094% of the scale.
-        const [numMin, numMax] = d3.extent(data, (d) => getAttrib(d, attr));
-        if (numMin < 0 && numMax > 0) {
-          nv.DEBUG &&
-            console.log(`Navio: Adding attr ${attrName} as diverging`);
-          nv.addDivergingAttrib(attr);
-        } else {
-          nv.DEBUG &&
-            console.log(`Navio: Adding attr ${attrName} as sequential`);
-          nv.addSequentialAttrib(attr);
-        }
-      } else if (firstNotNull instanceof Date) {
-        nv.DEBUG && console.log(`Navio: Adding attr ${attrName} as date`);
-        nv.addDateAttrib(attr);
-      } else if (typeof firstNotNull === typeof true) {
-        nv.DEBUG && console.log(`Navio: Adding attr ${attrName} as boolean`);
-        nv.addBooleanAttrib(attr);
-      } else {
-        // Default categories
-
-        if (Array.isArray(firstNotNull)) {
-          if (nv.addAllAttribsIncludeArrays) {
-            nv.DEBUG &&
-              console.log(
-                `Navio: Adding ${attrName} adding as Object (type=array)`
-              );
-            // nv.addCategoricalAttrib(attr);
-            nv.addObjectAttrib(attr);
-          } else {
-            skippedArrays.push(attrName);
-          }
-        } else {
-          if (nv.addAllAttribsIncludeObjects) {
-            nv.DEBUG &&
-              console.log(
-                `Navio: Adding object ${attrName} adding as Object (type=object)`
-              );
-            // nv.addCategoricalAttrib(attr);
-            nv.addObjectAttrib(attr);
-          } else {
-            skippedObjects.push(attrName);
-          }
-        }
-      }
-    }
-
-    // Skipping data silently would hide columns the caller expects to see, so
-    // this warns unconditionally - but only once, and it says how to opt in.
-    if (skippedArrays.length)
-      console.warn(
-        `navio.addAllAttribs: ignored ${skippedArrays.length} array attribute(s) [${skippedArrays.join(", ")}]. Set nv.addAllAttribsIncludeArrays = true to include them.`
-      );
-    if (skippedObjects.length)
-      console.warn(
-        `navio.addAllAttribs: ignored ${skippedObjects.length} object attribute(s) [${skippedObjects.join(", ")}]. Set nv.addAllAttribsIncludeObjects = true to include them.`
-      );
-
-    nv.data(data);
-    // drawBrushes(true); // updates brushes width
-    return nv;
-  };
+  // Declaring an attribute, guessing every column's type, and switching a
+  // column's type afterwards. Registers thirteen public methods on nv.
+  //
+  // All five bindings cross as getters: every one of them is REASSIGNED
+  // elsewhere in navio.js, so a captured value would leave the module reading
+  // a replaced array. The module never writes to any of them, which is why
+  // there are no setters here.
+  const _attribs = createAttribs({
+    nv,
+    get data() {
+      return data;
+    },
+    get attribsOrdered() {
+      return attribsOrdered;
+    },
+    get dAttribs() {
+      return dAttribs;
+    },
+    get colScales() {
+      return colScales;
+    },
+    attribAt,
+    getAttrib,
+    getAttribName,
+    moveAttrToPos,
+    findNotNull,
+  });
+  const { categoricalRange } = _attribs;
 
   nv.data = function (_) {
     initTooltipPopper();
@@ -4183,78 +3895,6 @@ function navio(selection, _h) {
   /** Is this attribute's column currently drawn? */
   nv.isAttribVisible = function (attrib) {
     return !hiddenAttribs.has(getAttribName(attrib));
-  };
-
-  // The attribute types a column can be switched between, and the method that
-  // builds each one's scale. "object" is excluded on purpose: addObjectAttrib
-  // replaces the attribute with a stringifying accessor rather than just
-  // changing its scale, so it is not a like-for-like swap.
-  const ATTRIB_TYPES = {
-    cat: { label: "categorical", add: "addCategoricalAttrib" },
-    seq: { label: "sequential", add: "addSequentialAttrib" },
-    ordered: { label: "ordered", add: "addOrderedAttrib" },
-    text: { label: "text", add: "addTextAttrib" },
-    date: { label: "date", add: "addDateAttrib" },
-    div: { label: "diverging", add: "addDivergingAttrib" },
-    bool: { label: "boolean", add: "addBooleanAttrib" },
-  };
-
-  /** The type tag of an attribute's colour scale: "cat", "seq", "text"... */
-  nv.getAttribType = function (attrib) {
-    const scale = colScales.get(attrib) || colScales.get(getAttribName(attrib));
-    return scale && scale.__type;
-  };
-
-  /** The switchable types, as {value, label} - for building a picker. */
-  nv.getAttribTypes = function () {
-    return Object.entries(ATTRIB_TYPES).map(([value, t]) => ({
-      value,
-      label: t.label,
-    }));
-  };
-
-  /**
-   * Re-type a column: how it is coloured and how its values are interpreted.
-   *
-   * Only the colour scale changes. The attribute keeps its name, its position,
-   * and anything pointing at it - sorting compares raw values and so does a
-   * value filter, while a range filter compares positions, so none of them are
-   * invalidated by a re-type. addAllAttribs guesses types from the data and
-   * sometimes guesses wrong; this is the correction.
-   */
-  nv.setAttribType = function (attrib, type) {
-    const spec = ATTRIB_TYPES[type];
-    if (!spec) {
-      console.warn(
-        `navio.setAttribType: unknown type "${type}". ` +
-          `One of: ${Object.keys(ATTRIB_TYPES).join(", ")}`
-      );
-      return nv;
-    }
-    const name = getAttribName(attrib);
-    const pos = attribsOrdered.findIndex((a) => getAttribName(a) === name);
-    if (pos === -1) {
-      console.warn(
-        `navio.setAttribType: "${name}" is not one of the attributes`
-      );
-      return nv;
-    }
-    const attr = attribsOrdered[pos];
-    if (nv.getAttribType(attr) === type) return nv;
-
-    // Drop it from all three structures and let the real add*Attrib rebuild
-    // it, so the scale is constructed exactly as it would have been at setup -
-    // domain included. Then put it back where it was: addAttrib appends.
-    attribsOrdered.splice(pos, 1);
-    dAttribs.delete(name);
-    colScales.delete(attr);
-    colScales.delete(name);
-
-    nv[spec.add](attr);
-    moveAttrToPos(attr, pos);
-
-    nv.hardUpdate();
-    return nv;
   };
 
   /** The attributes currently drawn, in order. A subset of getAttribs(). */
