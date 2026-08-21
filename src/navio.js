@@ -86,7 +86,7 @@ function navio(selection, _h) {
     // scale object -> its inverted quantize scale. See invertOrdinalScale (#62).
     invertScaleCache = new WeakMap(),
     xScale,
-    x,
+    _x,
     // Built once in init() (see the geom = createGeometry(...) call below);
     // not read anywhere yet. Later tasks in this plan convert renderers to
     // call it, at which point this disable comes back out.
@@ -937,7 +937,7 @@ function navio(selection, _h) {
     levelScale = d3.scaleBand().round(true);
     colScales = new Map();
 
-    x = function (val, level) {
+    _x = function (val, level) {
       return levelScale(level) + xScale(val);
     };
 
@@ -2317,7 +2317,7 @@ function navio(selection, _h) {
    * Zero when the headers are not drawn at all - the fixed default reserved
    * 100px for labels that showAttribTitles had removed.
    */
-  function measureHeaderBand() {
+  function measureHeaderBand(geom) {
     if (!nv.showAttribTitles || !context) return 0;
     const attribs = visibleAttribs();
     if (!attribs.length) return 0;
@@ -2336,10 +2336,10 @@ function navio(selection, _h) {
     }
     context.restore();
 
-    if (isVertical()) return Math.ceil(widest + 6 + nv.margin);
+    if (geom.isVertical()) return Math.ceil(widest + 6 + nv.margin);
 
     const theta = (Math.abs(nv.attribRotation) * Math.PI) / 180,
-      reach = (xScale.bandwidth() / 2 + widest) * Math.sin(theta),
+      reach = (geom.bandwidthA() / 2 + widest) * Math.sin(theta),
       glyph = fontSize * Math.cos(theta);
     return Math.ceil(reach + glyph + nv.margin);
   }
@@ -2356,7 +2356,7 @@ function navio(selection, _h) {
       headerSpill = 0;
       return false;
     }
-    const band = measureHeaderBand();
+    const band = measureHeaderBand(geom);
     // Vertical never spills. Its headers are upright and run BACK along the
     // record axis, which is the screen's horizontal - so the overspill would
     // hang off the left edge of the container, where a page is far more likely
@@ -2371,7 +2371,12 @@ function navio(selection, _h) {
     return true;
   }
 
-  function drawAttribHeaders(attribOverlay, attribOverlayEnter, headerHit) {
+  function drawAttribHeaders(
+    geom,
+    attribOverlay,
+    attribOverlayEnter,
+    headerHit
+  ) {
     // Sort and reorder are bound to BOTH the hit rect and the glyphs.
     //
     // The rect alone is not enough: a rotated label overhangs its neighbours,
@@ -2460,10 +2465,12 @@ function navio(selection, _h) {
         // The group is already translated to the column's origin, so this is a
         // local offset. Horizontal: sit above the column and rotate. Vertical:
         // sit to the left of the row, upright and right-aligned (#22).
-        .attr("x", () => (isVertical() ? -6 : xScale.bandwidth() / 2))
-        .attr("y", () => (isVertical() ? xScale.bandwidth() / 2 : 0))
-        .attr("text-anchor", () => (isVertical() ? "end" : "start"))
-        .attr("dominant-baseline", () => (isVertical() ? "middle" : "auto"))
+        .attr("x", () => (geom.isVertical() ? -6 : geom.bandwidthA() / 2))
+        .attr("y", () => (geom.isVertical() ? geom.bandwidthA() / 2 : 0))
+        .attr("text-anchor", () => (geom.isVertical() ? "end" : "start"))
+        .attr("dominant-baseline", () =>
+          geom.isVertical() ? "middle" : "auto"
+        )
         .style("font-weight", function (d) {
           return dSortBy[d.level] !== undefined &&
             dSortBy[d.level].attrib === d.attrib
@@ -2483,12 +2490,12 @@ function navio(selection, _h) {
         // Rotating the label only makes sense when it has to fit a narrow
         // column; along the record axis there is room to read it upright.
         .attr("transform", () =>
-          isVertical() ? null : `rotate(${nv.attribRotation})`
+          geom.isVertical() ? null : `rotate(${nv.attribRotation})`
         );
     } // if (nv.showAttribTitles) {
   }
 
-  function drawAttributesHolders(levelOverlay, levelOverlayEnter) {
+  function drawAttributesHolders(geom, levelOverlay, levelOverlayEnter) {
     let attribs = visibleAttribs();
 
     let attribOverlay = levelOverlayEnter
@@ -2554,7 +2561,7 @@ function navio(selection, _h) {
       });
 
     attribOverlayEnter.merge(attribOverlay).attr("transform", (d) => {
-      const p = toXY(x(d.name, d.level), yScales[d.level].range()[0]);
+      const p = geom.toXY(geom.cellA(d.name, d.level), geom.recordAxisStart());
       return `translate(${p.x}, ${p.y})`;
     });
 
@@ -2566,17 +2573,11 @@ function navio(selection, _h) {
       // .style("opacity", "0.1")
       .attr("x", 0)
       .attr("y", 0)
-      .attr("width", function (d) {
-        return toWH(
-          xScale.bandwidth() * 1.1,
-          yScales[d.level].range()[1] - yScales[d.level].range()[0]
-        ).width;
+      .attr("width", function (_d) {
+        return geom.toWH(geom.bandwidthA() * 1.1, geom.recordExtent()).width;
       })
-      .attr("height", function (d) {
-        return toWH(
-          xScale.bandwidth() * 1.1,
-          yScales[d.level].range()[1] - yScales[d.level].range()[0]
-        ).height;
+      .attr("height", function (_d) {
+        return geom.toWH(geom.bandwidthA() * 1.1, geom.recordExtent()).height;
       });
 
     // A hit area for each column header.
@@ -2628,8 +2629,8 @@ function navio(selection, _h) {
      * the console open: nine widgets on a page produced nine identical errors
      * and no visible symptom. It could not happen while y0 was a fixed 100.
      */
-    const hitDepth = (level) =>
-      Math.max(0, yScales[level].range()[0] - nv.margin);
+    const hitDepth = (_level) =>
+      Math.max(0, geom.recordAxisStart() - nv.margin);
 
     const headerHit = hits
       .enter()
@@ -2639,11 +2640,14 @@ function navio(selection, _h) {
       .attr("fill", "transparent")
       .style("cursor", "pointer")
       .attr("transform", (d) => {
-        const p = toXY(x(d.name, d.level), yScales[d.level].range()[0]);
+        const p = geom.toXY(
+          geom.cellA(d.name, d.level),
+          geom.recordAxisStart()
+        );
         return `translate(${p.x}, ${p.y})`;
       })
-      .attr("x", (d) => toXY(0, -hitDepth(d.level)).x)
-      .attr("y", (d) => toXY(0, -hitDepth(d.level)).y)
+      .attr("x", (d) => geom.toXY(0, -hitDepth(d.level)).x)
+      .attr("y", (d) => geom.toXY(0, -hitDepth(d.level)).y)
       // step(), not bandwidth(): paddingInner is 0.1, so strips a bandwidth
       // wide leave a dead gap between every pair of columns. Land in one and
       // the event's target is the <svg> itself - outside g.attribs, where the
@@ -2655,10 +2659,10 @@ function navio(selection, _h) {
       // happened to fall. Tiling the strips removes the gap instead of hiding
       // it. A strip that reaches into the padding is right anyway: nothing else
       // is drawn there, and a click target should not have holes.
-      .attr("width", (d) => toWH(xScale.step(), hitDepth(d.level)).width)
-      .attr("height", (d) => toWH(xScale.step(), hitDepth(d.level)).height);
+      .attr("width", (d) => geom.toWH(geom.stepA(), hitDepth(d.level)).width)
+      .attr("height", (d) => geom.toWH(geom.stepA(), hitDepth(d.level)).height);
 
-    drawAttribHeaders(attribOverlay, attribOverlayEnter, headerHit);
+    drawAttribHeaders(geom, attribOverlay, attribOverlayEnter, headerHit);
 
     attribOverlay.exit().remove();
   }
@@ -2686,7 +2690,7 @@ function navio(selection, _h) {
       });
     }
 
-    drawAttributesHolders(levelOverlay, levelOverlayEnter);
+    drawAttributesHolders(geom, levelOverlay, levelOverlayEnter);
     drawCounts(geom, levelOverlay, levelOverlayEnter);
     drawFilterExplanationsHTML(geom);
 
