@@ -24,6 +24,9 @@ function fakeContext() {
     set fillStyle(v) {
       calls.push(["fillStyle", v]);
     },
+    set globalAlpha(v) {
+      calls.push(["globalAlpha", v]);
+    },
   };
 }
 
@@ -51,55 +54,50 @@ function buildCtx(overrides = {}) {
 }
 
 describe("createCanvasRenderer construction contract", () => {
-  it("drawLine strokes an open path through every point", () => {
-    const context = fakeContext();
-    const { drawLine } = createCanvasRenderer(buildCtx({ context }));
-    drawLine(
-      [
-        { x: 1, y: 2 },
-        { x: 3, y: 4 },
-      ],
-      2,
-      "red",
-      false
-    );
-    expect(context.calls).toEqual([
-      ["beginPath"],
-      ["moveTo", 1, 2],
-      ["lineTo", 3, 4],
-      ["lineWidth", 2],
-      ["strokeStyle", "red"],
-      ["stroke"],
-    ]);
-  });
+  // drawLinks is one of the module's two public entry points, and it reads
+  // three ctx bindings - context, links and nv - which makes it the natural
+  // surface for pinning the getter contract. The painters behind it are
+  // private by design (see the design doc's section 3), and what they put on
+  // the canvas is covered by the e2e suite, not here.
 
-  it("drawLine fills and closes when close is true", () => {
+  it("does not touch the context when there are no links", () => {
     const context = fakeContext();
-    const { drawLine } = createCanvasRenderer(buildCtx({ context }));
-    drawLine([{ x: 0, y: 0 }], 1, "blue", true);
-    expect(context.calls).toEqual([
-      ["beginPath"],
-      ["moveTo", 0, 0],
-      ["lineWidth", 1],
-      ["fillStyle", "blue"],
-      ["closePath"],
-      ["fill"],
-    ]);
+    const { drawLinks } = createCanvasRenderer(buildCtx({ context }));
+    // geom is never reached on the empty path, so it does not need to be real.
+    drawLinks({});
+    expect(context.calls).toEqual([]);
   });
 
   // The contract this module exists to honour. `context` is assigned in
-  // init() (src/navio.js:979), long after this factory is constructed, so a
+  // init() (src/navio.js), long after this factory is constructed, so a
   // renderer that captured ctx.context by VALUE would hold undefined forever
   // and throw on the first paint. Same class of bug as geom's yScales getter.
   it("reads the CURRENT context, not one captured at construction", () => {
     let context = null;
-    const ctx = buildCtx();
+    const ctx = buildCtx({ links: [{}], visibleLinks: [] });
     Object.defineProperty(ctx, "context", { get: () => context });
-    const { drawLine } = createCanvasRenderer(ctx);
+    const { drawLinks } = createCanvasRenderer(ctx);
 
     // Constructed while context is still null - exactly navio's real order.
     context = fakeContext();
-    drawLine([{ x: 7, y: 8 }], 1, "green", false);
-    expect(context.calls).toContainEqual(["moveTo", 7, 8]);
+    drawLinks({});
+    expect(context.calls[0]).toEqual(["save"]);
+    expect(context.calls).toContainEqual(["stroke"]);
+    expect(context.calls[context.calls.length - 1]).toEqual(["restore"]);
+  });
+
+  it("reads the CURRENT links array, not one captured at construction", () => {
+    let links = [];
+    const context = fakeContext();
+    const ctx = buildCtx({ context, visibleLinks: [] });
+    Object.defineProperty(ctx, "links", { get: () => links });
+    const { drawLinks } = createCanvasRenderer(ctx);
+
+    drawLinks({});
+    expect(context.calls).toEqual([]); // empty -> early return
+
+    links = [{}, {}];
+    drawLinks({});
+    expect(context.calls).toContainEqual(["save"]);
   });
 });

@@ -2757,29 +2757,6 @@ function navio(selection, _h) {
       });
   }
 
-  // Links between nodes
-  function drawLinks(geom) {
-    if (!links.length) return;
-    if (nv.DEBUG)
-      console.log("Draw links ", links[links.length - 1].length, links);
-    context.save();
-    context.beginPath();
-    context.strokeStyle = nv.linkColor;
-    context.globalAlpha = Math.min(
-      1,
-      // links.length, not links[last].length - the latter is a link object, so
-      // this evaluated to NaN and canvas silently ignored the assignment.
-      Math.max(0.1, 1000 / links.length)
-    ); // More links more transparency
-    // context.lineWidth = 0.5;
-    for (let link of visibleLinks) {
-      canvasRenderer.drawLink(geom, link);
-    }
-    // visibleLinks.forEach(drawLink);
-    context.stroke();
-    context.restore();
-  }
-
   function computeRepresentatives(levelToUpdate) {
     if (nv.DEBUG) console.log("Compute representatives levels", levelToUpdate);
     let representatives = [];
@@ -3172,15 +3149,6 @@ function navio(selection, _h) {
     }
   }
 
-  function updateLevel(geom, levelData, i) {
-    canvasRenderer.drawLevelBorder(geom, i);
-    for (let rep of levelData.representatives) {
-      canvasRenderer.drawItem(geom, rep, i);
-    }
-
-    canvasRenderer.drawLevelConnections(geom, i);
-  }
-
   function updateWidthAndHeight() {
     applyTheme();
     // levelScale runs along A, `height` along R, so the two swap places on the
@@ -3387,13 +3355,13 @@ function navio(selection, _h) {
     context.clearRect(0, 0, w + 1, height + 1);
     // }
 
-    drawLinks(geom);
+    canvasRenderer.drawLinks(geom);
 
     // If we didn't get a specific level to update, do them all
     // if (levelsToUpdate===undefined) {
 
     for (let i = 0; i < dataIs.length; i++) {
-      updateLevel(geom, dataIs[i], i);
+      canvasRenderer.updateLevel(geom, dataIs[i], i);
     }
     // } else {
 

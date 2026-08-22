@@ -238,11 +238,37 @@ export function createCanvasRenderer(ctx) {
     }
   }
 
-  return {
-    drawItem,
-    drawLevelBorder,
-    drawLink,
-    drawLevelConnections,
-    drawLine,
-  };
+  function updateLevel(geom, levelData, i) {
+    drawLevelBorder(geom, i);
+    for (let rep of levelData.representatives) {
+      drawItem(geom, rep, i);
+    }
+
+    drawLevelConnections(geom, i);
+  }
+
+  function drawLinks(geom) {
+    const context = ctx.context,
+      links = ctx.links,
+      nv = ctx.nv;
+    if (!links.length) return;
+    if (nv.DEBUG)
+      console.log("Draw links ", links[links.length - 1].length, links);
+    context.save();
+    context.beginPath();
+    context.strokeStyle = nv.linkColor;
+    context.globalAlpha = Math.min(
+      1,
+      // links.length, not links[last].length - the latter is a link object, so
+      // this evaluated to NaN and canvas silently ignored the assignment.
+      Math.max(0.1, 1000 / links.length)
+    ); // More links more transparency
+    for (let link of ctx.visibleLinks) {
+      drawLink(geom, link);
+    }
+    context.stroke();
+    context.restore();
+  }
+
+  return { updateLevel, drawLinks };
 }
