@@ -119,6 +119,17 @@ export function createCanvasRenderer(ctx) {
       attrib = drawn[i];
       // `selected` and `__seqId` are rendered columns but no longer row
       // properties - both are derived from the row's index. See #88.
+      //
+      // This is attribAt(rowIdx, attrib) (src/rows.js) open-coded. The
+      // duplication is deliberate: consolidating onto ctx.rows.attribAt
+      // measured ~594ms against ~587ms (medians-of-3-medians, 5-sample
+      // medians each, A/B/A/B/A/B ordered, 100 hardUpdate() calls at 20000
+      // rows + 5000 links) - a small but consistent regression across six
+      // runs with zero overlap between the two groups, because this runs
+      // once per cell and a cross-module call per cell is what #111 was
+      // about. Keep the two in sync by hand; rows.attribAt is the
+      // definition. See docs/ai/2026-08-22-navio-row-access-design.md and
+      // .superpowers/sdd/2026-08-22-navio-row-access/task-4-report.md.
       const val =
         attrib === "selected"
           ? !!selectedFlags[rowIdx]
