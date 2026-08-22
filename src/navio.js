@@ -28,6 +28,9 @@ import { d3AscendingNull, d3DescendingNull } from "./scales.js";
 import {
   getAttribsFromObjectRecursive,
   getAttribsFromObjectAsFn,
+  getAttrib,
+  getAttribName,
+  isMissing,
 } from "./utils.js";
 import { createSettingsPanel } from "./chrome/settings-panel.js";
 import { createAttribs } from "./attribs.js";
@@ -1177,7 +1180,7 @@ function navio(selection, _h) {
    * nv.id() points at one of the caller's own fields and is read as before.
    */
   function idOf(index) {
-    return id === "__seqId" ? index : getAttrib(data[index], id);
+    return id === "__seqId" ? index : getAttrib(data[index], id, nv.DEBUG);
   }
 
   /**
@@ -1196,7 +1199,7 @@ function navio(selection, _h) {
     // for the same reason - otherwise sorting by it compares undefined to
     // undefined and does nothing.
     if (attrib === "selected") return !!selectedFlags[index];
-    return getAttrib(data[index], attrib);
+    return getAttrib(data[index], attrib, nv.DEBUG);
   }
 
   /**
@@ -1253,7 +1256,6 @@ function navio(selection, _h) {
     },
     announce,
     visibleAttribs,
-    getAttribName,
     moveAttrToPos,
   });
   const {
@@ -1297,12 +1299,9 @@ function navio(selection, _h) {
       return colScales;
     },
     idOf,
-    getAttrib,
-    getAttribName,
     visibleAttribs,
     indexOfRow,
     posAt,
-    isMissing,
     theme,
     divisionsColour,
   });
@@ -1331,35 +1330,6 @@ function navio(selection, _h) {
       for (let i = 0; i < data.length; i++) rowIndex.set(data[i], i);
     }
     return rowIndex.get(rowOrIndex);
-  }
-
-  function getAttrib(item, attrib) {
-    if (typeof attrib === "function") {
-      try {
-        return attrib(item);
-      } catch (e) {
-        if (nv.DEBUG)
-          console.log(
-            "navio error getting attrib with item ",
-            item,
-            " attrib ",
-            attrib,
-            "error",
-            e
-          );
-        return undefined;
-      }
-    } else {
-      return item[attrib];
-    }
-  }
-
-  function getAttribName(attrib) {
-    if (typeof attrib === "function") {
-      return attrib.name ? attrib.name : attrib;
-    } else {
-      return attrib;
-    }
   }
 
   // Level groups are identified by #levelN, which is NOT unique when several
@@ -1548,6 +1518,12 @@ function navio(selection, _h) {
     notifyChange({ silent });
   }
 
+  // filters.js calls getAttrib with two arguments, so it cannot receive the
+  // bare import - the debug flag would arrive undefined and the log would die
+  // silently, with nothing testing console output to catch it. nv.DEBUG is
+  // read INSIDE the wrapper so a runtime toggle still works (CLAUDE.md).
+  const getAttribForFilters = (d, a) => getAttrib(d, a, nv.DEBUG);
+
   function updateBrushes(geom, d, level) {
     // The brush selects a RANGE OF RECORDS, so it runs along R: brushY when
     // records go down the screen, brushX when they go across (#22).
@@ -1695,7 +1671,7 @@ function navio(selection, _h) {
           getAttribAt: attribAt,
           level: level,
           itemAttr: dSortBy[level] ? dSortBy[level].attrib : "__seqId",
-          getAttrib,
+          getAttrib: getAttribForFilters,
           getAttribName,
         });
       } else {
@@ -1707,7 +1683,7 @@ function navio(selection, _h) {
           getAttribAt: attribAt,
           level: level,
           itemAttr: dSortBy[level] ? dSortBy[level].attrib : "__seqId",
-          getAttrib,
+          getAttrib: getAttribForFilters,
           getAttribName,
         });
       }
@@ -1791,14 +1767,14 @@ function navio(selection, _h) {
         newFilter = new FilterByValueDifferent({
           sel,
           itemAttr,
-          getAttrib,
+          getAttrib: getAttribForFilters,
           getAttribName,
         });
       } else {
         newFilter = new FilterByValue({
           sel,
           itemAttr,
-          getAttrib,
+          getAttrib: getAttribForFilters,
           getAttribName,
         });
       }
@@ -2852,18 +2828,6 @@ function navio(selection, _h) {
    * two-value column over the same rows. The scan itself is unavoidable - every
    * row has to be read - but what it accumulates does not have to be. See #61.
    */
-  /**
-   * A gap, not a value. These four are drawn in nullColor instead of going
-   * through the colour scale, so they must not enter a categorical domain
-   * either: each one there consumed a palette colour that could never be shown,
-   * pushed every category after it along, and counted towards the recycling
-   * warning. Shared with the drawing code deliberately - two lists of what
-   * counts as missing would drift.
-   */
-  function isMissing(v) {
-    return v === undefined || v === null || v === "" || v === "none";
-  }
-
   function distinctAt(attrib, reduce) {
     const seen = new Set();
     for (let j = 0; j < dataIs[0].length; j++) {
@@ -3396,8 +3360,6 @@ function navio(selection, _h) {
       return colScales;
     },
     attribAt,
-    getAttrib,
-    getAttribName,
     moveAttrToPos,
     findNotNull,
   });
@@ -3536,7 +3498,7 @@ function navio(selection, _h) {
             getAttribAt: attribAt,
             getId: idOf,
             resolveAttrib,
-            getAttrib,
+            getAttrib: getAttribForFilters,
             getAttribName,
           })
         )
@@ -3663,7 +3625,7 @@ function navio(selection, _h) {
       // A custom id lives on the row, so a foreign object resolves fine. The
       // default id is the row's index into `data`, which only an object we own
       // can supply - hence the identity lookup.
-      const v = id !== "__seqId" ? getAttrib(r, id) : indexOfRow(r);
+      const v = id !== "__seqId" ? getAttrib(r, id, nv.DEBUG) : indexOfRow(r);
       if (v === undefined) unresolved++;
       else ids.push(v);
     }

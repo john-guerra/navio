@@ -79,3 +79,50 @@ export function getAttribsFromObjectAsFn(obj, recursionLevel = Infinity) {
     attr.length > 1 ? convertAttribToFn(attr) : attr[0]
   );
 }
+
+/** The display name of an attribute: a string is its own name, a function's
+ * name is its `name`, and an anonymous function is its own name. */
+export function getAttribName(attrib) {
+  if (typeof attrib === "function") {
+    return attrib.name ? attrib.name : attrib;
+  } else {
+    return attrib;
+  }
+}
+
+/** Values navio renders as the null colour rather than through a scale. */
+export function isMissing(v) {
+  return v === undefined || v === null || v === "" || v === "none";
+}
+
+/**
+ * Read `attrib` off `item`, whether it is a property name or an accessor
+ * function.
+ *
+ * A function accessor is caller-supplied and can throw on a row it does not
+ * expect; navio swallows that and treats the cell as missing rather than
+ * aborting the redraw. `debug` is passed explicitly rather than read off `nv`
+ * because this is a pure leaf - callers pass `nv.DEBUG`, and must read it AT
+ * CALL TIME, since CLAUDE.md requires `nv.DEBUG = true` to work after
+ * construction.
+ */
+export function getAttrib(item, attrib, debug) {
+  if (typeof attrib === "function") {
+    try {
+      return attrib(item);
+    } catch (e) {
+      if (debug)
+        console.log(
+          "navio error getting attrib with item ",
+          item,
+          " attrib ",
+          attrib,
+          "error",
+          e
+        );
+      return undefined;
+    }
+  } else {
+    return item[attrib];
+  }
+}

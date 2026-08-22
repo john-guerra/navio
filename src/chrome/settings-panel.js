@@ -2,6 +2,7 @@ import * as d3 from "d3";
 import { PARAMS } from "../params.js";
 import { createTheme } from "./theme.js";
 import { createSettingsStorage } from "./settings-storage.js";
+import { getAttribName } from "../utils.js";
 
 /**
  * The settings panel for one Navio instance, and the composition root for the
@@ -25,7 +26,7 @@ import { createSettingsStorage } from "./settings-storage.js";
  * @param {object} ctx - { nv, instanceId, get selection(), get attribsOrdered(),
  *   get dataIs(), get canvas(), get tooltipElement(),
  *   get/set hiddenAttribs, get/set height,
- *   announce, visibleAttribs, getAttribName, moveAttrToPos }
+ *   announce, visibleAttribs, moveAttrToPos }
  */
 export function createSettingsPanel(ctx) {
   // Panel-owned state. These left navio.js's let chain with this module and are
@@ -90,7 +91,7 @@ export function createSettingsPanel(ctx) {
       get liveSelects() {
         return LIVE_SELECTS;
       },
-      getAttribName: ctx.getAttribName,
+      getAttribName,
       moveAttrToPos: ctx.moveAttrToPos,
     },
     {
@@ -787,9 +788,7 @@ export function createSettingsPanel(ctx) {
     // --- attributes ------------------------------------------------------
     // Same label the column header uses, so the two agree.
     const label = (a) =>
-      ctx.getAttribName(a) === "__seqId"
-        ? "sequential Index"
-        : ctx.getAttribName(a);
+      getAttribName(a) === "__seqId" ? "sequential Index" : getAttribName(a);
     const names = ctx.attribsOrdered.map(label);
 
     // One row per column, so this is the section that grows without bound and
@@ -819,7 +818,7 @@ export function createSettingsPanel(ctx) {
         ctx.nv.setHiddenAttribs(
           ctx.attribsOrdered
             .filter((a) => !shown.has(label(a)))
-            .map((a) => ctx.getAttribName(a))
+            .map((a) => getAttribName(a))
         );
         persistSettings();
         ctx.announce(`${shown.size} of ${names.length} columns shown`);
@@ -841,7 +840,7 @@ export function createSettingsPanel(ctx) {
       // so re-typing them would only break how they render.
       canSetType: (name) => {
         const attrib = ctx.attribsOrdered.find((a) => label(a) === name);
-        const n = ctx.getAttribName(attrib);
+        const n = getAttribName(attrib);
         return n !== "__seqId" && n !== "selected";
       },
       move: (name, delta) => {
@@ -874,7 +873,7 @@ export function createSettingsPanel(ctx) {
         .data(
           ctx.attribsOrdered
             .filter((a) => {
-              const n = ctx.getAttribName(a);
+              const n = getAttribName(a);
               return n !== "__seqId" && n !== "selected";
             })
             .map((a) => ({ attrib: a, name: label(a) }))

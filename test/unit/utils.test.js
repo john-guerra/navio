@@ -1,8 +1,11 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
   convertAttribToFn,
   getAttribsFromObjectAsFn,
   getAttribsFromObjectRecursive,
+  getAttribName,
+  isMissing,
+  getAttrib,
 } from "../../src/utils.js";
 
 describe("convertAttribToFn", () => {
@@ -112,5 +115,63 @@ describe("getAttribsFromObjectAsFn", () => {
     expect(attribs[0]).toBe("top");
     expect(typeof attribs[1]).toBe("function");
     expect(attribs[1]({ outer: { inner: 2 } })).toBe(2);
+  });
+});
+
+describe("getAttribName", () => {
+  it("returns a string attribute unchanged", () => {
+    expect(getAttribName("value")).toBe("value");
+  });
+  it("returns a named function's name", () => {
+    const f = function score(d) {
+      return d.a;
+    };
+    expect(getAttribName(f)).toBe("score");
+  });
+  it("returns the function itself when it is anonymous", () => {
+    const f = (d) => d.a;
+    Object.defineProperty(f, "name", { value: "" });
+    expect(getAttribName(f)).toBe(f);
+  });
+});
+
+describe("isMissing", () => {
+  it.each([undefined, null, "", "none"])("treats %p as missing", (v) => {
+    expect(isMissing(v)).toBe(true);
+  });
+  it.each([0, false, "a", NaN])("treats %p as present", (v) => {
+    expect(isMissing(v)).toBe(false);
+  });
+});
+
+describe("getAttrib", () => {
+  it("reads a plain property", () => {
+    expect(getAttrib({ a: 1 }, "a")).toBe(1);
+  });
+  it("calls a function accessor", () => {
+    expect(getAttrib({ a: 1 }, (d) => d.a * 2)).toBe(2);
+  });
+
+  // The accessor is caller-supplied, so it can throw on rows it does not
+  // expect. Navio swallows that and renders the cell as missing rather than
+  // aborting the whole redraw.
+  it("returns undefined when the accessor throws, and stays silent", () => {
+    const spy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const boom = () => {
+      throw new Error("nope");
+    };
+    expect(getAttrib({}, boom)).toBeUndefined();
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  it("logs when debug is true", () => {
+    const spy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const boom = () => {
+      throw new Error("nope");
+    };
+    expect(getAttrib({}, boom, true)).toBeUndefined();
+    expect(spy).toHaveBeenCalled();
+    spy.mockRestore();
   });
 });

@@ -1,3 +1,5 @@
+import { getAttrib, getAttribName, isMissing } from "../utils.js";
+
 /**
  * navio's canvas painters: everything that draws to the 2D context.
  *
@@ -40,8 +42,7 @@
  *
  * @param {object} ctx - { nv, get context(), get data(), get dataIs(),
  *   get links(), get visibleLinks(), get selectedFlags(), get colScales(),
- *   idOf, getAttrib, getAttribName, visibleAttribs, indexOfRow, posAt,
- *   isMissing, theme, divisionsColour }
+ *   idOf, visibleAttribs, indexOfRow, posAt, theme, divisionsColour }
  */
 export function createCanvasRenderer(ctx) {
   function drawLevelBorder(geom, i) {
@@ -107,9 +108,6 @@ export function createCanvasRenderer(ctx) {
       selectedFlags = ctx.selectedFlags,
       colScales = ctx.colScales,
       idOf = ctx.idOf,
-      getAttrib = ctx.getAttrib,
-      getAttribName = ctx.getAttribName,
-      isMissing = ctx.isMissing,
       divisionsColour = ctx.divisionsColour,
       nv = ctx.nv;
     const item = data[rowIdx];
@@ -126,7 +124,7 @@ export function createCanvasRenderer(ctx) {
           ? !!selectedFlags[rowIdx]
           : attrib === "__seqId"
             ? rowIdx
-            : getAttrib(item, attrib);
+            : getAttrib(item, attrib, nv.DEBUG);
       const attribName = getAttribName(attrib);
 
       // A whole number of DEVICE pixels, so the stroke can sit exactly on the
@@ -189,7 +187,7 @@ export function createCanvasRenderer(ctx) {
     // array in place - d3-force rewrites source/target from ids to node
     // objects after navio has already seen them. It was tried, it regressed,
     // it was reverted; test/e2e/61-link-endpoints.spec.js pins it.
-    let lastAttrib = ctx.getAttribName(visible[visible.length - 1]),
+    let lastAttrib = getAttribName(visible[visible.length - 1]),
       rightBorder = geom.cellA(lastAttrib, lastLevel) + geom.bandwidthA() + 2,
       ys =
         geom.cellR(idOf(indexOfRow(link.source)), lastLevel) +

@@ -1,6 +1,6 @@
 import * as d3 from "d3";
 import { scaleText, scaleOrdered } from "./scales.js";
-import { getAttribsFromObjectAsFn } from "./utils.js";
+import { getAttribsFromObjectAsFn, getAttrib, getAttribName } from "./utils.js";
 
 /**
  * How a column becomes an attribute: declaring one with a scale, guessing the
@@ -19,8 +19,7 @@ import { getAttribsFromObjectAsFn } from "./utils.js";
  * cross as getters or the module would go on reading a replaced array.
  *
  * @param {object} ctx - { nv, get data(), get attribsOrdered(), get dAttribs(),
- *   get colScales(), attribAt, getAttrib, getAttribName, moveAttrToPos,
- *   findNotNull }
+ *   get colScales(), attribAt, moveAttrToPos, findNotNull }
  */
 export function createAttribs(ctx) {
   /**
@@ -32,7 +31,7 @@ export function createAttribs(ctx) {
    */
   function attribExistsInData(attr) {
     if (!ctx.data.length) return true;
-    const name = ctx.getAttribName(attr);
+    const name = getAttribName(attr);
     // Derived columns are not row properties. See #88.
     if (name === "__seqId" || name === "selected") return true;
     if (typeof attr === "function") return true; // an accessor computes its own
@@ -50,7 +49,7 @@ export function createAttribs(ctx) {
     if (scale === undefined) {
       scale = d3.scaleOrdinal(d3.schemeCategory10);
     }
-    if (ctx.dAttribs.has(ctx.getAttribName(attr))) {
+    if (ctx.dAttribs.has(getAttribName(attr))) {
       console.warn(`navio.addAttrib: attribute ${attr} already added`);
       return;
     }
@@ -59,12 +58,12 @@ export function createAttribs(ctx) {
     if (!attribExistsInData(attr)) {
       const known = Object.keys(ctx.data[0] || {});
       console.warn(
-        `navio.addAttrib: "${ctx.getAttribName(attr)}" is not in the data. ` +
+        `navio.addAttrib: "${getAttribName(attr)}" is not in the data. ` +
           `The column will be empty. Available: ${known.join(", ")}`
       );
     }
     ctx.attribsOrdered.push(attr);
-    ctx.dAttribs.set(ctx.getAttribName(attr), attr);
+    ctx.dAttribs.set(getAttribName(attr), attr);
     ctx.colScales.set(attr, scale);
     return ctx.nv;
   };
@@ -92,7 +91,7 @@ export function createAttribs(ctx) {
     const domain =
       ctx.data !== undefined && ctx.data.length > 0
         ? d3.extent(ctx.data, function (d) {
-            return ctx.getAttrib(d, attr);
+            return getAttrib(d, attr, ctx.nv.DEBUG);
           })
         : [0, 1];
 
@@ -110,7 +109,7 @@ export function createAttribs(ctx) {
     const domain =
       ctx.data !== undefined && ctx.data.length > 0
         ? d3.extent(ctx.data, function (d) {
-            return ctx.getAttrib(d, attr);
+            return getAttrib(d, attr, ctx.nv.DEBUG);
           })
         : [-1, 1];
     const scale =
@@ -249,7 +248,7 @@ export function createAttribs(ctx) {
         const numDistinctValues = new Set(
           ctx.data
             .slice(0, ctx.nv.howManyItemsShouldSearchForNotNull)
-            .map((d) => ctx.getAttrib(d, attr))
+            .map((d) => getAttrib(d, attr, ctx.nv.DEBUG))
         ).size;
 
         // How many different elements are there
@@ -284,7 +283,7 @@ export function createAttribs(ctx) {
         // -73.886312) drew as one flat brown: its 0.139 of range sat inside a
         // 148.05-wide domain, 0.094% of the scale.
         const [numMin, numMax] = d3.extent(ctx.data, (d) =>
-          ctx.getAttrib(d, attr)
+          getAttrib(d, attr, ctx.nv.DEBUG)
         );
         if (numMin < 0 && numMax > 0) {
           ctx.nv.DEBUG &&
@@ -364,7 +363,7 @@ export function createAttribs(ctx) {
   /** The type tag of an attribute's colour scale: "cat", "seq", "text"... */
   ctx.nv.getAttribType = function (attrib) {
     const scale =
-      ctx.colScales.get(attrib) || ctx.colScales.get(ctx.getAttribName(attrib));
+      ctx.colScales.get(attrib) || ctx.colScales.get(getAttribName(attrib));
     return scale && scale.__type;
   };
 
@@ -394,10 +393,8 @@ export function createAttribs(ctx) {
       );
       return ctx.nv;
     }
-    const name = ctx.getAttribName(attrib);
-    const pos = ctx.attribsOrdered.findIndex(
-      (a) => ctx.getAttribName(a) === name
-    );
+    const name = getAttribName(attrib);
+    const pos = ctx.attribsOrdered.findIndex((a) => getAttribName(a) === name);
     if (pos === -1) {
       console.warn(
         `navio.setAttribType: "${name}" is not one of the attributes`
