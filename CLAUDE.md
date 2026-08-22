@@ -35,7 +35,7 @@ npm run build > /tmp/build.log 2>&1; echo "EXIT: $?"
 ## Layout
 
 ```
-src/navio.js        ~4000 lines, ONE closure. Most things still live here.
+src/navio.js        ~3910 lines, ONE closure. Most things still live here.
 src/chrome/settings-panel.js   the gear, the panel, and everything drawn in it.
                     Composition root: it builds theme.js and
                     settings-storage.js, so navio.js constructs ONE thing.
@@ -48,6 +48,10 @@ src/render/canvas.js    every function that paints to the 2D context. Built
                     with a ctx of getters like geometry.js; imports nothing.
                     Exposes updateLevel and drawLinks; the five painters
                     behind them are private.
+src/rows.js         row identity and position. Owns posByLevel and rowIndex;
+                    reads data/id/selectedFlags through getters. attribAt is
+                    the definition of how a cell's value is resolved.
+src/utils.js        getAttrib, getAttribName, isMissing
 src/filters.js      the five filter factories + filterFromValue (serialisation)
 src/scales.js       scaleText, scaleOrdered, null-safe comparators
 src/NavioWidget.js  reactivewidgets.org wrapper: .value, input events
