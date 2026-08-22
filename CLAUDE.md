@@ -35,7 +35,7 @@ npm run build > /tmp/build.log 2>&1; echo "EXIT: $?"
 ## Layout
 
 ```
-src/navio.js        ~4190 lines, ONE closure. Most things still live here.
+src/navio.js        ~4010 lines, ONE closure. Most things still live here.
 src/chrome/settings-panel.js   the gear, the panel, and everything drawn in it.
                     Composition root: it builds theme.js and
                     settings-storage.js, so navio.js constructs ONE thing.
@@ -44,6 +44,10 @@ src/chrome/settings-storage.js the settings object and localStorage. Reaches the
 src/chrome/theme.js THEMES and which one applies. A leaf: imports only d3.
 src/geometry.js     navio's coordinate system - forward and inverse mapping
                     between (attribute, record) and screen. A leaf: imports only d3.
+src/render/canvas.js    every function that paints to the 2D context. Built
+                    with a ctx of getters like geometry.js; imports nothing.
+                    Exposes updateLevel and drawLinks; the five painters
+                    behind them are private.
 src/filters.js      the five filter factories + filterFromValue (serialisation)
 src/scales.js       scaleText, scaleOrdered, null-safe comparators
 src/NavioWidget.js  reactivewidgets.org wrapper: .value, input events
