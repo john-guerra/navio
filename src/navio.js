@@ -1362,95 +1362,6 @@ function navio(selection, _h) {
     }
   }
 
-  function drawItem(geom, rowIdx, level) {
-    const {
-      toXY,
-      cellA,
-      cellR,
-      bandwidthA,
-      bandwidthR,
-      snapToDevice,
-      pixelRatio,
-    } = geom;
-    const item = data[rowIdx];
-    let attrib, i, y;
-
-    const drawn = visibleAttribs();
-    context.save();
-    for (i = 0; i < drawn.length; i++) {
-      attrib = drawn[i];
-      // `selected` is a rendered column but is no longer a row property.
-      // `selected` and `__seqId` are rendered columns but no longer row
-      // properties - both are derived from the row's index. See #88.
-      const val =
-        attrib === "selected"
-          ? !!selectedFlags[rowIdx]
-          : attrib === "__seqId"
-            ? rowIdx
-            : getAttrib(item, attrib);
-      const attribName = getAttribName(attrib);
-
-      // A whole number of DEVICE pixels, so the stroke can sit exactly on the
-      // grid. Round rather than ceil the device width: ceil in CSS units then
-      // scaled would round twice and, at a fractional pixelRatio, still land
-      // between pixels.
-      const deviceWidth = Math.max(
-        1,
-        Math.round(Math.ceil(bandwidthR(level)) * pixelRatio())
-      );
-      y = snapToDevice(
-        cellR(idOf(rowIdx), level) + bandwidthR(level) / 2,
-        deviceWidth
-      );
-
-      // One stroke per (record, attribute) cell: it runs the width of the
-      // attribute band along A, and is as thick as one record along R.
-      const aStart = Math.round(cellA(attribName, level)),
-        aEnd = Math.round(cellA(attribName, level) + bandwidthA()),
-        p0 = toXY(aStart, y),
-        p1 = toXY(aEnd, y);
-      context.beginPath();
-      context.moveTo(p0.x, p0.y);
-      context.lineTo(p1.x, p1.y);
-      context.lineWidth = deviceWidth / pixelRatio();
-
-      context.strokeStyle = isMissing(val)
-        ? nv.nullColor
-        : colScales.get(attrib)(val);
-
-      context.stroke();
-
-      // TODO get this out
-      //If the range bands are tick enough draw divisions
-      if (bandwidthR(level) > nv.divisionsThreshold * 2) {
-        let yLine = Math.round(cellR(idOf(rowIdx), level));
-        // y = yScales[level](item[id])+yScales[level].bandwidth()/2;
-        const d0 = toXY(cellA(attribName, level), yLine),
-          d1 = toXY(cellA(attribName, level) + bandwidthA(), yLine);
-        context.beginPath();
-        context.moveTo(d0.x, d0.y);
-        context.lineTo(d1.x, d1.y);
-        context.lineWidth = 1;
-        // context.lineWidth = 1;
-        context.strokeStyle = divisionsColour();
-        context.stroke();
-      }
-    }
-    context.restore();
-  } // drawItem
-
-  function drawLevelBorder(geom, i) {
-    context.save();
-    context.beginPath();
-    const origin = geom.toXY(geom.levelStartA(i), geom.recordAxisStart() - 1),
-      size = geom.toWH(geom.levelExtentA() + 1, geom.recordExtent() + 2);
-    context.rect(origin.x, origin.y, size.width, size.height);
-    context.strokeStyle = theme().border;
-    context.lineWidth = 1;
-    context.stroke();
-    context.restore();
-  }
-
   // Level groups are identified by #levelN, which is NOT unique when several
   // Navios share a page - a document-wide d3.select would always return the
   // first instance's element and move the wrong widget's brush. Same class of
@@ -2847,29 +2758,6 @@ function navio(selection, _h) {
   }
 
   // Links between nodes
-  function drawLink(geom, link) {
-    const lastLevel = dataIs.length - 1;
-    const visible = visibleAttribs();
-    let lastAttrib = getAttribName(visible[visible.length - 1]),
-      rightBorder = geom.cellA(lastAttrib, lastLevel) + geom.bandwidthA() + 2,
-      ys =
-        geom.cellR(idOf(indexOfRow(link.source)), lastLevel) +
-        geom.bandwidthR(lastLevel) / 2,
-      yt =
-        geom.cellR(idOf(indexOfRow(link.target)), lastLevel) +
-        geom.bandwidthR(lastLevel) / 2,
-      miny = Math.min(ys, yt),
-      maxy = Math.max(ys, yt),
-      midy = maxy - miny;
-    context.moveTo(rightBorder, miny); //starting point
-    context.quadraticCurveTo(
-      rightBorder + midy / 6,
-      miny + midy / 2, // mid point
-      rightBorder,
-      maxy // end point
-    );
-  }
-
   function drawLinks(geom) {
     if (!links.length) return;
     if (nv.DEBUG)
@@ -2885,62 +2773,11 @@ function navio(selection, _h) {
     ); // More links more transparency
     // context.lineWidth = 0.5;
     for (let link of visibleLinks) {
-      drawLink(geom, link);
+      canvasRenderer.drawLink(geom, link);
     }
     // visibleLinks.forEach(drawLink);
     context.stroke();
     context.restore();
-  }
-
-  function drawLevelConnections(geom, level) {
-    if (level <= 0) {
-      return;
-    }
-    for (let item of dataIs[level].representatives) {
-      // Compute the yPrev by calculating the index of the corresponding representative
-      let iOnPrev = posAt(item, level - 1);
-      let iRep = Math.floor(
-        iOnPrev - (iOnPrev % dataIs[level - 1].itemsPerpixel)
-      );
-      // if (nv.DEBUG) console.log("i rep = "+ iRep);
-      // if (nv.DEBUG) console.log(data[level-1][iRep]);
-      // if (nv.DEBUG) console.log(yScales[level-1](data[level-1][iRep][id]));
-      let locPrevLevel = {
-        x: geom.levelStartA(level - 1) + geom.levelExtentA(),
-        y: geom.cellR(idOf(dataIs[level - 1][iRep]), level - 1),
-      };
-      let locLevel = {
-        x: geom.levelStartA(level),
-        y: geom.cellR(idOf(item), level),
-      };
-
-      let points = [
-        locPrevLevel,
-        { x: locPrevLevel.x + nv.levelsSeparation * 0.3, y: locPrevLevel.y },
-        { x: locLevel.x - nv.levelsSeparation * 0.3, y: locLevel.y },
-        locLevel,
-        { x: locLevel.x, y: locLevel.y + geom.bandwidthR(level) },
-        {
-          x: locLevel.x - nv.levelsSeparation * 0.3,
-          y: locLevel.y + geom.bandwidthR(level),
-        },
-        {
-          x: locPrevLevel.x + nv.levelsSeparation * 0.3,
-          y: locPrevLevel.y + geom.bandwidthR(level - 1),
-        },
-        {
-          x: locPrevLevel.x,
-          y: locPrevLevel.y + geom.bandwidthR(level - 1),
-        },
-        locPrevLevel,
-      ];
-      // `points` is built in (attribute-axis, record-axis) space above - the
-      // .x fields come from levelScale/xScale and the .y fields from yScales -
-      // so mapping the whole path through toXY transposes it for free (#22).
-      const path = points.map((pt) => geom.toXY(pt.x, pt.y));
-      canvasRenderer.drawLine(path, 1, nv.levelConnectionsColor);
-      canvasRenderer.drawLine(path, 1, nv.levelConnectionsColor, true);
-    }
   }
 
   function computeRepresentatives(levelToUpdate) {
@@ -3336,12 +3173,12 @@ function navio(selection, _h) {
   }
 
   function updateLevel(geom, levelData, i) {
-    drawLevelBorder(geom, i);
+    canvasRenderer.drawLevelBorder(geom, i);
     for (let rep of levelData.representatives) {
-      drawItem(geom, rep, i);
+      canvasRenderer.drawItem(geom, rep, i);
     }
 
-    drawLevelConnections(geom, i);
+    canvasRenderer.drawLevelConnections(geom, i);
   }
 
   function updateWidthAndHeight() {
