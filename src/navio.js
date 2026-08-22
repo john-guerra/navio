@@ -5,6 +5,7 @@ import * as d3 from "d3";
 import { PARAMS, METHODS } from "./params.js";
 import { palettes, nameable } from "./palettes.js";
 import { createGeometry } from "./geometry.js";
+import { createCanvasRenderer } from "./render/canvas.js";
 
 // import {
 //   interpolateBlues,
@@ -1267,6 +1268,44 @@ function navio(selection, _h) {
     persistSettings,
     maybeRestoreSettings,
   } = settings;
+
+  // The canvas painters. Constructed here rather than at the top of the
+  // closure because `theme` and `divisionsColour` are consts from the
+  // settings module just above; everything else it needs is either `nv`, a
+  // hoisted function declaration, or read through a getter at call time.
+  const canvasRenderer = createCanvasRenderer({
+    nv,
+    get context() {
+      return context;
+    },
+    get data() {
+      return data;
+    },
+    get dataIs() {
+      return dataIs;
+    },
+    get links() {
+      return links;
+    },
+    get visibleLinks() {
+      return visibleLinks;
+    },
+    get selectedFlags() {
+      return selectedFlags;
+    },
+    get colScales() {
+      return colScales;
+    },
+    idOf,
+    getAttrib,
+    getAttribName,
+    visibleAttribs,
+    indexOfRow,
+    posAt,
+    isMissing,
+    theme,
+    divisionsColour,
+  });
 
   /** True when attributes run down the screen and records run across (#22). */
   function isVertical() {
@@ -2853,27 +2892,6 @@ function navio(selection, _h) {
     context.restore();
   }
 
-  function drawLine(points, width, color, close) {
-    context.beginPath();
-    for (let i = 0; i < points.length; i++) {
-      const p = points[i];
-      if (i === 0) {
-        context.moveTo(p.x, p.y);
-      } else {
-        context.lineTo(p.x, p.y);
-      }
-    }
-    context.lineWidth = width;
-    if (close) {
-      context.fillStyle = color;
-      context.closePath();
-      context.fill();
-    } else {
-      context.strokeStyle = color;
-      context.stroke();
-    }
-  }
-
   function drawLevelConnections(geom, level) {
     if (level <= 0) {
       return;
@@ -2920,8 +2938,8 @@ function navio(selection, _h) {
       // .x fields come from levelScale/xScale and the .y fields from yScales -
       // so mapping the whole path through toXY transposes it for free (#22).
       const path = points.map((pt) => geom.toXY(pt.x, pt.y));
-      drawLine(path, 1, nv.levelConnectionsColor);
-      drawLine(path, 1, nv.levelConnectionsColor, true);
+      canvasRenderer.drawLine(path, 1, nv.levelConnectionsColor);
+      canvasRenderer.drawLine(path, 1, nv.levelConnectionsColor, true);
     }
   }
 
