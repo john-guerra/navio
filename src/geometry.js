@@ -121,8 +121,11 @@ export function createGeometry(ctx) {
    * ratio 1 and break ratio 2, which is why the old code looked correct.
    */
   function snapToDevice(coord, deviceWidth) {
-    const dev = Math.round(coord * pixelRatio()) + (deviceWidth % 2 ? 0.5 : 0);
-    return dev / pixelRatio();
+    // One read, not two: this runs once per (row, attribute) cell, which is
+    // navio's hot path (#111).
+    const ratio = pixelRatio();
+    const dev = Math.round(coord * ratio) + (deviceWidth % 2 ? 0.5 : 0);
+    return dev / ratio;
   }
 
   function attribAtA(pos, level) {

@@ -77,6 +77,9 @@ export function createCanvasRenderer(ctx) {
       snapToDevice,
       pixelRatio,
     } = geom;
+    // pixelRatio is a method call on geom; read it once per row rather than
+    // twice per attribute (#111).
+    const ratio = pixelRatio();
     // Read every rebound binding ONCE here, not per attribute: each is a
     // getter, and this loop is navio's hot path (see the design's section 4).
     const context = ctx.context,
@@ -112,7 +115,7 @@ export function createCanvasRenderer(ctx) {
       // between pixels.
       const deviceWidth = Math.max(
         1,
-        Math.round(Math.ceil(bandwidthR(level)) * pixelRatio())
+        Math.round(Math.ceil(bandwidthR(level)) * ratio)
       );
       y = snapToDevice(
         cellR(idOf(rowIdx), level) + bandwidthR(level) / 2,
@@ -128,7 +131,7 @@ export function createCanvasRenderer(ctx) {
       context.beginPath();
       context.moveTo(p0.x, p0.y);
       context.lineTo(p1.x, p1.y);
-      context.lineWidth = deviceWidth / pixelRatio();
+      context.lineWidth = deviceWidth / ratio;
 
       context.strokeStyle = isMissing(val)
         ? nv.nullColor
