@@ -8,7 +8,9 @@ one possible.
 
 **How to use this doc:** a snapshot. Re-check line references before acting.
 
-**Status:** design only. Nothing here is implemented.
+**Status:** implemented. See
+`docs/superpowers/plans/2026-08-21-navio-canvas-renderer.md` (Tasks 1-5) for
+what landed and where it diverged from this design.
 
 ## 1. What this is for, and what it is not
 

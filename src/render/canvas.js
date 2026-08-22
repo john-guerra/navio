@@ -2,7 +2,7 @@
  * navio's canvas painters: everything that draws to the 2D context.
  *
  * Built ONCE, in the closure, after the settings module is destructured
- * (src/navio.js:1258-1269) - `theme` and `divisionsColour` come from there.
+ * (src/navio.js:1259-1270) - `theme` and `divisionsColour` come from there.
  *
  * `context`, `data`, `dataIs`, `links`, `visibleLinks`, `selectedFlags` and
  * `colScales` are all reassigned during the widget's life - `context` in
@@ -12,6 +12,19 @@
  * module, and is safe as a plain value. This is the same contract
  * src/geometry.js documents, and CLAUDE.md's "a module gets GETTERS, not
  * values" landmine is about exactly this.
+ *
+ * Of the seven getters, `context`, `links` and `visibleLinks` are pinned by
+ * test/unit/canvas-renderer.test.js, and `data`, `dataIs` and `colScales`
+ * fail loudly in the e2e suite if captured by value. `selectedFlags` is
+ * neither: it starts as an empty Uint8Array, so a stale capture paints the
+ * `selected` column as all-unselected forever without throwing, and nothing
+ * currently catches that. It is held correct by this contract alone - if you
+ * touch how it is read, verify by hand.
+ *
+ * Convention: anything read inside a loop, or read more than once, is
+ * hoisted into a local at function entry - a getter read is a function call
+ * and drawItem's attribute loop is navio's hot path (#111). One-shot reads
+ * of never-rebound plain values are left inline as `ctx.x`.
  *
  * `geom` is NOT a ctx entry - it is passed per call, because every one of
  * these functions already takes it.
@@ -156,6 +169,7 @@ export function createCanvasRenderer(ctx) {
     context.restore();
   } // drawItem
 
+  // Links between nodes
   function drawLink(geom, link) {
     const context = ctx.context,
       dataIs = ctx.dataIs,

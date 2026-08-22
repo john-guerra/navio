@@ -3363,17 +3363,6 @@ function navio(selection, _h) {
     for (let i = 0; i < dataIs.length; i++) {
       canvasRenderer.updateLevel(geom, dataIs[i], i);
     }
-    // } else {
-
-    //   levelToUpdate.forEach(levelToUp => {
-    //     if (! dataIs.length.hasOwnProperty(levelToUp)) {
-    //       updateLevel(dataIs[levelToUp], levelToUp);
-    //     } else {
-    //       if (nv.DEBUG) console.log("Asked to update a level that doesn't exist, ignoring. Level=" , levelToUp, " levs to update" levelsToUpdate);
-    //     }
-
-    //   });
-    // }
 
     if (shouldDrawBrushes) {
       drawBrushes(recomputeBrushes);

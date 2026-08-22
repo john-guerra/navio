@@ -13,6 +13,9 @@ function fakeContext() {
     closePath: () => calls.push(["closePath"]),
     moveTo: (x, y) => calls.push(["moveTo", x, y]),
     lineTo: (x, y) => calls.push(["lineTo", x, y]),
+    rect: (x, y, w, h) => calls.push(["rect", x, y, w, h]),
+    quadraticCurveTo: (a, b, c, d) =>
+      calls.push(["quadraticCurveTo", a, b, c, d]),
     stroke: () => calls.push(["stroke"]),
     fill: () => calls.push(["fill"]),
     set lineWidth(v) {
@@ -99,5 +102,39 @@ describe("createCanvasRenderer construction contract", () => {
     links = [{}, {}];
     drawLinks({});
     expect(context.calls).toContainEqual(["save"]);
+  });
+
+  // The third getter reachable from the public surface, and the one whose
+  // failure is SILENT: visibleLinks starts as [] (src/navio.js), so a stale
+  // capture never throws - links simply stop being painted. The e2e suite
+  // does not catch it either, because 61-link-endpoints.spec.js asserts on
+  // nv.getVisibleLinks() (the model) rather than on what reaches the canvas.
+  it("reads the CURRENT visibleLinks, not one captured at construction", () => {
+    let visibleLinks = [];
+    const context = fakeContext();
+    // links non-empty so drawLinks gets past its early return; one level and
+    // one attribute is all drawLink needs to resolve an endpoint.
+    const ctx = buildCtx({
+      context,
+      links: [{}],
+      dataIs: [[0]],
+      visibleAttribs: () => ["value"],
+    });
+    Object.defineProperty(ctx, "visibleLinks", { get: () => visibleLinks });
+    const { drawLinks } = createCanvasRenderer(ctx);
+    // rightBorder = cellA + bandwidthA + 2 = 12; ys = cellR + bandwidthR/2 = 6.
+    const geom = {
+      cellA: () => 0,
+      bandwidthA: () => 10,
+      cellR: () => 5,
+      bandwidthR: () => 2,
+    };
+
+    drawLinks(geom);
+    expect(context.calls).not.toContainEqual(["moveTo", 12, 6]);
+
+    visibleLinks = [{ source: 0, target: 0 }];
+    drawLinks(geom);
+    expect(context.calls).toContainEqual(["moveTo", 12, 6]);
   });
 });
