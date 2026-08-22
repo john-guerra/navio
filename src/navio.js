@@ -1282,10 +1282,8 @@ function navio(selection, _h) {
     get colScales() {
       return colScales;
     },
-    idOf: rows.idOf,
+    rows,
     visibleAttribs,
-    indexOfRow: rows.indexOfRow,
-    posAt: rows.posAt,
     theme,
     divisionsColour,
   });
@@ -3316,7 +3314,7 @@ function navio(selection, _h) {
     get colScales() {
       return colScales;
     },
-    attribAt: rows.attribAt,
+    rows,
     moveAttrToPos,
     findNotNull,
   });

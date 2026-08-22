@@ -42,7 +42,7 @@ import { getAttrib, getAttribName, isMissing } from "../utils.js";
  *
  * @param {object} ctx - { nv, get context(), get data(), get dataIs(),
  *   get links(), get visibleLinks(), get selectedFlags(), get colScales(),
- *   idOf, visibleAttribs, indexOfRow, posAt, theme, divisionsColour }
+ *   rows, visibleAttribs, theme, divisionsColour }
  */
 export function createCanvasRenderer(ctx) {
   function drawLevelBorder(geom, i) {
@@ -107,7 +107,7 @@ export function createCanvasRenderer(ctx) {
       data = ctx.data,
       selectedFlags = ctx.selectedFlags,
       colScales = ctx.colScales,
-      idOf = ctx.idOf,
+      idOf = ctx.rows.idOf,
       divisionsColour = ctx.divisionsColour,
       nv = ctx.nv;
     const item = data[rowIdx];
@@ -178,8 +178,8 @@ export function createCanvasRenderer(ctx) {
   function drawLink(geom, link) {
     const context = ctx.context,
       dataIs = ctx.dataIs,
-      idOf = ctx.idOf,
-      indexOfRow = ctx.indexOfRow;
+      idOf = ctx.rows.idOf,
+      indexOfRow = ctx.rows.indexOfRow;
     const lastLevel = dataIs.length - 1;
     const visible = ctx.visibleAttribs();
     // link.source/link.target are resolved through indexOfRow on EVERY call.
@@ -212,8 +212,8 @@ export function createCanvasRenderer(ctx) {
       return;
     }
     const dataIs = ctx.dataIs,
-      posAt = ctx.posAt,
-      idOf = ctx.idOf,
+      posAt = ctx.rows.posAt,
+      idOf = ctx.rows.idOf,
       nv = ctx.nv;
     for (let item of dataIs[level].representatives) {
       // Compute the yPrev by calculating the index of the corresponding

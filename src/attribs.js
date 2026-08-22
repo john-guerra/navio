@@ -19,7 +19,7 @@ import { getAttribsFromObjectAsFn, getAttrib, getAttribName } from "./utils.js";
  * cross as getters or the module would go on reading a replaced array.
  *
  * @param {object} ctx - { nv, get data(), get attribsOrdered(), get dAttribs(),
- *   get colScales(), attribAt, moveAttrToPos, findNotNull }
+ *   get colScales(), rows, moveAttrToPos, findNotNull }
  */
 export function createAttribs(ctx) {
   /**
@@ -75,7 +75,7 @@ export function createAttribs(ctx) {
           // the row gives undefined for every row and collapses the domain to
           // [undefined, undefined] - a flat, unreadable column.
           d3.extent(ctx.data, function (_d, i) {
-            return ctx.attribAt(i, attr);
+            return ctx.rows.attribAt(i, attr);
           })
         : [0, 1]; //if we don"t have data, set the default domain
     const scale =
