@@ -35,7 +35,7 @@ npm run build > /tmp/build.log 2>&1; echo "EXIT: $?"
 ## Layout
 
 ```
-src/navio.js        ~4010 lines, ONE closure. Most things still live here.
+src/navio.js        ~4000 lines, ONE closure. Most things still live here.
 src/chrome/settings-panel.js   the gear, the panel, and everything drawn in it.
                     Composition root: it builds theme.js and
                     settings-storage.js, so navio.js constructs ONE thing.

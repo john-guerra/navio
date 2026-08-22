@@ -106,9 +106,12 @@ describe("createCanvasRenderer construction contract", () => {
 
   // The third getter reachable from the public surface, and the one whose
   // failure is SILENT: visibleLinks starts as [] (src/navio.js), so a stale
-  // capture never throws - links simply stop being painted. The e2e suite
-  // does not catch it either, because 61-link-endpoints.spec.js asserts on
-  // nv.getVisibleLinks() (the model) rather than on what reaches the canvas.
+  // capture never throws - links simply stop being painted. This test pins
+  // THIS module's half of the contract (that the module re-reads ctx per call),
+  // but nothing catches navio.js's half (actually supplying a getter): all 293
+  // e2e specs pass with it captured by value, because 61-link-endpoints.spec.js
+  // asserts on nv.getVisibleLinks() (the model) rather than on what reaches
+  // the canvas.
   it("reads the CURRENT visibleLinks, not one captured at construction", () => {
     let visibleLinks = [];
     const context = fakeContext();

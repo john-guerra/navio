@@ -13,13 +13,20 @@
  * src/geometry.js documents, and CLAUDE.md's "a module gets GETTERS, not
  * values" landmine is about exactly this.
  *
- * Of the seven getters, `context`, `links` and `visibleLinks` are pinned by
- * test/unit/canvas-renderer.test.js, and `data`, `dataIs` and `colScales`
- * fail loudly in the e2e suite if captured by value. `selectedFlags` is
- * neither: it starts as an empty Uint8Array, so a stale capture paints the
- * `selected` column as all-unselected forever without throwing, and nothing
- * currently catches that. It is held correct by this contract alone - if you
- * touch how it is read, verify by hand.
+ * The contract has two halves, and they are covered very differently.
+ * test/unit/canvas-renderer.test.js pins THIS module's half - that the
+ * functions here re-read ctx per call rather than capturing at construction -
+ * by building its own ctx with getters. It says nothing about navio.js's
+ * half: that navio.js actually hands these over AS getters. Mutation-testing
+ * navio.js's ctx literal, one entry at a time, shows only four of the seven
+ * are caught by anything: `context` throws at once (it is undefined until
+ * init()), and `data`, `dataIs` and `colScales` produce loud e2e failures.
+ * `links`, `visibleLinks` and `selectedFlags` are caught by NOTHING - all
+ * 293 e2e specs pass with any of them captured by value, because each starts
+ * empty, so a stale capture never throws: links silently stop painting and
+ * the `selected` column paints all-unselected forever. Those three are held
+ * correct by this contract alone. If you change how navio.js supplies them,
+ * verify by hand - no test will tell you.
  *
  * Convention: anything read inside a loop, or read more than once, is
  * hoisted into a local at function entry - a getter read is a function call
