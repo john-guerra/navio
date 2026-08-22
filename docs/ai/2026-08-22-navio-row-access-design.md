@@ -216,6 +216,28 @@ canvas phase could obey *"destructure at entry, never in the loop"* because it
 | `attribAt`, in `extentAt` (`:2827`) and `distinctAt` (`:2870`) | O(n) per attribute per load |
 | `idOf`/`indexOfRow`, in `drawLink` (`canvas.js:195`, `:198`) | per link |
 
+**Correction, after step 3 was measured.** The table above states the *call*
+frequencies correctly but overstates what step 3 actually exposes, and the
+measurement made that visible. Two corrections, recorded because the next phase
+would otherwise inherit the same wrong model:
+
+- **`drawItem` hoists `idOf` once per row**, not per cell
+  (`canvas.js:110`, `const idOf = ctx.rows.idOf`). The *calls* are twice per
+  attribute per row and their cost is unchanged; only the one-time reference
+  acquisition gained a property hop. So step 3's real cost on this path is one
+  extra hop per row, not per cell — predicted to be invisible, and it was.
+- **The O(n log n) sort comparator was never in step 3's blast radius.** It
+  reads `rows.attribAt` directly off the closure (`navio.js:1026-1031`), not
+  through `attribs.js`'s context. The only `attribAt` site step 3 touched is
+  `attribs.js:78`, which runs once per attribute at declaration time. The
+  benchmark therefore says nothing about the `attribs.js` half of step 3 —
+  correctly, because that half was never hot.
+
+**Step 4 is the step this section was really about.** It puts `attribAt` behind
+a cross-module call *per cell*, inside `drawItem`'s attribute loop. That is a
+genuine per-cell change and the gate there is load-bearing in a way step 3's
+was not.
+
 Issue [#111](https://github.com/john-guerra/navio/issues/111) measured 7.7-8.5%
 on this exact path from turning direct closure reads into method calls, and its
 fix recovered about a third. Step 3 is the same class of change, on the same
