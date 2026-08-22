@@ -13,10 +13,14 @@ import { getAttrib } from "./utils.js";
  * gets GETTERS, not values" landmine is about exactly this. `nv` is never
  * rebound and is a plain value.
  *
- * Neither `data`, `id` nor `selectedFlags` is pinned end-to-end by a test:
- * the unit tests here build their own ctx, which proves this module re-reads
- * but says nothing about navio.js supplying getters. Verify by hand if you
- * change how they are supplied.
+ * navio.js's half - that it supplies these as getters rather than values - is
+ * pinned end-to-end by three specs: dropping `data` to a plain value fails 228
+ * e2e tests, `id` fails test/e2e/60-reactive-widget.spec.js:98, and
+ * `selectedFlags` fails test/e2e/92-options.spec.js:238. This module's own
+ * half - that it re-reads `ctx.x` per call rather than capturing at
+ * construction - is pinned only for `indexOfRow`, by the cache-invalidation
+ * test below: the other unit tests build `ctx` from plain values, so capping
+ * `id` or `selectedFlags` at construction here would still pass all of them.
  *
  * See docs/ai/2026-08-22-navio-row-access-design.md.
  *
@@ -36,6 +40,16 @@ export function createRows(ctx) {
       : getAttrib(ctx.data[index], ctx.id, ctx.nv.DEBUG);
   }
 
+  /**
+   * An attribute value by row INDEX. `__seqId` is derived from the index rather
+   * than stored on the row (#88), so it needs resolving here.
+   *
+   * `__seqId` is the index itself, NOT `idOf(index)`. It used to be assigned as
+   * `d.__seqId = i` regardless of any custom id, and it is drawn as the
+   * "sequential Index" column - the visual cue that the data is still in its
+   * original order. Routing it through a caller-supplied id would paint that
+   * column with the wrong values.
+   */
   function attribAt(index, attrib) {
     if (attrib === "__seqId") return index;
     // Also a drawn column backed by a side table, so it needs resolving here

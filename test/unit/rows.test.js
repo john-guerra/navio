@@ -45,6 +45,19 @@ describe("attribAt", () => {
   it("reads a real attribute off the row", () => {
     expect(createRows(ctx()).attribAt(0, "v")).toBe(10);
   });
+
+  // __seqId is the index itself, never idOf(index). With a custom id the two
+  // differ, and routing __seqId through the id would paint the "sequential
+  // Index" column with the wrong values. Nothing else pins this: the other
+  // attribAt tests all run under the default __seqId id, where the two are
+  // indistinguishable.
+  it("resolves __seqId to the index even under a custom id", () => {
+    const rows = createRows(
+      buildCtx({ data: [{ k: "a" }, { k: "b" }], id: "k" })
+    );
+    expect(rows.attribAt(1, "__seqId")).toBe(1);
+    expect(rows.idOf(1)).toBe("b"); // the two genuinely differ here
+  });
 });
 
 describe("indexOfRow", () => {

@@ -7,7 +7,10 @@ seam: nine of the canvas module's context entries are one idea.
 
 **How to use this doc:** a snapshot. Re-check line references before acting.
 
-**Status:** design only. Nothing here is implemented.
+**Status:** implemented. See
+`docs/superpowers/plans/2026-08-22-navio-row-access.md` (Tasks 1-5) for what
+landed and where it diverged from this design — in particular §6, corrected
+mid-execution after the step-3 measurement disproved part of its risk model.
 
 **Revision note.** An adversarial review of the first draft confirmed the
 central architectural argument (§3) but found six factual errors and one
@@ -181,6 +184,11 @@ Each module drops the pure functions (importing them instead) and collapses
 several row helpers into one `rows` entry. `canvas.js` reaches 10 only if §5
 lands, since `ctx.data` and `ctx.selectedFlags` appear there **only** inside
 `drawItem`.
+
+(The 46 → 38 row counts only the four *consumer* modules above. `rows.js`
+itself introduces its own 4-entry context — `{ nv, data, id, selectedFlags }`
+— so the honest branch-wide net is 46 → 42. The next phase should not inherit
+38 as its baseline.)
 
 ## 5. The deduplication this exposes, and why it is gated
 

@@ -45,13 +45,15 @@ src/chrome/theme.js THEMES and which one applies. A leaf: imports only d3.
 src/geometry.js     navio's coordinate system - forward and inverse mapping
                     between (attribute, record) and screen. A leaf: imports only d3.
 src/render/canvas.js    every function that paints to the 2D context. Built
-                    with a ctx of getters like geometry.js; imports nothing.
-                    Exposes updateLevel and drawLinks; the five painters
-                    behind them are private.
+                    with a ctx of getters like geometry.js; imports only the
+                    pure helpers from utils.js. Exposes updateLevel and
+                    drawLinks; the five painters behind them are private.
 src/rows.js         row identity and position. Owns posByLevel and rowIndex;
                     reads data/id/selectedFlags through getters. attribAt is
                     the definition of how a cell's value is resolved.
-src/utils.js        getAttrib, getAttribName, isMissing
+src/utils.js        pure attribute helpers: getAttrib, getAttribName,
+                    isMissing, convertAttribToFn, and the
+                    getAttribsFromObject* family
 src/filters.js      the five filter factories + filterFromValue (serialisation)
 src/scales.js       scaleText, scaleOrdered, null-safe comparators
 src/NavioWidget.js  reactivewidgets.org wrapper: .value, input events

@@ -3577,9 +3577,8 @@ function navio(selection, _h) {
         ids.push(r);
         continue;
       }
-      // A custom id lives on the row, so a foreign object resolves fine. The
-      // default id is the row's index into `data`, which only an object we own
-      // can supply - hence the identity lookup.
+      // See rows.idFromRow for how this resolves under the default vs. a
+      // custom id.
       const v = rows.idFromRow(r);
       if (v === undefined) unresolved++;
       else ids.push(v);
