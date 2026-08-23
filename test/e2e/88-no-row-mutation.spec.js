@@ -122,6 +122,86 @@ test("the sequential ID column still paints a gradient", async ({ page }) => {
   expect(scale.some((c) => /nan/i.test(String(c)))).toBe(false);
 });
 
+// The test above proves nothing about what actually got PAINTED: it reads
+// window.nv.getColorScale("__seqId"), which is built by walking the data
+// through rows.attribAt (src/rows.js). drawItem (src/render/canvas.js) does
+// NOT call attribAt - it open-codes the identical three-way branch by hand,
+// "to keep the two in sync by hand", and nothing enforces that they stay in
+// sync. A reviewer once changed drawItem's `attrib === "__seqId" ? rowIdx`
+// branch to route through getAttrib(item, attrib, ...) instead - reintroducing
+// #88 in the painter only, leaving attribAt (and this file's other tests)
+// untouched - and all 293 e2e specs, including the gradient test above, still
+// passed. So this test samples actual canvas PIXELS: if drawItem resolved
+// __seqId off the row object it would get `undefined` for every row (rows
+// don't carry a __seqId property, see #88), every cell would paint
+// nv.nullColor, and the top and bottom samples taken here would be identical.
+test("drawItem paints the __seqId column from the row index, not the row object", async ({
+  page,
+}) => {
+  await page.goto("/test/e2e/fixtures/single.html");
+  await expect(page.locator("#nv canvas")).toHaveCount(1);
+
+  // Derive the column's geometry from the widget rather than guessing pixels:
+  // level 0 starts at nv.x0 + nv.margin (geometry.cellA adds levelScale(0),
+  // whose range starts there - src/navio.js's `.range([nv.x0 + nv.margin,
+  // ...])`), columns are then attribWidth wide and laid out left to right, and
+  // getAttribs() reports them in the same left-to-right order drawItem
+  // iterates (visibleAttribs(), and single.html hides nothing). y0 and
+  // height() are the record axis's start and extent (src/geometry.js
+  // recordAxisStart/recordExtent), so the record rows span exactly that band.
+  const geom = await page.evaluate(() => {
+    const names = window.nv
+      .getAttribs()
+      .map((a) => (typeof a === "function" ? a.name : a));
+    return {
+      col: names.indexOf("__seqId"),
+      aw: window.nv.attribWidth,
+      x0: window.nv.x0,
+      margin: window.nv.margin,
+      y0: window.nv.y0,
+      height: window.nv.height(),
+    };
+  });
+  expect(geom.col).toBeGreaterThanOrEqual(0);
+
+  const box = await page.locator("#nv canvas").boundingBox();
+  const x = box.x + geom.x0 + geom.margin + geom.aw * (geom.col + 0.5);
+  // 10%/90% down the record band: comfortably inside the first and last rows
+  // of the fixture's 5 records without depending on exact row height.
+  const yTop = box.y + geom.y0 + geom.height * 0.1;
+  const yBottom = box.y + geom.y0 + geom.height * 0.9;
+
+  // Read the actual painted pixel, the same way test/e2e/senate-example.spec.js
+  // samples the graph canvas - getImageData on the 2D context, not a DOM
+  // assertion. Coordinates are converted from CSS to backing-store pixels so
+  // this holds even if a run's devicePixelRatio is not 1.
+  const colourAt = (px, py) =>
+    page.evaluate(
+      ([px, py]) => {
+        const c = document.querySelector("#nv canvas");
+        const rect = c.getBoundingClientRect();
+        const scaleX = c.width / rect.width;
+        const scaleY = c.height / rect.height;
+        const d = c
+          .getContext("2d")
+          .getImageData(
+            Math.round((px - rect.left) * scaleX),
+            Math.round((py - rect.top) * scaleY),
+            1,
+            1
+          ).data;
+        return [d[0], d[1], d[2], d[3]];
+      },
+      [px, py]
+    );
+
+  const top = await colourAt(x, yTop);
+  const bottom = await colourAt(x, yBottom);
+  // If drawItem painted __seqId via getAttrib(item, "__seqId") instead of the
+  // row index, both cells paint nv.nullColor and these would be identical.
+  expect(top).not.toEqual(bottom);
+});
+
 // Same failure mode one layer up: the tooltip read values off the row, so the
 // two derived columns reported "undefined" on hover.
 test("hovering the derived columns shows a value, not undefined", async ({

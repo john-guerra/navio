@@ -34,6 +34,15 @@ export function createRows(ctx) {
   // whenever the data is replaced.
   let rowIndex = null;
 
+  /**
+   * The id value for a row index.
+   *
+   * The default id used to be a `__seqId` property written onto every row -
+   * but `data` is never reordered (only `dataIs[level]` is), so it always
+   * equalled the row's index. It is now derived rather than stored. A custom
+   * id set via nv.id() points at one of the caller's own fields and is read
+   * as before.
+   */
   function idOf(index) {
     return ctx.id === "__seqId"
       ? index
@@ -64,6 +73,13 @@ export function createRows(ctx) {
     return p ? p[index] : undefined;
   }
 
+  /**
+   * Index of a row within `data`. Accepts an index unchanged, so internal
+   * callers (which already have one) pay nothing.
+   *
+   * The map itself is not free at a million rows - see the laziness
+   * rationale on `rowIndex` above.
+   */
   function indexOfRow(rowOrIndex) {
     if (typeof rowOrIndex === "number") return rowOrIndex;
     if (!rowOrIndex || typeof rowOrIndex !== "object") return undefined;

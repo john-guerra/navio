@@ -90,7 +90,14 @@ export function getAttribName(attrib) {
   }
 }
 
-/** Values navio renders as the null colour rather than through a scale. */
+/**
+ * A gap, not a value. These four are drawn in nullColor instead of going
+ * through the colour scale, so they must not enter a categorical domain
+ * either: each one there consumed a palette colour that could never be
+ * shown, pushed every category after it along, and counted towards the
+ * recycling warning. Shared with the drawing code deliberately - two lists
+ * of what counts as missing would drift.
+ */
 export function isMissing(v) {
   return v === undefined || v === null || v === "" || v === "none";
 }
