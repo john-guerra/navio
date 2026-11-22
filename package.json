@@ -12,7 +12,6 @@
   ],
   "main": "dist/navio.min.js",
   "module": "dist/navio.esm.js",
-  "browser": "dist/navio.min.js",
   "unpkg": "dist/navio.min.js",
   "jsdelivr": "dist/navio.min.js",
   "dependencies": {
