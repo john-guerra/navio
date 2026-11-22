@@ -10,7 +10,7 @@
     "README.md",
     "LICENSE"
   ],
-  "main": "dist/navio.min.js",
+  "main": "dist/navio.esm.js",
   "module": "dist/navio.esm.js",
   "unpkg": "dist/navio.min.js",
   "jsdelivr": "dist/navio.min.js",
